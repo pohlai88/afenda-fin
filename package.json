@@ -17,6 +17,7 @@
     "typecheck:native:single": "tsc --noEmit -p tsconfig.json --singleThreaded",
     "typecheck:compat": "tsc6 --noEmit -p tsconfig.json",
     "lint": "eslint .",
+    "lint:dev": "eslint . --cache --cache-location node_modules/.cache/eslint",
     "boundary:check": "depcruise packages --config .dependency-cruiser.cjs",
     "agent-docs": "node scripts/generate-agent-docs.ts",
     "gate": "node scripts/gate.ts",

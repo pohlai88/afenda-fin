@@ -100,7 +100,7 @@ describe('JSON-safe structure', () => {
       cause: new Error('internal-only'),
     });
     const publicJson = toPublicJson(failure.error);
-    const roundTripped = JSON.parse(JSON.stringify(publicJson));
+    const roundTripped: unknown = JSON.parse(JSON.stringify(publicJson));
     expect(roundTripped).toEqual({
       code: 'VALIDATION_FAILED',
       message: 'field is required',

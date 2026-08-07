@@ -29,10 +29,14 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/ban-ts-comment': 'error',
-      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'error',
+      '@typescript-eslint/no-unsafe-argument': 'error',
+      // Phase 3B.1 (governance/PHASE_3B1_LINT_REPORT.md): no-unsafe-member-access and
+      // no-unsafe-call remain OFF deliberately — no current violation makes them
+      // mechanically necessary yet, and the phase brief scopes this change to the two
+      // unsafe-ingress rules with concrete red evidence (assignment, argument).
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-call': 'off',
-      '@typescript-eslint/no-unsafe-argument': 'off',
     },
   },
 );

@@ -212,20 +212,156 @@ function runDependencyRangeFixture(): RedFixtureResult {
   };
 }
 
-async function runLintTsSuppressionFixture(): Promise<RedFixtureResult> {
+/**
+ * Phase 3B.1 (governance/PHASE_3B1_LINT_REPORT.md): the lint-fixture bug this
+ * harness is built to never repeat. `eslint.lintText` against an invented
+ * path (`scripts/__red_fixture__.mjs`, never written to disk) reports
+ * `errorCount: 1` — but the ONE message is `{ ruleId: null, fatal: true,
+ * message: "...was not found by the project service..." }`, a projectService
+ * parser failure, not `no-explicit-any`/`ban-ts-comment` actually firing.
+ * Confirmed by running CLEAN source (`export const x = 1;`) through the exact
+ * same invented path: it reports the IDENTICAL `errorCount: 1` fatal parser
+ * error. A naive `errorCount > 0` assertion therefore could not distinguish
+ * "the rule fired" from "the file does not exist" — false-red evidence.
+ *
+ * The fix below never repeats this shape: every lint fixture (1) writes a
+ * REAL file to a REAL on-disk path already covered by `tsconfig.json`'s
+ * `include`, (2) asserts every expected ruleId is present among the fired
+ * messages, (3) asserts NO message is `fatal`/`ruleId: null` (a parser/config
+ * failure can never substitute for rule sensitivity), and (4) proves clean
+ * source at the exact same path lints with zero errors — then removes the
+ * fixture file in a `finally` block, even on failure.
+ */
+interface LintRuleFixtureSpec {
+  /** Repository-relative path; MUST already fall under a real tsconfig.json include (e.g. scripts/**\/*.ts). */
+  relativePath: string;
+  /** Source that must trigger every id in `expectedRuleIds` and nothing that looks like a parser/config failure. */
+  badSource: string;
+  /** Every one of these ruleIds must appear among the messages fired against `badSource`. */
+  expectedRuleIds: string[];
+  /** Source that, written to the SAME path, must lint with zero errors — proving the fixture path/config itself is not just broken. */
+  cleanSource: string;
+}
+
+async function runLintRuleFixture(name: string, spec: LintRuleFixtureSpec): Promise<RedFixtureResult> {
+  const absolutePath = path.join(ROOT, spec.relativePath);
   const eslint = new ESLint({ cwd: ROOT });
-  const badCode = [
-    '// @ts-ignore',
-    '/** @type {any} */',
-    'const x = 1;',
-    'console.log(x);',
-    '',
-  ].join('\n');
-  const [report] = await eslint.lintText(badCode, {
-    filePath: path.join(ROOT, 'scripts', '__red_fixture__.mjs'),
+  try {
+    writeFileSync(absolutePath, spec.badSource, 'utf8');
+    const [badReport] = await eslint.lintFiles([spec.relativePath]);
+    const badMessages = badReport?.messages ?? [];
+    const anyFatalOrParserFailure = badMessages.some((m) => m.fatal === true || m.ruleId === null);
+    const firedRuleIds = new Set(badMessages.map((m) => m.ruleId).filter((id): id is string => id !== null));
+    const allExpectedRuleIdsFired = spec.expectedRuleIds.every((id) => firedRuleIds.has(id));
+    if (anyFatalOrParserFailure) {
+      return { name, expectFail: true, failed: false, error: `parser/config failure substituted for rule detection: ${JSON.stringify(badMessages)}` };
+    }
+    if (!allExpectedRuleIdsFired) {
+      return { name, expectFail: true, failed: false, error: `expected ruleIds ${JSON.stringify(spec.expectedRuleIds)} not all present; got ${JSON.stringify([...firedRuleIds])}` };
+    }
+
+    writeFileSync(absolutePath, spec.cleanSource, 'utf8');
+    const [cleanReport] = await eslint.lintFiles([spec.relativePath]);
+    const cleanErrorCount = cleanReport?.errorCount ?? -1;
+    if (cleanErrorCount !== 0) {
+      return { name, expectFail: true, failed: false, error: `clean source at the same real path did not lint clean: ${JSON.stringify(cleanReport?.messages ?? [])}` };
+    }
+
+    return { name, expectFail: true, failed: true };
+  } catch (err) {
+    const e = err as { message: string };
+    return { name, expectFail: true, failed: false, error: e.message };
+  } finally {
+    rmSync(absolutePath, { force: true });
+  }
+}
+
+function runLintTsSuppressionFixture(): Promise<RedFixtureResult> {
+  return runLintRuleFixture('lint-ts-suppression (@ts-ignore + explicit any, real on-disk path, exact rule IDs)', {
+    relativePath: path.join('scripts', '__red_fixture_lint_suppression__.ts'),
+    badSource: ['// @ts-ignore', 'export const redFixtureLintSuppression: any = 1;', ''].join('\n'),
+    expectedRuleIds: ['@typescript-eslint/ban-ts-comment', '@typescript-eslint/no-explicit-any'],
+    cleanSource: ['export const redFixtureLintSuppressionClean: number = 1;', ''].join('\n'),
   });
-  const failed = report !== undefined && report.errorCount > 0;
-  return { name: 'lint-ts-suppression (@ts-ignore + JSDoc any)', expectFail: true, failed };
+}
+
+/** Phase 3B.1: proves @typescript-eslint/no-unsafe-assignment actually fires on an untrusted JSON.parse() value assigned into a typed authoritative shape. */
+function runUnsafeAssignmentLintFixture(): Promise<RedFixtureResult> {
+  return runLintRuleFixture('lint: no-unsafe-assignment fires on untrusted JSON.parse() assigned to a typed shape', {
+    relativePath: path.join('scripts', '__red_fixture_unsafe_assignment__.ts'),
+    badSource: [
+      'interface RedFixtureShape {',
+      '  amount: string;',
+      '}',
+      'declare const raw: string;',
+      'export const redFixtureUnsafeAssignment: RedFixtureShape = JSON.parse(raw);',
+      '',
+    ].join('\n'),
+    expectedRuleIds: ['@typescript-eslint/no-unsafe-assignment'],
+    cleanSource: [
+      'interface RedFixtureShape {',
+      '  amount: string;',
+      '}',
+      'declare const raw: RedFixtureShape;',
+      'export const redFixtureUnsafeAssignmentClean: RedFixtureShape = raw;',
+      '',
+    ].join('\n'),
+  });
+}
+
+/** Phase 3B.1: proves @typescript-eslint/no-unsafe-argument actually fires when an untrusted JSON.parse()-derived value is passed to a typed function parameter. */
+function runUnsafeArgumentLintFixture(): Promise<RedFixtureResult> {
+  return runLintRuleFixture('lint: no-unsafe-argument fires on untrusted JSON.parse() value passed to a typed parameter', {
+    relativePath: path.join('scripts', '__red_fixture_unsafe_argument__.ts'),
+    badSource: [
+      'function redFixtureTypedFunction(value: string): string {',
+      '  return value;',
+      '}',
+      'declare const raw: string;',
+      'export const redFixtureUnsafeArgument = redFixtureTypedFunction(JSON.parse(raw).value);',
+      '',
+    ].join('\n'),
+    expectedRuleIds: ['@typescript-eslint/no-unsafe-argument'],
+    cleanSource: [
+      'function redFixtureTypedFunction(value: string): string {',
+      '  return value;',
+      '}',
+      'declare const raw: string;',
+      'export const redFixtureUnsafeArgumentClean = redFixtureTypedFunction(raw);',
+      '',
+    ].join('\n'),
+  });
+}
+
+/**
+ * Phase 3B.1 §7 — the business-facing proof. An untrusted `JSON.parse()`
+ * value flowing straight into a domain Money constructor (bypassing
+ * packages/contracts's Zod schema entirely) must fail lint for real
+ * (no-unsafe-assignment for the untyped JSON.parse() binding,
+ * no-unsafe-argument for the two `any`-typed member accesses passed into
+ * `moneyFromParts`). The SANCTIONED path — the same untrusted JSON.parse()
+ * value passed straight into `decodeMoneyTransport` (whose parameter type is
+ * `unknown`, not `any`) — must lint perfectly clean, proving Zod is a real,
+ * mechanically-enforced ingress boundary and not merely a naming convention.
+ */
+function runMoneyJsonIngressLintFixture(): Promise<RedFixtureResult> {
+  return runLintRuleFixture('lint: untrusted JSON->Money ingress fails without Zod; decodeMoneyTransport(JSON.parse(...)) lints clean', {
+    relativePath: path.join('scripts', '__red_fixture_money_json_ingress__.ts'),
+    badSource: [
+      "import { moneyFromParts } from '@afenda/money';",
+      'declare const raw: string;',
+      'const incoming = JSON.parse(raw);',
+      'export const redFixtureMoneyIngressUnsafe = moneyFromParts(incoming.currency, incoming.minorUnits);',
+      '',
+    ].join('\n'),
+    expectedRuleIds: ['@typescript-eslint/no-unsafe-assignment', '@typescript-eslint/no-unsafe-argument'],
+    cleanSource: [
+      "import { decodeMoneyTransport } from '@afenda/contracts';",
+      'declare const raw: string;',
+      'export const redFixtureMoneyIngressClean = decodeMoneyTransport(JSON.parse(raw));',
+      '',
+    ].join('\n'),
+  });
 }
 
 /**
@@ -603,6 +739,9 @@ async function main(): Promise<void> {
   results.push(runDependencyRangeFixture());
   results.push(runLockfileDisagreementFixture());
   results.push(await runLintTsSuppressionFixture());
+  results.push(await runUnsafeAssignmentLintFixture());
+  results.push(await runUnsafeArgumentLintFixture());
+  results.push(await runMoneyJsonIngressLintFixture());
   results.push(runTypecheckFixture('typecheck:native', 'typecheck-native-injected-type-error (genuine string-as-number defect)'));
   results.push(runTypecheckFixture('typecheck:compat', 'typecheck-compat-injected-type-error (same genuine defect, compatibility lane)'));
   results.push(runTypeInvalidDelegatedFixture());
