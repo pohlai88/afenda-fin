@@ -2,7 +2,7 @@
   "name": "@afenda/errors",
   "version": "0.0.0",
   "private": true,
-  "description": "Canonical typed failure/result vocabulary shared by AFENDA application packages.",
+  "description": "Canonical typed failure/result vocabulary (wrapErr provenance re-code, non-finite detail canonicalization, flat frozen details).",
   "type": "module",
   "exports": {
     ".": {
@@ -11,7 +11,8 @@
     }
   },
   "files": [
-    "src"
+    "src",
+    "README.md"
   ],
   "scripts": {
     "typecheck:native": "tsc --noEmit -p tsconfig.json",

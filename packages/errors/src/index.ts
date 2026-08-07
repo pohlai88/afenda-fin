@@ -16,6 +16,8 @@ export type {
 } from './result.ts';
 
 export {
+  NON_FINITE_DETAIL_CANONICAL,
+  normalizePublicErrorDetails,
   ok,
   err,
   isOk,

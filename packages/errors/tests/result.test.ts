@@ -10,6 +10,7 @@ import {
   toPublicJson,
   unwrapOr,
   wrapErr,
+  NON_FINITE_DETAIL_CANONICAL,
   type ErrorShape,
   type Result,
 } from '../src/index.ts';
@@ -146,9 +147,28 @@ describe('wrapErr cause chaining', () => {
       expect((middle.cause as ErrorShape<'L1'>).code).toBe('L1');
     }
   });
+
+  it('contrasts with mapErr without spread: prior cause is dropped (lossy replace)', () => {
+    // Contract proof that mapErr is not wrapErr — agents must not pick by vibes.
+    const root = new Error('driver');
+    const result: Result<number, 'LOW'> = err('LOW', 'low', { cause: root, details: { attempt: 1 } });
+    const mapped = mapErr(result, () => ({ code: 'HIGH' as const, message: 'high' }));
+    expect(isErr(mapped)).toBe(true);
+    if (isErr(mapped)) {
+      expect(mapped.error.code).toBe('HIGH');
+      expect(Object.hasOwn(mapped.error, 'cause')).toBe(false);
+      expect(Object.hasOwn(mapped.error, 'details')).toBe(false);
+    }
+    const wrapped = wrapErr(result, 'HIGH', 'high');
+    expect(isErr(wrapped)).toBe(true);
+    if (isErr(wrapped)) {
+      expect(wrapped.error.cause).toBe(result.error);
+      expect(wrapped.error.details).toEqual({ attempt: 1 });
+    }
+  });
 });
 
-describe('details isolation (shallow copy)', () => {
+describe('details isolation (shallow copy + freeze)', () => {
   it('err shallow-copies details so later mutation of the input cannot alias into the ErrorShape', () => {
     const details = { attempt: 1 };
     const failure = err('X', 'm', { details });
@@ -160,9 +180,19 @@ describe('details isolation (shallow copy)', () => {
     const failure = err('X', 'm', { details: { attempt: 1 } });
     const publicJson = toPublicJson(failure.error);
     if (publicJson.details === undefined) throw new Error('expected details');
-    const mutable = publicJson.details as { attempt: number };
-    mutable.attempt = 99;
+    expect(() => {
+      (publicJson.details as { attempt: number }).attempt = 99;
+    }).toThrow();
     expect(failure.error.details).toEqual({ attempt: 1 });
+    expect(publicJson.details).toEqual({ attempt: 1 });
+  });
+
+  it('freezes stored details so post-construction key mutation fails', () => {
+    const failure = err('X', 'm', { details: { attempt: 1 } });
+    expect(Object.isFrozen(failure.error.details)).toBe(true);
+    expect(() => {
+      (failure.error.details as { attempt: number }).attempt = 99;
+    }).toThrow();
   });
 });
 
@@ -187,8 +217,10 @@ describe('non-finite detail scalars', () => {
     // JSON.stringify(-0) emits 0 and drops the sign. Canonical '-0' is intentional
     // determinism — see packages/errors/README.md — not a quirk to reverse.
     const failure = err('X', 'm', { details: { delta: -0 } });
-    expect(failure.error.details).toEqual({ delta: '-0' });
-    expect(toPublicJson(failure.error).details).toEqual({ delta: '-0' });
+    expect(failure.error.details).toEqual({ delta: NON_FINITE_DETAIL_CANONICAL.negativeZero });
+    expect(toPublicJson(failure.error).details).toEqual({
+      delta: NON_FINITE_DETAIL_CANONICAL.negativeZero,
+    });
   });
 
   it('leaves ordinary finite numbers, including positive zero, untouched', () => {
