@@ -94,12 +94,12 @@ Complete each item before marking the stack `ADOPTED`.
 
 ### Database
 
-- [ ] Pin PostgreSQL 18 and 17 container digests. *(Phase 3C commit 1 pinned PostgreSQL 18 only; 17 deferred to commit 2 — left unchecked until both digests are present.)*
-- [x] Configure `pg` type parsing so authoritative bigint/numeric/time values do not silently lose precision. *(Phase 3C commit 1: packages/db/src/type-parsers.ts; OID 790 money forbidden; lossy-parser red fixture.)*
-- [x] Implement a same-client transaction capability; forbid transactional `pool.query()`. *(Phase 3C commit 1: withTransaction + scripts/check-transaction-safety.ts + red fixtures.)*
-- [ ] Run every migration and authoritative DB control on both PostgreSQL majors. *(commit 2)*
-- [ ] Generate Kysely types from the migrated schema and fail on drift. *(commit 2)*
-- [ ] Separate request, posting, migration, audit and backup credentials. *(Phase 3C commit 1 established migrator vs app roles only; request/posting/audit/backup not yet applicable — left unchecked.)*
+- [x] Pin PostgreSQL 18 and 17 container digests. *(Phase 3C: both digests pinned in docker-compose.yml and Testcontainers helpers.)*
+- [x] Configure `pg` type parsing so authoritative bigint/numeric/time values do not silently lose precision. *(Phase 3C: packages/db/src/type-parsers.ts; OID 790 money forbidden; lossy-parser red fixture.)*
+- [x] Implement a same-client transaction capability; forbid transactional `pool.query()`. *(Phase 3C: withTransaction + scripts/check-transaction-safety.ts + red fixtures.)*
+- [x] Run every migration and authoritative DB control on both PostgreSQL majors. *(Phase 3C commit 2: dual-major.integration.test.ts; disagreement = build failure.)*
+- [x] Generate Kysely types from the migrated schema and fail on drift. *(Phase 3C commit 2: CanonicalCodegenSource = Testcontainers PG18 only; check:types-drift in gate:db-integration.)*
+- [ ] Separate request, posting, migration, audit and backup credentials. *(Phase 3C established migrator vs app roles only; request/posting/audit/backup not yet applicable — left unchecked.)*
 
 ### API and frontend
 
@@ -222,6 +222,6 @@ The stack remains **architecturally approved, not adopted**. No ratifier signatu
 
 ---
 
-## 9. Phase 3C persistence-boundary review (2026-08-08) — commit 1
+## 9. Phase 3C persistence-boundary review (2026-08-08)
 
-Phase 3C commit 1 (`packages/db`, `db/migrations/0001_bootstrap.sql`, Testcontainers PostgreSQL 18 via `pnpm gate:db-integration`) was reviewed against §3. Items ticked above for type parsing and single-client transactions have real mechanical evidence (see `governance/PHASE_3C_DB_REPORT.md`). The PostgreSQL 18 digest pin is evidenced; PostgreSQL 17 is not yet. Dual-major qualification, Kysely codegen/drift, PGlite structural gating, and full credential topology remain unchecked. **Ticking these items is not a stack adoption event.**
+Phase 3C (`packages/db`, `db/migrations/0001_bootstrap.sql`, dual-major Testcontainers 18/17, PGlite fast lane with structural `requireTestcontainersLane`, Kysely codegen from CanonicalCodegenSource PG18 only, `pnpm gate:db-integration`) was reviewed against §3. Database items ticked above have real mechanical evidence (see `governance/PHASE_3C_DB_REPORT.md`). Full credential topology (request/posting/audit/backup) and the remaining non-Database checklist items stay unchecked. **Ticking these items is not a stack adoption event.**

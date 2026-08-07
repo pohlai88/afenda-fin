@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "as_of": "2026-08-08",
-  "generation_method": "Manually assessed against executable evidence gathered during AFENDA Phase 2 (control plane), Phase 2.1 (control plane hardening), Phase 2.2 (toolchain authority/CI-evidence reconciliation), Phase 3A (first doctrine-bearing application kernel: packages/errors, packages/time, packages/money), Phase 3B (first external transport boundary: packages/contracts, Zod 4.4.3), Phase 3B.1 (lint control repair/hardening), and Phase 3C commit 1 (first persistence boundary: packages/db, db/migrations, node-postgres, Testcontainers PostgreSQL 18 via pnpm gate:db-integration). Unlike doctrine-registry.json / stack-registry.json / position-registry.json / authority-index.json, this file is not a pure deterministic text-extraction projection: implementation state is a judgment call that requires running real checks, not parsing prose. Structural completeness (every SCC-01..27 and V01..18 present exactly once, states drawn from the fixed enum) is itself verified by scripts/gate.ts's control-map-completeness step. See governance/PHASE_3A_KERNEL_REPORT.md, governance/PHASE_3B_CONTRACTS_REPORT.md, governance/PHASE_3B1_LINT_REPORT.md and governance/PHASE_3C_DB_REPORT.md for full evidence detail.",
+  "generation_method": "Manually assessed against executable evidence gathered during AFENDA Phase 2–2.2 (control plane), Phase 3A (errors/time/money), Phase 3B (contracts), Phase 3B.1 (lint hardening), and Phase 3C (packages/db persistence boundary: node-postgres, dual-major Testcontainers 18/17, PGlite structural lane gate, Kysely CanonicalCodegenSource + drift via pnpm gate:db-integration). Unlike doctrine-registry.json / stack-registry.json / position-registry.json / authority-index.json, this file is not a pure deterministic text-extraction projection: implementation state is a judgment call that requires running real checks, not parsing prose. Structural completeness (every SCC-01..27 and V01..18 present exactly once, states drawn from the fixed enum) is itself verified by scripts/gate.ts's control-map-completeness step. See governance/PHASE_3A_KERNEL_REPORT.md, governance/PHASE_3B_CONTRACTS_REPORT.md, governance/PHASE_3B1_LINT_REPORT.md and governance/PHASE_3C_DB_REPORT.md for full evidence detail.",
   "state_enum": ["implemented", "partial", "not-yet-built", "blocked", "not-applicable-current-tree"],
   "policy": [
     "A control is never 'implemented' merely because a document describes it; implementation requires an executable check.",
@@ -152,17 +152,18 @@
       "control_id": "SCC-07",
       "name": "Dual PostgreSQL major qualification",
       "applies_to": ["SEL-05", "SEL-08", "SEL-20"],
-      "state": "partial",
-      "gate": "pnpm gate:db-integration (PostgreSQL 18 Testcontainers lane only in Phase 3C commit 1)",
+      "state": "implemented",
+      "gate": "pnpm gate:db-integration (packages/db/tests/dual-major.integration.test.ts)",
       "evidence": [
-        "Phase 3C commit 1: packages/db/tests/persistence.integration.test.ts runs migrations, transactions, and type-parser proofs against digest-pinned postgres@sha256:a02db8cac496f15b094798a38254f14d6e00741f709360e5e00bb6668ea31636 (PostgreSQL 18) via Testcontainers",
-        "docker-compose.yml pins the same PostgreSQL 18 digest for local development (`pnpm db:up`)"
+        "Phase 3C commit 2: dual-major.integration.test.ts runs the same migration + transaction + int8 corpus on digest-pinned PostgreSQL 18 (sha256:a02db8cac496f15b094798a38254f14d6e00741f709360e5e00bb6668ea31636) and PostgreSQL 17 (sha256:7958605b474b3d264a969cb3a123d6aa00ad1e1fe9da8a69984dabb704d93317)",
+        "docker-compose.yml pins both digests (`pnpm db:up`)",
+        "Disagreement policy: any 17-vs-18 failure fails the DB-integration gate; raising the floor requires an explicit STACK decision, never a silent runner fallback"
       ],
       "red_fixtures": [
-        "Phase 3C red.ts DB-integration mutation fixtures invoke `pnpm --filter @afenda/db run test:integration` (the DB lane), never the fast `pnpm gate`"
+        "Phase 3C red.ts DB-integration mutation fixtures invoke the dual-major DB lane"
       ],
-      "notes": "PARTIAL: only the primary major (PostgreSQL 18) is qualified in commit 1. PostgreSQL 17 dual-major lane, disagreement policy enforcement, and STACK_ADOPTION dual-major tick are deferred to Phase 3C commit 2. A 17-vs-18 difference must be a build failure, never a silent floor bump.",
-      "revisit_trigger": "When Phase 3C commit 2 adds an independent PostgreSQL 17 Testcontainers lane and both majors pass the same migration/transaction/type-parser corpus."
+      "notes": "Implemented for the current migration/transaction/type-parser corpus. Ledger migrations must also pass on both majors when they appear.",
+      "revisit_trigger": "When ledger/business migrations exist; extend the dual-major corpus."
     },
     {
       "control_id": "SCC-08",
@@ -203,10 +204,16 @@
       "control_id": "SCC-10",
       "name": "Schema-derived Kysely types",
       "applies_to": ["SEL-07"],
-      "state": "not-yet-built",
-      "gate": null, "evidence": [], "red_fixtures": [],
-      "notes": "Deferred to Phase 3C commit 2. Codegen must use exactly one canonical source (Testcontainers PostgreSQL 18); PGlite must be structurally incapable of producing committed types.",
-      "revisit_trigger": "When Kysely codegen + drift gate exist against Testcontainers PG18 only."
+      "state": "implemented",
+      "gate": "pnpm gate:db-integration step check:types-drift",
+      "evidence": [
+        "packages/db/src/codegen-source.ts CanonicalCodegenSource token is minted only by codegenSourceFromPostgres18 (Testcontainers PG18); PGlite/PG17 helpers do not return that type",
+        "packages/db/scripts/generate-types.ts regenerates packages/db/src/generated/database.ts from a migrated PG18 Testcontainers instance via kysely-codegen 0.20.0",
+        "packages/db/scripts/check-types-drift.ts regenerates fresh and diffs against the committed file; wired into pnpm gate:db-integration"
+      ],
+      "red_fixtures": [],
+      "notes": "Implemented for the current bootstrap schema (afenda_migration_history). kysely-codegen maps timestamptz to Date by default — AFENDA owned pg parsers still return strings at the driver layer; call sites that need Instant must decode explicitly. No hand-maintained DB type authority.",
+      "revisit_trigger": "When new tables/columns ship; regenerate types and keep drift gate green. Consider kysely-codegen overrides if Date-vs-string friction becomes a defect."
     },
     {
       "control_id": "SCC-11",
@@ -305,10 +312,16 @@
       "control_id": "SCC-19",
       "name": "Concurrency lane enforcement",
       "applies_to": ["SEL-20"],
-      "state": "not-yet-built",
-      "gate": null, "evidence": [], "red_fixtures": [],
-      "notes": "No PGlite/Testcontainers test lanes exist.",
-      "revisit_trigger": "When concurrency-tagged tests and both test lanes exist."
+      "state": "partial",
+      "gate": "pnpm --filter @afenda/db test (PGlite) && pnpm gate:db-integration",
+      "evidence": [
+        "packages/db/src/testcontainers-lane.ts requireTestcontainersLane() throws unless AFENDA_DB_LANE=testcontainers",
+        "packages/db/tests/pglite.fast.test.ts proves the helper throws under the PGlite lane",
+        "packages/db/tests/concurrency-lane.integration.test.ts proves it resolves under Testcontainers"
+      ],
+      "red_fixtures": [],
+      "notes": "PARTIAL: the structural lane gate exists before any real multi-session concurrency test. No lock-order/isolation corpus yet — that requires business logic to race.",
+      "revisit_trigger": "When concurrency-tagged multi-session tests exist and are rejected on PGlite via requireTestcontainersLane()."
     },
     {
       "control_id": "SCC-20",

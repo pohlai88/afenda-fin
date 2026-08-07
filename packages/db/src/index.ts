@@ -13,3 +13,10 @@ export {
   type MigrationErrorCode,
   type AppliedMigration,
 } from './migrate.ts';
+export {
+  createCanonicalCodegenSource,
+  assertCanonicalCodegenSource,
+  type CanonicalCodegenSource,
+} from './codegen-source.ts';
+export { requireTestcontainersLane, currentDbLane, type DbLane } from './testcontainers-lane.ts';
+

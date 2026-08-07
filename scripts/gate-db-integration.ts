@@ -23,13 +23,17 @@ function run(command: string, args: string[]): void {
 console.log('=== AFENDA DB-integration gate (pnpm gate:db-integration) ===\n');
 
 try {
-  console.log('[1/2] @afenda/db unit tests (no containers)');
+  console.log('[1/3] @afenda/db unit + PGlite fast tests (no Docker)');
   run('pnpm', ['--filter', '@afenda/db', 'run', 'test']);
-  console.log('[PASS] unit tests\n');
+  console.log('[PASS] unit/PGlite tests\n');
 
-  console.log('[2/2] @afenda/db Testcontainers integration (PostgreSQL 18)');
+  console.log('[2/3] @afenda/db Testcontainers integration (PostgreSQL 18 + 17)');
   run('pnpm', ['--filter', '@afenda/db', 'run', 'test:integration']);
-  console.log('[PASS] integration tests\n');
+  console.log('[PASS] dual-major integration tests\n');
+
+  console.log('[3/3] Kysely types drift vs Testcontainers PostgreSQL 18 (sole codegen source)');
+  run('pnpm', ['--filter', '@afenda/db', 'run', 'check:types-drift']);
+  console.log('[PASS] Kysely type drift\n');
 
   console.log('Overall DB-integration gate: PASS');
   process.exit(0);

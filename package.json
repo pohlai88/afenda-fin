@@ -20,7 +20,7 @@
     "lint:dev": "eslint . --cache --cache-location node_modules/.cache/eslint",
     "boundary:check": "depcruise packages --config .dependency-cruiser.cjs",
     "agent-docs": "node scripts/generate-agent-docs.ts",
-    "db:up": "docker compose up -d postgres18",
+    "db:up": "docker compose up -d postgres18 postgres17",
     "db:down": "docker compose down",
     "gate": "node scripts/gate.ts",
     "gate:db-integration": "node scripts/gate-db-integration.ts",

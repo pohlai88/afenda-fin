@@ -1,8 +1,8 @@
-# AFENDA Phase 3C — Persistence Boundary Report (Commit 1)
+# AFENDA Phase 3C — Persistence Boundary Report
 
-**Baseline commit:** `a11585b` (`docs(governance): correct lint-phase concurrency record, add mutation evidence`), descendant of Phase 3B.1 `a67ac88`. `authority-baseline-v1` remains at `09e7e6e`, unmoved.
+**Baseline commit:** `a11585b` (pre-Phase-3C). Commit 1: `a44ec74`. Commit 2 completes the planned split. `authority-baseline-v1` remains at `09e7e6e`, unmoved.
 
-**Scope (commit 1):** first persistence foundations — `packages/db`, `db/migrations/0001_bootstrap.sql`, exact `pg` type parsers, single-client transactions, checksummed forward-only migration runner with transactional header policy, digest-pinned PostgreSQL 18 via Testcontainers and docker-compose, separate `pnpm gate:db-integration` lane. **No** ledger/business schema, **no** Kysely codegen, **no** PostgreSQL 17 dual-major lane, **no** PGlite (those are commit 2).
+**Scope:** first persistence boundary — `packages/db`, `db/migrations/0001_bootstrap.sql`, exact `pg` type parsers, single-client transactions, checksummed forward-only migrations, dual-major Testcontainers (18+17), PGlite fast lane with structural concurrency gating, Kysely codegen from a single canonical source (Testcontainers PG18), separate `pnpm gate:db-integration` lane. **No** ledger/business schema.
 
 ---
 
@@ -50,41 +50,46 @@ DB red fixtures invoke the DB-integration lane / `checkTransactionSafety`, never
 
 ---
 
-## 3. Control-state changes (commit 1)
+## 3. Control-state changes
 
 | Control | Before | After | Notes |
 | --- | --- | --- | --- |
 | SCC-05 | implemented | implemented | Evidence extended to 5-package graph |
 | SCC-06 | not-yet-built | not-yet-built | No ledger kernel |
-| SCC-07 | not-yet-built | **partial** | PG18 only; PG17 = commit 2 |
+| SCC-07 | not-yet-built | **implemented** | Dual-major 18+17 corpus; disagreement = fail |
 | SCC-08 | not-yet-built | **implemented** | withTransaction + static scan + red fixtures |
 | SCC-09 | not-yet-built | **implemented** | Owned parsers + OID 790 ban + lossy-mutant red |
-| SCC-10 | not-yet-built | not-yet-built | Kysely codegen = commit 2 |
+| SCC-10 | not-yet-built | **implemented** | CanonicalCodegenSource PG18 only + drift gate |
 | SCC-11 | not-yet-built | **implemented** | Checksums + 0001 bootstrap + red fixture |
-| SCC-19 | not-yet-built | not-yet-built | Structural PGlite gating = commit 2 |
+| SCC-19 | not-yet-built | **partial** | Structural lane gate; no real concurrency corpus yet |
 
 ---
 
-## 4. Dependencies (exact pins)
+## 4. Commit 2 additions
+
+- `dual-major.integration.test.ts` — same corpus on PG18 and PG17
+- `requireTestcontainersLane()` — import-time structural gate (not a filename convention)
+- PGlite fast lane for cheap SQL feedback; concurrency helpers throw there
+- `CanonicalCodegenSource` + `generate:types` / `check:types-drift` (PG18 Testcontainers only)
+- docker-compose PostgreSQL 17 service on host port 5433
+
+---
+
+## 5. Dependencies (exact pins)
 
 | Package | Version |
 | --- | --- |
 | pg | 8.22.0 |
 | @types/pg | 8.21.0 |
+| kysely | 0.29.4 |
+| kysely-codegen | 0.20.0 |
+| @electric-sql/pglite | 0.5.4 |
 | testcontainers | 12.1.0 |
 | @testcontainers/postgresql | 12.1.0 |
 | PostgreSQL 18 image | `postgres@sha256:a02db8cac496f15b094798a38254f14d6e00741f709360e5e00bb6668ea31636` |
+| PostgreSQL 17 image | `postgres@sha256:7958605b474b3d264a969cb3a123d6aa00ad1e1fe9da8a69984dabb704d93317` |
 
-Native `ssh2` / `cpu-features` optional bindings failed to compile on this Windows host (no VS C++ toolchain); JS fallback is used for local Docker. Documented as an environment limitation, not a control gap.
-
----
-
-## 5. Commit 2 remaining
-
-- Dual-major PostgreSQL 17 lane + disagreement policy (build failure, never silent floor bump)
-- PGlite fast lane with import-time `requireTestcontainersLane()` structural gating
-- Kysely codegen from **only** Testcontainers PG18; PGlite structurally incapable of producing types
-- Drift gate in the DB-integration lane
+Native `ssh2` / `cpu-features` optional bindings failed to compile on this Windows host (no VS C++ toolchain); JS fallback is used for local Docker.
 
 ---
 
@@ -93,4 +98,5 @@ Native `ssh2` / `cpu-features` optional bindings failed to compile on this Windo
 - Dev-only role passwords are embedded in `0001_bootstrap.sql` for local/CI reproducibility; must be replaced by secret injection before shared/production use.
 - No request/posting/audit/backup credential topology yet.
 - No ledger/business tables.
+- kysely-codegen maps `timestamptz` to `Date` in generated types; owned `pg` parsers still return strings — decode at call sites.
 - Stack remains **not adopted**.
