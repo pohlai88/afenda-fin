@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-08-07",
+  "policy": "Exact patches and container digests are frozen in machine files at adoption; this baseline selects release lines and verified reference patches.",
+  "runtime": {
+    "node": {
+      "line": "24 LTS",
+      "reference_patch": "24.18.0",
+      "pin_files": [
+        ".node-version",
+        "package.json engines",
+        "CI assertion"
+      ]
+    }
+  },
+  "compiler": {
+    "typescript_native": {
+      "line": "7.0",
+      "reference_patch": "7.0.2",
+      "package_alias": "@typescript/native -> npm:typescript@7.0.2"
+    },
+    "typescript_compat": {
+      "line": "6.0",
+      "reference_patch": "6.0.2",
+      "package_alias": "typescript -> npm:@typescript/typescript6@6.0.2"
+    }
+  },
+  "database": {
+    "primary": {
+      "major": 18,
+      "reference_patch": "18.4"
+    },
+    "compatibility_floor": {
+      "major": 17,
+      "reference_patch": "17.10"
+    }
+  },
+  "frontend": {
+    "react": {
+      "line": "19.2",
+      "minimum_safe_rsc_patch": "19.2.4",
+      "policy": "react-server-dom-* prohibited"
+    },
+    "vite": {
+      "line": "8.1"
+    },
+    "tailwindcss": {
+      "line": "4",
+      "reference_release": "4.3"
+    }
+  },
+  "identity": {
+    "keycloak": {
+      "line": "26.7",
+      "reference_patch": "26.7.0"
+    }
+  },
+  "libraries": {
+    "zod": "4.x stable; exact patch from lockfile",
+    "hono": "exact patch from lockfile; Node adapter only",
+    "kysely": "exact patch from lockfile",
+    "pg": "exact patch from lockfile",
+    "graphile-worker": "exact patch from lockfile",
+    "tanstack": "exact patches from lockfile",
+    "vitest": "exact patch from lockfile",
+    "fast-check": "exact patch from lockfile",
+    "strykerjs": "exact patches from lockfile",
+    "playwright": "exact patch and browser bundle from lockfile/install manifest"
+  },
+  "container_policy": "All release images are digest-pinned in deployment manifests; tags alone are insufficient."
+}

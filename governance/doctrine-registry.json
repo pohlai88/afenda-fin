@@ -1,0 +1,1960 @@
+{
+  "schema_version": 1,
+  "generated_by": "scripts/build-authority-registry.mjs",
+  "generated_from": {
+    "path": "doctrine/DOCTRINE.md",
+    "sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2"
+  },
+  "authority_classes": [
+    {
+      "marker": "[C]",
+      "meaning": "Constitutional system invariant",
+      "change_threshold": "Implementation contradiction, incident, audit finding, demonstrated harm, or superseding authoritative source"
+    },
+    {
+      "marker": "[D]",
+      "meaning": "Default engineering method",
+      "change_threshold": "Written evidence that another method satisfies the same invariant with equal or better assurance"
+    },
+    {
+      "marker": "[J]",
+      "meaning": "Jurisdictional requirement",
+      "change_threshold": "Applicable regulator/law/source version and deployment scope"
+    },
+    {
+      "marker": "[C/J]",
+      "meaning": "Constitutional objective with jurisdiction-specific implementation",
+      "change_threshold": "Both thresholds apply"
+    }
+  ],
+  "evidence_grade_definitions": {
+    "grades": [
+      {
+        "grade": "E0",
+        "name": "Hypothesis",
+        "meaning": "Desired statement, not yet precise enough to verify"
+      },
+      {
+        "grade": "E1",
+        "name": "Specified",
+        "meaning": "Unique rule, source basis, method, acceptance and red condition defined"
+      },
+      {
+        "grade": "E2",
+        "name": "Tested",
+        "meaning": "Fresh positive and negative evidence passes in a controlled environment"
+      },
+      {
+        "grade": "E3",
+        "name": "Mutation-sensitive",
+        "meaning": "Relevant injected faults make the actual mapped control fail"
+      },
+      {
+        "grade": "E4",
+        "name": "Independently verified",
+        "meaning": "A diverse oracle or independent implementation confirms the material result"
+      },
+      {
+        "grade": "E5",
+        "name": "Qualified",
+        "meaning": "E2–E4 repeated in supported deployment topology, versions, concurrency, restore, and operational conditions"
+      },
+      {
+        "grade": "E6",
+        "name": "Operationally proven",
+        "meaning": "Sustained real use, close/recovery cycles, operator evidence, and incident-derived regressions exist"
+      }
+    ],
+    "modifiers": [
+      {
+        "token": "-R",
+        "name": "Reported",
+        "meaning": "result is present in a supplied document or log but was not independently reproduced from the supplied bundle."
+      },
+      {
+        "token": "RED",
+        "name": "",
+        "meaning": "direct inspection or execution has identified a material contradiction or missing control."
+      },
+      {
+        "token": "PARTIAL",
+        "name": "",
+        "meaning": "some criteria are covered, but a material part of the rule remains unverified."
+      }
+    ]
+  },
+  "rules": [
+    {
+      "id": "GOV-01",
+      "section": "5. Governance and verification",
+      "title": "Every binding rule is uniquely identifiable and individually verifiable",
+      "authority": "[C]",
+      "rule_verbatim": "Every binding requirement shall have a permanent identifier, an observable acceptance condition, a named verification method, and a traceable source. A requirement that cannot be assessed separately shall not be constitutional.",
+      "gist": "Every binding requirement have permanent identifier, observable acceptance condition, named verification method, and traceable source.",
+      "source_basis": [
+        "S01",
+        "S02",
+        "S04",
+        "S06"
+      ],
+      "required_method": "Maintain a rule registry in this single document. Each rule states: authority, source basis, required method, turn-red evidence, qualification evidence, and current evidence grade. Repealed identifiers remain tombstones and are never reused.",
+      "red_test": "Delete or bypass a rule’s mapped control, or introduce a known violating fixture. The governance gate must report the exact unmapped, unverified, or violated rule identifier.",
+      "qualification_evidence": "A fresh traceability report must show that every constitutional system invariant maps to at least one executable control or an explicitly scoped open decision, and every executable control maps back to a rule.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:106",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "088cd4835d1e4d431cb74f6ff6fc125e35f63d164338f1ae67a41e8d14caab2c"
+    },
+    {
+      "id": "GOV-02",
+      "section": "5. Governance and verification",
+      "title": "Citation establishes basis; executable evidence establishes implementation",
+      "authority": "[C]",
+      "rule_verbatim": "No rule may be called implemented, proven, qualified, or battle-proven merely because an external authority recommends the practice.",
+      "gist": "No rule may be called implemented, proven, qualified, or battle-proven merely because external authority recommends practice.",
+      "source_basis": [
+        "S01",
+        "S02",
+        "S04",
+        "S05"
+      ],
+      "required_method": "Record two independent facts: (1) source basis, and (2) local evidence grade. Source citations may move a rule from unsupported opinion to E1 SPECIFIED; only local evidence may move it beyond E1.",
+      "red_test": "Replace a working control with a no-op while leaving the citation unchanged. The system must turn red. If it stays green, the citation was being mistaken for assurance.",
+      "qualification_evidence": "An independent assessor can reproduce the named evidence without relying on this document’s assertion that the evidence exists.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:124",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "c27cf3f12715ea357605a79460ecb1265c5d564dd171b494b003610c788a1431"
+    },
+    {
+      "id": "GOV-03",
+      "section": "5. Governance and verification",
+      "title": "Critical executable controls must demonstrate that they can fail",
+      "authority": "[C]",
+      "rule_verbatim": "A critical executable rule is not accepted on green tests alone. At least one relevant injected fault must make the actual control turn red.",
+      "gist": "critical executable rule is not accepted on green tests alone.",
+      "source_basis": [
+        "S02",
+        "S26",
+        "S27"
+      ],
+      "required_method": "Maintain an independently governed mutant corpus. Each mutant identifies the rule and real control it weakens. The mutation runner invokes the same production verification check, not a duplicate probe.",
+      "red_test": "Remove the balance guard, widen a privilege, change half-even to half-up, remove a tenant/entity predicate, change a governing date, or reuse an idempotency key with a different payload. The mapped control must fail.",
+      "qualification_evidence": "Critical mutant survival is zero in the supported qualification environment. Equivalent mutants require retained proof; waivers are time-boxed and approved by an Owned-tier owner plus an independent reviewer.",
+      "declared_evidence_grade": "E3-R — MUTATION-SENSITIVE, REPORTED; NOT INDEPENDENTLY REPRODUCED",
+      "rule_status": "active",
+      "evidence_status": "reported-unverified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:142",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "b317186e42ce5b1c421e48c745b5e3f3093198900b9f367fcf3c183c47ab9321"
+    },
+    {
+      "id": "GOV-04",
+      "section": "5. Governance and verification",
+      "title": "Critical invariants require a diverse oracle",
+      "authority": "[C]",
+      "rule_verbatim": "A critical financial, statutory, or isolation invariant shall have at least one oracle that does not reuse the implementation’s principal calculation path.",
+      "gist": "critical financial, statutory, or isolation invariant have at least one oracle does not reuse implementation’s principal calculation path.",
+      "source_basis": [
+        "S01",
+        "S04",
+        "S05",
+        "S26"
+      ],
+      "required_method": "Examples: recompute FX from original transaction amounts and stored rates in an independently written implementation; compare ledger projections with raw-line SQL; compare generated statutory output with an independently written parser; test authorization through real database roles rather than application mocks.",
+      "red_test": "Introduce a defect that preserves the implementation’s own internal consistency—for example, a consistently wrong FX conversion that still balances. At least one diverse oracle must detect it.",
+      "qualification_evidence": "At least one independent oracle passes on supported PostgreSQL and fails under a domain mutant. The oracle’s authoring lineage and calculation path are documented.",
+      "declared_evidence_grade": "E1 — SPECIFIED; CURRENT V2 ORACLE IS INSUFFICIENT FOR FX CORRECTNESS",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:160",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "34130c08f86cd7a5cee7004deebe924d88e8186332c1710379487c6c2880bfa4"
+    },
+    {
+      "id": "GOV-05",
+      "section": "5. Governance and verification",
+      "title": "Evidence must be reproducible from a complete verification bundle",
+      "authority": "[C]",
+      "rule_verbatim": "A reported test count is not accepted as current proof unless the supplied repository contains the commands, source, dependency lock, supported environment declaration, and immutable inputs needed to reproduce it.",
+      "gist": "reported test count is not accepted as current proof unless supplied repository contains commands, source, dependency lock, supported envir…",
+      "source_basis": [
+        "S01",
+        "S02",
+        "S22",
+        "S23"
+      ],
+      "required_method": "Every evidence-bearing release includes package manifest, lockfile, migration set, test runners, fixtures, supported database versions, role topology, source hashes, and commands. Raw results record environment and exit status.",
+      "red_test": "Remove a dependency lock, hash, migration, fixture, or runner. The evidence validation gate must reject the bundle rather than treating historical counts as proof.",
+      "qualification_evidence": "A second environment reproduces the applicable gates from a clean checkout using only the declared bundle.",
+      "declared_evidence_grade": "E1 — SPECIFIED; CURRENT BUNDLE INCOMPLETE",
+      "rule_status": "active",
+      "evidence_status": "historical-orphaned",
+      "historical_orphan_refs": [
+        {
+          "red_id": "RED-09",
+          "finding": "Verification package is incomplete for an independent clean run"
+        }
+      ],
+      "source_anchor": "doctrine/DOCTRINE.md:178",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "6ae416632b276b1379c55910a33229ed1b382cc798fb2f428d3569c5dcdd7370"
+    },
+    {
+      "id": "GOV-06",
+      "section": "5. Governance and verification",
+      "title": "Ownership attaches to risk in the change, not file type",
+      "authority": "[C]",
+      "rule_verbatim": "Changes affecting financial or statutory substance, money or time semantics, tenant/entity isolation, authorization, privacy, destructive migrations, concurrency, external effects, public contracts, generators, or verification infrastructure automatically require human diff review.",
+      "gist": "Changes affecting financial or statutory substance, money or time semantics, tenant/entity isolation, authorization, privacy, destructive m…",
+      "source_basis": [
+        "S03",
+        "S05",
+        "S06"
+      ],
+      "required_method": "Use three obligations: Generated—mechanically verified and traceable; Reviewed—every diff read; Owned—named human comprehends the invariant, oracle, limitations, and failure meaning. No person approves their own Owned-tier change alone.",
+      "red_test": "Misclassify a security- or money-semantic change as Generated. The governance gate must escalate it and fail until required approval is recorded.",
+      "qualification_evidence": "Escalation rules are exercised with positive and negative fixtures, and the observed escalation rate is monitored for miscalibration.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:196",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "400c14d08f92d1cccd4b334b9a745e1fe318740e8465af93c36587e139ca0abc"
+    },
+    {
+      "id": "GOV-07",
+      "section": "5. Governance and verification",
+      "title": "There is one doctrine authority and it is integrity-checked",
+      "authority": "[C]",
+      "rule_verbatim": "Only this file is doctrine authority after adoption. Other doctrine drafts become evidence inputs, not rival authorities. The loaded doctrine must match a recorded cryptographic digest.",
+      "gist": "Only this file is doctrine authority after adoption.",
+      "source_basis": [
+        "S22",
+        "S23"
+      ],
+      "required_method": "Store this file at one canonical path. CI calculates SHA-256 and compares it to the ratified digest stored in repository governance configuration. Prompts and tools reject any other file presented as doctrine authority.",
+      "red_test": "Alter one byte, load an old doctrine file, or provide two current authorities. The governance gate must turn red before generation or execution.",
+      "qualification_evidence": "A clean checkout resolves exactly one doctrine file and validates its digest on every applicable gate.",
+      "declared_evidence_grade": "E1 — SPECIFIED; CURRENT DOCTRINE SHA FILE NOT SUPPLIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:214",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "11caddf3cec8fe07fd1d0b45829281962ecfa936bd89b17b40c0e2247b9aee29"
+    },
+    {
+      "id": "GOV-08",
+      "section": "5. Governance and verification",
+      "title": "Normative rules freeze; evidence advances append-only",
+      "authority": "[C]",
+      "rule_verbatim": "After ratification, the normative rule text is frozen. Evidence grade, test results, incidents, source versions, and qualification records may advance through append-only entries without rewriting the rule.",
+      "gist": "After ratification, normative rule text is frozen.",
+      "source_basis": [
+        "S01",
+        "S04",
+        "S22",
+        "S23"
+      ],
+      "required_method": "Amend a rule only for an implementation contradiction, incident, audit finding, changed law or regulator requirement, changed supported platform, measurable control failure, or demonstrated harm. Record exact before/after text, evidence, decision authority, and affected controls.",
+      "red_test": "Attempt a style-only or theoretical amendment with no qualifying evidence. The doctrine governance gate must reject it.",
+      "qualification_evidence": "An amendment audit can reconstruct every normative change and every evidence-grade transition without retaining a second current authority.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:232",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "0c815367c30f065860d349e62f320409df7ef6064d0accbc0898ff9f1fd1c267"
+    },
+    {
+      "id": "LED-01",
+      "section": "6. Ledger and posting integrity",
+      "title": "Posted financial substance is immutable to runtime credentials",
+      "authority": "[C]",
+      "rule_verbatim": "After posting, amount, currency, rate basis, account, dimensions, direction, effective time, source identity, and reversal linkage shall not be updated or deleted by any runtime credential.",
+      "gist": "After posting, amount, currency, rate basis, account, dimensions, direction, effective time, source identity, and reversal linkage not be u…",
+      "source_basis": [
+        "S03",
+        "S18",
+        "S28",
+        "S36"
+      ],
+      "required_method": "Use append-only posting tables for financial substance. Put operational metadata in separate mutable or append-only operational records. Separate migration ownership from runtime credentials. Add refusal triggers as secondary controls, not substitutes for privilege separation.",
+      "red_test": "Grant UPDATE or DELETE to each runtime role; attempt mutation of batch and line tables; attempt inherited-role and membership paths; attempt mutation through a function. Every path must fail.",
+      "qualification_evidence": "Privilege inventory and adversarial mutation tests pass on supported PostgreSQL, including role membership, function ownership, restore, and privilege-drift checks.",
+      "declared_evidence_grade": "E3-R — PARTIAL; BROADER UPDATE/DELETE COVERAGE REQUIRED",
+      "rule_status": "active",
+      "evidence_status": "historical-orphaned",
+      "historical_orphan_refs": [
+        {
+          "red_id": "RED-08",
+          "finding": "Immutability evidence does not yet cover update/delete on both batch and line through every runtime credential and membership path"
+        }
+      ],
+      "source_anchor": "doctrine/DOCTRINE.md:252",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "f8d47406618a88f691f2442629dd8cbbd7b9260b4d32e19b6ab812b66965b461"
+    },
+    {
+      "id": "LED-02",
+      "section": "6. Ledger and posting integrity",
+      "title": "The request-serving role cannot insert ledger rows directly",
+      "authority": "[C]",
+      "rule_verbatim": "Request-serving credentials shall have no direct INSERT privilege on posting batches or lines. Posting occurs only through a narrowly scoped capability.",
+      "gist": "Request-serving credentials have no direct INSERT privilege on posting batches or lines.",
+      "source_basis": [
+        "S03",
+        "S07",
+        "S11",
+        "S36"
+      ],
+      "required_method": "Use a SECURITY DEFINER function or equivalently scoped transaction capability owned by a dedicated writer. Revoke PUBLIC EXECUTE, grant only to the application role, schema-qualify every reference, use a secure exact search_path, validate authorization/evidence/scope, and write the complete batch atomically.",
+      "red_test": "Grant direct INSERT, expose PUBLIC EXECUTE, use an unsafe search_path, omit schema USAGE, leak elevated role after exception, or call from an unauthorized scope. The actual capability tests must fail.",
+      "qualification_evidence": "Tests pass under actual supported PostgreSQL roles and concurrent sessions; catalog queries prove grants, ownership, memberships, function configuration, and no privilege persistence.",
+      "declared_evidence_grade": "E3-R — PARTIAL; REPORTED 16/16 AND MUTANTS NOT INDEPENDENTLY REPRODUCED",
+      "rule_status": "active",
+      "evidence_status": "reported-unverified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:270",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "b6cf77027296e872fe3f92336dbfcf6737d30a130efec803bb33efbad1e35285"
+    },
+    {
+      "id": "LED-03",
+      "section": "6. Ledger and posting integrity",
+      "title": "A posting batch is atomic and balanced in functional currency at commit",
+      "authority": "[C]",
+      "rule_verbatim": "Every committed posting batch shall contain its complete set of lines and total debits shall equal total credits in functional currency.",
+      "gist": "Every committed posting batch contain its complete set of lines and total debits equal total credits in functional currency.",
+      "source_basis": [
+        "S09",
+        "S10",
+        "S17"
+      ],
+      "required_method": "Insert batch and all lines in one transaction. Enforce functional-currency balance with a deferred constraint trigger or an equivalent atomic database mechanism. No partial batch may commit.",
+      "red_test": "Drop or disable the constraint trigger; omit a line; interrupt before completion; commit an imbalanced batch; mutate trigger timing. V1 must turn red.",
+      "qualification_evidence": "Pass on supported PostgreSQL with transaction failure, rollback, concurrent writers, dump/restore, and mutation evidence.",
+      "declared_evidence_grade": "E3-R — REPORTED; NOT INDEPENDENTLY REPRODUCED",
+      "rule_status": "active",
+      "evidence_status": "reported-unverified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:288",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "d7896e5d33c44f6db2030ede617168bb7d2fd6f13bd970cb29e15c3296dcdcf1"
+    },
+    {
+      "id": "LED-04",
+      "section": "6. Ledger and posting integrity",
+      "title": "Source economic balance is validated before conversion rounding",
+      "authority": "[C]",
+      "rule_verbatim": "A posting capability shall reject an economically unbalanced source transaction before using rounding to balance functional-currency conversion.",
+      "gist": "posting capability reject economically unbalanced source transaction before using rounding to balance functional-currency conversion.",
+      "source_basis": [
+        "S08",
+        "S17",
+        "S18"
+      ],
+      "required_method": "Validate source debits and credits per transaction currency or per explicitly declared multi-currency balancing policy. Compute the exact conversion and the rounded conversion separately. Derive the maximum possible rounding residual mathematically from the registered rounding boundary—not from a broad line-count tolerance.",
+      "red_test": "Post debit 100 and credit 99 at FX 1/1. It must fail, never create a rounding line. Mutate the source-balance check away; the mapped test must turn red.",
+      "qualification_evidence": "Property tests cover single and multiple currencies, zero and negative prohibitions, maximum line counts, and residual bounds; an independent oracle confirms that every accepted rounding residual is caused solely by declared rounding.",
+      "declared_evidence_grade": "RED — CURRENT SQL CAN CONVERT A SOURCE IMBALANCE INTO A ROUNDING LINE",
+      "rule_status": "active",
+      "evidence_status": "historical-orphaned",
+      "historical_orphan_refs": [
+        {
+          "red_id": "RED-01",
+          "finding": "`post_batch` does not first prove source debit=credit; a small economic imbalance can be posted as “rounding” under `v_tol := line_count + 1`"
+        }
+      ],
+      "source_anchor": "doctrine/DOCTRINE.md:306",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "506cdbba1dbdedbe789b2dac52ed9139e2386f5428b6feca114ebbc183536e76"
+    },
+    {
+      "id": "LED-05",
+      "section": "6. Ledger and posting integrity",
+      "title": "Rounding is explicit, uniquely routed, and attributable",
+      "authority": "[C]",
+      "rule_verbatim": "Every authoritative rounding difference shall be represented by an identified posting line tied to a named rounding boundary and a uniquely selected rounding account.",
+      "gist": "Every authoritative rounding difference be represented by identified posting line tied to named rounding boundary and uniquely selected rou…",
+      "source_basis": [
+        "S03",
+        "S08",
+        "S09",
+        "S18"
+      ],
+      "required_method": "Register each rounding boundary and policy. Configure exactly one eligible rounding account per entity, ledger, currency context, and effective policy. Mark the line with boundary ID, policy version, reason, and source lines. Silent alteration of another line is forbidden.",
+      "red_test": "Remove the rounding line; configure two eligible accounts; route to a foreign entity; omit boundary evidence; silently alter an ordinary line. Each fault must fail.",
+      "qualification_evidence": "Golden and property tests cover ties, negative values, allocations, tax, FX, and maximum residuals; mutation changes half-even to half-up and must be killed.",
+      "declared_evidence_grade": "E3-R — PARTIAL; SOURCE-BALANCE DEFECT UNDERMINES THE CURRENT CLAIM",
+      "rule_status": "active",
+      "evidence_status": "historical-orphaned",
+      "historical_orphan_refs": [
+        {
+          "red_id": "RED-01",
+          "finding": "`post_batch` does not first prove source debit=credit; a small economic imbalance can be posted as “rounding” under `v_tol := line_count + 1`"
+        }
+      ],
+      "source_anchor": "doctrine/DOCTRINE.md:324",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "db4c1f40548833e703591025ff11b412b93ff7544caed777cbc9f2d42198c636"
+    },
+    {
+      "id": "LED-06",
+      "section": "6. Ledger and posting integrity",
+      "title": "Technical reversal exactly links and negates the original facts",
+      "authority": "[C]",
+      "rule_verbatim": "A technical reversal shall name the original batch and exactly negate its monetary and dimensional facts using the original rate basis. Revaluation or current-period correction is a separate adjustment posting.",
+      "gist": "technical reversal name original batch and exactly negate its monetary and dimensional facts using original rate basis.",
+      "source_basis": [
+        "S18",
+        "S03",
+        "S28"
+      ],
+      "required_method": "Persist `reverses_batch_id`, enforce same entity and ledger, copy original currency/rate/dimensions, prohibit hidden current-rate differences, and prevent unauthorized or duplicate reversal under the declared policy.",
+      "red_test": "Omit the link; alter a dimension; use the current FX rate; reverse quantity without valuation; reverse twice; reverse across entity. The reversal control must turn red.",
+      "qualification_evidence": "An independent query proves line-by-line negation and linkage; cross-period and closed-period scenarios pass under the declared correction policy.",
+      "declared_evidence_grade": "RED — CURRENT V4 DOES NOT REQUIRE REVERSAL LINKAGE OR DIMENSIONAL EQUALITY",
+      "rule_status": "active",
+      "evidence_status": "historical-orphaned",
+      "historical_orphan_refs": [
+        {
+          "red_id": "RED-05",
+          "finding": "V4 does not require `reverses_batch_id`, dimension equality, or independent original-basis comparison"
+        }
+      ],
+      "source_anchor": "doctrine/DOCTRINE.md:342",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "a956e42a4848258d8fbcfc7d44be38930dd82816f5c1b9354d1b9ff4b6206566"
+    },
+    {
+      "id": "LED-07",
+      "section": "6. Ledger and posting integrity",
+      "title": "Idempotency binds an operation key to a canonical request fingerprint",
+      "authority": "[C]",
+      "rule_verbatim": "Retrying the same semantic operation may return the original result; reusing its key with a different canonical payload shall fail with an idempotency conflict.",
+      "gist": "Retrying same semantic operation may return original result; reusing its key with different canonical payload fail with idempotency conflic…",
+      "source_basis": [
+        "S09",
+        "S21",
+        "S35"
+      ],
+      "required_method": "Define operation identity and key scope. Canonicalize the authoritative payload, including entity, dates, source, evidence, lines, dimensions, rates, and reversal target. Store its digest. Same key plus same digest returns the prior result; same key plus different digest conflicts. Concurrent identical calls create one business effect.",
+      "red_test": "Reuse a key with changed amount, account, entity, date, evidence, or reversal target; race two calls; reuse the document with a new key contrary to operation policy. The checks must turn red.",
+      "qualification_evidence": "Concurrent tests on supported PostgreSQL prove one effect and deterministic responses. Fingerprint calculation is independently reproduced from the canonical input.",
+      "declared_evidence_grade": "RED — CURRENT FUNCTION RETURNS AN OLD BATCH FOR A DIFFERENT PAYLOAD",
+      "rule_status": "active",
+      "evidence_status": "historical-orphaned",
+      "historical_orphan_refs": [
+        {
+          "red_id": "RED-04",
+          "finding": "Same idempotency key with a different payload returns the previous batch; no canonical request digest conflict"
+        }
+      ],
+      "source_anchor": "doctrine/DOCTRINE.md:360",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "657a4a6e1473c2126aad9df32c531f8e44a58b9ac9732ee826c34e2a44e09939"
+    },
+    {
+      "id": "LED-08",
+      "section": "6. Ledger and posting integrity",
+      "title": "Account and ledger scope must match structurally",
+      "authority": "[C]",
+      "rule_verbatim": "A posting line shall not reference an account outside the batch’s declared entity and ledger scope.",
+      "gist": "posting line not reference account outside batch’s declared entity and ledger scope.",
+      "source_basis": [
+        "S03",
+        "S09",
+        "S12"
+      ],
+      "required_method": "Prefer a composite key and foreign key such as `(entity_id, account_id) → account(entity_id, id)`, or an equally strong validated ownership path inside the posting capability. Explicitly model global/shared exceptions; do not infer them.",
+      "red_test": "Submit an E1 batch using an E2 account; mutate the composite predicate or RLS policy; use an inherited or shared record without permission. Every unauthorized path must fail.",
+      "qualification_evidence": "Cross-scope adversarial fixtures pass for tenant, entity, group, inherited scope, global reference, and explicitly shared records on the real role topology.",
+      "declared_evidence_grade": "RED — CURRENT SQL DOES NOT CHECK ACCOUNT.ENTITY_ID AGAINST BATCH.ENTITY_ID",
+      "rule_status": "active",
+      "evidence_status": "historical-orphaned",
+      "historical_orphan_refs": [
+        {
+          "red_id": "RED-02",
+          "finding": "A batch can reference an account from another entity because `account.entity_id` is not matched to `posting_batch.entity_id`"
+        }
+      ],
+      "source_anchor": "doctrine/DOCTRINE.md:378",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "fe1b720c2ee2f73bd1c05687b88cace329351e6818f3360e395358b42da0fb4b"
+    },
+    {
+      "id": "LED-09",
+      "section": "6. Ledger and posting integrity",
+      "title": "Posting evidence is typed, resolvable, and versioned",
+      "authority": "[C]",
+      "rule_verbatim": "Every posting shall carry typed references to the policy and reference-data versions that determined it, plus actor, reason, source, and correlation evidence.",
+      "gist": "Every posting carry typed references to policy and reference-data versions determined it, plus actor, reason, source, and correlation evide…",
+      "source_basis": [
+        "S04",
+        "S22",
+        "S28"
+      ],
+      "required_method": "Use versioned registries or immutable referenced records for tax, FX, valuation, pricing, extension policies, and other authoritative inputs. Validate schema and existence. Preserve the exact version or digest, not merely a label supplied by the caller.",
+      "red_test": "Pass `{'x': null}`, unknown versions, deleted references, empty actor, fabricated policy keys, or inconsistent effective dates. The posting must fail.",
+      "qualification_evidence": "Historical reconstruction resolves every evidence reference after restore; a mutant that removes referential validation is killed.",
+      "declared_evidence_grade": "RED/PARTIAL — NON-EMPTY JSON DOES NOT PROVE RESOLVABLE POLICY EVIDENCE",
+      "rule_status": "active",
+      "evidence_status": "historical-orphaned",
+      "historical_orphan_refs": [
+        {
+          "red_id": "RED-07",
+          "finding": "Evidence constraint proves only non-empty JSON, not typed or resolvable policy/reference versions"
+        }
+      ],
+      "source_anchor": "doctrine/DOCTRINE.md:396",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "4d412474b3ad3fd63655c7fe6fe74904c72fee0c77298a9492d7cacd46f17e01"
+    },
+    {
+      "id": "LED-10",
+      "section": "6. Ledger and posting integrity",
+      "title": "Period close and posting are one concurrency contract",
+      "authority": "[C]",
+      "rule_verbatim": "A posting must not commit into a period that closes concurrently, and a close must not complete while an eligible posting remains in-flight without a declared resolution.",
+      "gist": "posting must not commit into period closes concurrently, and close must not complete while eligible posting remains in-flight without decla…",
+      "source_basis": [
+        "S13",
+        "S14",
+        "S18"
+      ],
+      "required_method": "Declare isolation, period guard, lock order, retry policy, idempotency key, and conflict outcome. The period status read and posting write must participate in the same protected transaction.",
+      "red_test": "Race close against post in both orders; downgrade isolation; remove period guard; reorder locks; retry after serialization failure. Invalid interleavings must fail or retry without double effect.",
+      "qualification_evidence": "Concurrency tests pass on supported PostgreSQL with multiple real connections and repeated randomized schedules.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:414",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "83de3c27473186eb41c62c5c9850063ae9ae5819e3943b8f09a7a9ab39507e40"
+    },
+    {
+      "id": "MON-01",
+      "section": "7. Money and foreign exchange",
+      "title": "Authoritative money never crosses a binary floating-point boundary",
+      "authority": "[C]",
+      "rule_verbatim": "Binary floating point shall not determine, transport, persist, compare, allocate, reconcile, post, settle, or report an authoritative monetary amount.",
+      "gist": "Binary floating point not determine, transport, persist, compare, allocate, reconcile, post, settle, or report authoritative monetary amoun…",
+      "source_basis": [
+        "S08",
+        "S21"
+      ],
+      "required_method": "Use bigint or exact decimal internally. In JSON and language boundaries that cannot preserve arbitrary integers, transmit canonical decimal strings with schema validation. Convert only at explicit exact boundaries.",
+      "red_test": "Round-trip 2^53−1, 2^53, 2^53+1, PostgreSQL bigint extrema, and large FX products through every boundary. Any changed value turns the gate red.",
+      "qualification_evidence": "Property tests and cross-language fixtures prove exact round-trip and overflow behavior on every supported API, queue, database, and export path.",
+      "declared_evidence_grade": "RED — CURRENT JAVASCRIPT TEST/TRANSPORT USES NUMBER FOR BIGINT AMOUNTS",
+      "rule_status": "active",
+      "evidence_status": "historical-orphaned",
+      "historical_orphan_refs": [
+        {
+          "red_id": "RED-03",
+          "finding": "JavaScript checks construct/convert authoritative amounts through `Number`, losing integers beyond 2^53−1"
+        }
+      ],
+      "source_anchor": "doctrine/DOCTRINE.md:434",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "b42cc292698680722ccfbebe82c3e2556b6086303dc801b647cdd708b5add040"
+    },
+    {
+      "id": "MON-02",
+      "section": "7. Money and foreign exchange",
+      "title": "Posted amounts and intermediate calculations use different exact representations",
+      "authority": "[D]",
+      "rule_verbatim": "Posted amounts default to integer minor units with explicit currency; intermediate tax, allocation, accrual, valuation, and FX calculations use exact decimal or rational arithmetic.",
+      "gist": "Posted amounts default to integer minor units with explicit currency; intermediate tax, allocation, accrual, valuation, and FX calculations…",
+      "source_basis": [
+        "S08",
+        "S19"
+      ],
+      "required_method": "Define Money, DecimalQuantity, Rate, and RoundingBoundary as separate types. Conversion to posted minor units occurs only through the registered rounding policy.",
+      "red_test": "Mix a quantity or rate with Money; post an unrounded decimal; round at an unnamed boundary; silently coerce float. Compile-time or runtime verification must fail.",
+      "qualification_evidence": "Golden cases from accounting policy and property tests pass across positive, negative, allocation, tax, and FX scenarios.",
+      "declared_evidence_grade": "E2-R/PARTIAL",
+      "rule_status": "active",
+      "evidence_status": "reported-unverified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:452",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "d2be077e2f04bd623cc3a270c1ea23bd7ef039cee6891a54c4c671bcb410141b"
+    },
+    {
+      "id": "MON-03",
+      "section": "7. Money and foreign exchange",
+      "title": "Currency roles are explicit: transaction, functional, and presentation",
+      "authority": "[C]",
+      "rule_verbatim": "Every monetary fact and report shall state whether a currency is transaction, functional, or presentation currency. The phrase “base currency” is forbidden as ambiguous.",
+      "gist": "Every monetary fact and report state whether currency is transaction, functional, or presentation currency.",
+      "source_basis": [
+        "S19"
+      ],
+      "required_method": "Store the transaction currency on source facts, functional currency on each ledger, and presentation currency on reports/consolidation. Conversion paths state source, target, rate type, effective time, and policy.",
+      "red_test": "Supply an amount or rate without currency roles; translate directly between ambiguous currencies; change an entity’s functional currency without a governed transition. The control must fail.",
+      "qualification_evidence": "Scenario tests cover foreign transactions, reporting translation, functional-currency changes, and consolidation boundaries under qualified accounting review.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:470",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "88597f1cf02f513dcc8f2fc9b1dbaa433e34df1d4ba4e9f4784db51ba25e7ff4"
+    },
+    {
+      "id": "MON-04",
+      "section": "7. Money and foreign exchange",
+      "title": "Every rounding boundary is named and versioned",
+      "authority": "[C]",
+      "rule_verbatim": "No authoritative rounding may occur outside a registered boundary with a versioned policy and jurisdictional override where applicable.",
+      "gist": "No authoritative rounding may occur outside registered boundary with versioned policy and jurisdictional override where applicable.",
+      "source_basis": [
+        "S08",
+        "S18",
+        "S32"
+      ],
+      "required_method": "Maintain a registry for document-line posting, tax, allocation, FX, valuation, and other domains. Record method, precision, allocation rule, account, effective dates, and jurisdiction.",
+      "red_test": "Call a generic rounding helper without boundary ID; use the wrong policy; omit jurisdiction version; change policy without qualification. The mapped control must fail.",
+      "qualification_evidence": "Golden examples, regulatory examples, and domain mutants cover every registered boundary; no unregistered call site remains.",
+      "declared_evidence_grade": "E3-R/PARTIAL",
+      "rule_status": "active",
+      "evidence_status": "reported-unverified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:488",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "5c629b9f22136f06a8a0519c4339c328c3990abe6954e81fbcaec28dca6bcf16"
+    },
+    {
+      "id": "MON-05",
+      "section": "7. Money and foreign exchange",
+      "title": "An FX rate is a complete quoted fact, not a bare number",
+      "authority": "[C]",
+      "rule_verbatim": "Every authoritative FX rate shall record source currency, target currency, quote convention, source, category, effective time, precision, and version.",
+      "gist": "Every authoritative FX rate record source currency, target currency, quote convention, source, category, effective time, precision, and ver…",
+      "source_basis": [
+        "S19"
+      ],
+      "required_method": "Use a typed rate record. Rational or fixed-scale decimal is a default implementation choice. Record whether rate is direct/indirect, spot/average/closing/settlement, and the source reference.",
+      "red_test": "Invert without direction; triangulate incompatible dates or sources; use a missing version; apply a closing rate as a transaction rate without policy. The control must fail.",
+      "qualification_evidence": "Independent oracle cases reproduce conversions, inversions, triangulation, and reversals from stored evidence.",
+      "declared_evidence_grade": "E1/PARTIAL",
+      "rule_status": "active",
+      "evidence_status": "partial",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:506",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "718525571a1ae008b52764967b6cf641b237031e661ae4b9e2c8e4ae635b1a29"
+    },
+    {
+      "id": "MON-06",
+      "section": "7. Money and foreign exchange",
+      "title": "Range, overflow, and sign behavior are part of money correctness",
+      "authority": "[C]",
+      "rule_verbatim": "Every exact-money operation shall have declared range, overflow, sign, and zero-side behavior. Overflow must fail, never wrap or truncate.",
+      "gist": "Every exact-money operation have declared range, overflow, sign, and zero-side behavior.",
+      "source_basis": [
+        "S08",
+        "S09",
+        "S21"
+      ],
+      "required_method": "Validate integer ranges before database insertion; use checked multiplication/division; constrain one-sided debit/credit and non-negative posted lines; define treatment of negative business amounts through direction, not accidental signs.",
+      "red_test": "Exercise min/max values, one beyond each bound, multiplication overflow, zero/zero, both debit and credit, negative denominator, and malformed decimal strings. All invalid cases must fail.",
+      "qualification_evidence": "Property tests run across language and database boundaries with independent expected values.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "historical-orphaned",
+      "historical_orphan_refs": [
+        {
+          "red_id": "RED-03",
+          "finding": "JavaScript checks construct/convert authoritative amounts through `Number`, losing integers beyond 2^53−1"
+        }
+      ],
+      "source_anchor": "doctrine/DOCTRINE.md:524",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "96e4b8c75c1ceda7d3f4e35e6eb7cf53f6bc943526790875483bba637b50fb90"
+    },
+    {
+      "id": "TIM-01",
+      "section": "8. Time, correction, and restatement",
+      "title": "Every business date and instant is individually named",
+      "authority": "[C]",
+      "rule_verbatim": "Document date, transaction date, accounting date, tax point, due date, FX date, recorded instant, validation instant, and other governing times shall never be collapsed into a generic `date` field.",
+      "gist": "Document date, transaction date, accounting date, tax point, due date, FX date, recorded instant, validation instant, and other governing t…",
+      "source_basis": [
+        "S01",
+        "S15",
+        "S20",
+        "S32",
+        "S34"
+      ],
+      "required_method": "Model each date/instant explicitly. State whether it is a civil date, local scheduled time, or absolute instant. APIs use RFC 3339 for instants and declared date formats for civil dates.",
+      "red_test": "Replace accounting date with document date; omit offset from an instant; infer FX date; use generic `date`. Static or runtime governance must fail.",
+      "qualification_evidence": "Date-governance fixtures exercise month/year close, daylight-saving transitions where relevant, leap dates, time-zone conversion, and statutory validation windows.",
+      "declared_evidence_grade": "E1/PARTIAL",
+      "rule_status": "active",
+      "evidence_status": "partial",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:544",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "c825e1b047c2a6dfb2102f33f2206e204a602299fd983646f5ee6ebb31ceba57"
+    },
+    {
+      "id": "TIM-02",
+      "section": "8. Time, correction, and restatement",
+      "title": "Every calculation and report declares its governing temporal policy",
+      "authority": "[C]",
+      "rule_verbatim": "No subsystem may infer its governing time from field proximity or naming convention. Period assignment, aging, tax, FX, revenue recognition, and statutory windows each declare a date or versioned temporal policy.",
+      "gist": "No subsystem may infer its governing time from field proximity or naming convention.",
+      "source_basis": [
+        "S01",
+        "S18",
+        "S19",
+        "S32"
+      ],
+      "required_method": "Maintain a temporal policy registry. Every calculation/report records policy ID and as-of boundary. Revenue recognition may use performance-obligation policy rather than one date.",
+      "red_test": "Change the governing field, omit policy ID, use ambient current date, or run the same report with an unrecorded as-of value. The control must turn red.",
+      "qualification_evidence": "Historical reruns produce the same result from the same facts, policy versions, and as-of boundary.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:562",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "039c393391ff814e56838cd6719b909eb3d39c57235764b24c8647059adcc02d"
+    },
+    {
+      "id": "TIM-03",
+      "section": "8. Time, correction, and restatement",
+      "title": "Absolute instants are stored with UTC semantics; business zones are retained separately when needed",
+      "authority": "[D]",
+      "rule_verbatim": "Recorded and external-event instants use timezone-aware storage; scheduling and statutory local-time rules retain the relevant IANA time-zone identifier separately.",
+      "gist": "Recorded and external-event instants use timezone-aware storage; scheduling and statutory local-time rules retain relevant IANA time-zone i…",
+      "source_basis": [
+        "S15",
+        "S20"
+      ],
+      "required_method": "Use `timestamptz` for instants, RFC 3339 at interfaces, and a separate zone ID for future schedules or local legal rules. Do not use `timestamp without time zone` for an absolute event.",
+      "red_test": "Round-trip instants across session zones; change server TimeZone; cross DST boundaries; omit the business zone for a schedule. Incorrect behavior must fail.",
+      "qualification_evidence": "Qualified tests run with multiple session/server zones and the supported IANA database version.",
+      "declared_evidence_grade": "E1/PARTIAL",
+      "rule_status": "active",
+      "evidence_status": "partial",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:580",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "8ab2eeaa346c14fba13bf129e97e5ad57f7d01ec46fb9b5ea093b02109c82e37"
+    },
+    {
+      "id": "TIM-04",
+      "section": "8. Time, correction, and restatement",
+      "title": "Effective time and recorded time remain distinct",
+      "authority": "[C]",
+      "rule_verbatim": "Financial facts shall record when they are effective in the business world and when the system recorded them. As-of reports use both dimensions explicitly.",
+      "gist": "Financial facts record when they are effective in business world and when system recorded them.",
+      "source_basis": [
+        "S18",
+        "S28"
+      ],
+      "required_method": "Store effective date/time and immutable recorded instant. Projection queries accept both business as-of and knowledge as-of boundaries. Corrections preserve original recorded history.",
+      "red_test": "Backdate a fact without recording when it arrived; query March as known on 5 April after a later correction and get current restated state. The as-of control must detect the difference.",
+      "qualification_evidence": "Scenario tests reproduce original-known and current-restated balances across late entries and corrections.",
+      "declared_evidence_grade": "E1/PARTIAL",
+      "rule_status": "active",
+      "evidence_status": "partial",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:598",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "9d454ed2fa22a17beb6730c795493f5c98baf92a7d87640300e8481847b7d321"
+    },
+    {
+      "id": "TIM-05",
+      "section": "8. Time, correction, and restatement",
+      "title": "Transaction correction, policy restatement, and data repair are different authorities",
+      "authority": "[C]",
+      "rule_verbatim": "An isolated transaction correction, a population-wide policy restatement, and a structural data repair shall use different authority, evidence, and execution protocols.",
+      "gist": "isolated transaction correction, population-wide policy restatement, and structural data repair use different authority, evidence, and exec…",
+      "source_basis": [
+        "S18",
+        "S03",
+        "S28"
+      ],
+      "required_method": "Transaction correction uses standard reversal. Policy restatement requires named authority, maker-checker, scope declared before dry run, deterministic plan, corrective postings, resumable execution, snapshots, reconciliation, and notification assessment. Data repair must prove economic meaning is unchanged.",
+      "red_test": "Execute mass correction autonomously; alter history; derive scope from the run; omit dry run; mix revaluation into reversal. The control must fail.",
+      "qualification_evidence": "A qualified restatement rehearsal completes, interrupts, resumes, reconciles, and reproduces evidence without partial economic effect.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:616",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "43da4b779b58cf91721b2885c8d0f05664920db54aac8aad916f59a6a35141e5"
+    },
+    {
+      "id": "SEC-01",
+      "section": "9. Security and privacy",
+      "title": "Least privilege and separation of duties are enforced in the real credential topology",
+      "authority": "[C]",
+      "rule_verbatim": "Request, posting, migration, audit, backup, and administrative capabilities shall be separated so each credential has only the permissions needed for its role.",
+      "gist": "Request, posting, migration, audit, backup, and administrative capabilities be separated so each credential has only permissions needed for…",
+      "source_basis": [
+        "S03",
+        "S07",
+        "S36"
+      ],
+      "required_method": "Define non-login capability roles and separate login/service identities. Prohibit runtime inheritance of migration or owner roles. Record role membership and privilege inventory as deployable configuration.",
+      "red_test": "Grant a runtime login membership in owner/migration role; add UPDATE, DELETE, BYPASSRLS, superuser, or CREATE in a trusted schema. Privilege-drift checks must fail.",
+      "qualification_evidence": "Catalog assertions pass after fresh migration, upgrade, restore, and credential rotation in the production-equivalent topology.",
+      "declared_evidence_grade": "E2-R/PARTIAL",
+      "rule_status": "active",
+      "evidence_status": "historical-orphaned",
+      "historical_orphan_refs": [
+        {
+          "red_id": "RED-08",
+          "finding": "Immutability evidence does not yet cover update/delete on both batch and line through every runtime credential and membership path"
+        }
+      ],
+      "source_anchor": "doctrine/DOCTRINE.md:636",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "add8189b6cf720807c33f3561df0717d2769fb5541e8d8fe3e61508851680279"
+    },
+    {
+      "id": "SEC-02",
+      "section": "9. Security and privacy",
+      "title": "Authorization is operation-specific, fail-closed, and independent of UI visibility",
+      "authority": "[C]",
+      "rule_verbatim": "Every authoritative operation shall verify actor, action, resource, scope, and relevant policy. Absence, ambiguity, or dependency failure denies the operation.",
+      "gist": "Every authoritative operation verify actor, action, resource, scope, and relevant policy.",
+      "source_basis": [
+        "S03",
+        "S07"
+      ],
+      "required_method": "Centralize typed authorization at the operation boundary. UI hiding is advisory only. Record the decision evidence and policy version for privileged financial/statutory actions.",
+      "red_test": "Call an operation directly without the UI; omit actor or scope; make the policy service unavailable; guess another entity ID. All must deny safely.",
+      "qualification_evidence": "Integration tests exercise every operation and role/scope combination, including negative and dependency-failure cases.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:654",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "11ab8ef408a883b8eedcb64eca6a3d31fcc4113cac20c16423a63dc6fa16ceaf"
+    },
+    {
+      "id": "SEC-03",
+      "section": "9. Security and privacy",
+      "title": "Scope isolation is enforced below application filtering",
+      "authority": "[C]",
+      "rule_verbatim": "Tenant, entity, group, global, inherited, and explicitly shared scope shall be structurally declared and enforced by database/schema isolation, RLS, composite ownership constraints, or an equivalent lower-layer mechanism.",
+      "gist": "Tenant, entity, group, global, inherited, and explicitly shared scope be structurally declared and enforced by database/schema isolation, R…",
+      "source_basis": [
+        "S03",
+        "S12"
+      ],
+      "required_method": "Every authoritative record declares scope or inherits it through an enforced ownership path. Application filters may improve ergonomics but are never the only control. Test owner/bypass behavior explicitly.",
+      "red_test": "Remove a scope predicate; access another tenant/entity; exploit owner bypass; use a shared reference as private; change inherited ownership. The cross-scope suite must turn red.",
+      "qualification_evidence": "Cross-scope adversarial fixtures pass under real roles after migration, restore, and privilege changes.",
+      "declared_evidence_grade": "RED — CURRENT LEDGER ALLOWS CROSS-ENTITY ACCOUNT REFERENCE",
+      "rule_status": "active",
+      "evidence_status": "historical-orphaned",
+      "historical_orphan_refs": [
+        {
+          "red_id": "RED-02",
+          "finding": "A batch can reference an account from another entity because `account.entity_id` is not matched to `posting_batch.entity_id`"
+        }
+      ],
+      "source_anchor": "doctrine/DOCTRINE.md:672",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "f82115bd9cb0b96da555151f2451f896b0d822e1e8d17ba1ea7a10b43227df85"
+    },
+    {
+      "id": "SEC-04",
+      "section": "9. Security and privacy",
+      "title": "SECURITY DEFINER functions are hardened as privileged code",
+      "authority": "[C]",
+      "rule_verbatim": "A SECURITY DEFINER function shall have a trusted exact search_path, fully qualified references, selective EXECUTE grants, no PUBLIC execution window, least-privileged ownership, and input/authorization checks.",
+      "gist": "SECURITY DEFINER function have trusted exact search_path, fully qualified references, selective EXECUTE grants, no PUBLIC execution window,…",
+      "source_basis": [
+        "S11",
+        "S36"
+      ],
+      "required_method": "Create function and grants in one transaction. Pin a reviewed path such as trusted schema(s) plus `pg_temp` last, or an intentionally empty path with every object qualified. Assert the exact configuration, not merely the presence of `search_path=`.",
+      "red_test": "Reset search_path; set it to `public`; create a shadow object in temp/public; retain PUBLIC EXECUTE; change owner; omit schema qualification. The real privilege tests must fail.",
+      "qualification_evidence": "Exploit fixtures fail on supported PostgreSQL, and catalog assertions match the exact approved function definition and grants.",
+      "declared_evidence_grade": "E3-R/PARTIAL; EXACT SEARCH_PATH ASSERTION MUST BE STRENGTHENED",
+      "rule_status": "active",
+      "evidence_status": "historical-orphaned",
+      "historical_orphan_refs": [
+        {
+          "red_id": "RED-06",
+          "finding": "Search-path check accepts any `search_path=` value rather than the exact approved secure value"
+        }
+      ],
+      "source_anchor": "doctrine/DOCTRINE.md:690",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "d85f7a68e2e1bf5a190333bdb7b54685209beac0fb731f9cfdbaa0e69afa8db3"
+    },
+    {
+      "id": "SEC-05",
+      "section": "9. Security and privacy",
+      "title": "All external and cross-boundary input is untrusted",
+      "authority": "[C]",
+      "rule_verbatim": "HTTP, database output, files, webhooks, extension output, generated artifacts, configuration, and internal-service messages shall be validated against typed and business constraints before authoritative use.",
+      "gist": "HTTP, database output, files, webhooks, extension output, generated artifacts, configuration, and internal-service messages be validated ag…",
+      "source_basis": [
+        "S02",
+        "S05",
+        "S25"
+      ],
+      "required_method": "Validate syntax, type, length, range, required/extra fields, cross-field consistency, scope, and business rules. Parse money and dates exactly. Reject unknown authoritative fields unless a versioned compatibility policy permits them.",
+      "red_test": "Fuzz malformed JSON, overflow, duplicate keys, invalid Unicode, extra fields, cross-scope IDs, code-like expressions, and inconsistent related values. Invalid inputs must fail without partial effect.",
+      "qualification_evidence": "Fuzzing and negative tests pass at every boundary in supported environments.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:708",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "348ed6a19e8e67f18f19b34c1c009e123b7d80c24688cb0935d47279e41abd93"
+    },
+    {
+      "id": "SEC-06",
+      "section": "9. Security and privacy",
+      "title": "Secrets never enter generated artifacts, prompts, fixtures, logs, or data configuration",
+      "authority": "[C]",
+      "rule_verbatim": "Credentials, private keys, tokens, and secret material shall be supplied through governed secret channels and excluded from source, AI context, test fixtures, errors, logs, and tenant-editable records.",
+      "gist": "Credentials, private keys, tokens, and secret material be supplied through governed secret channels and excluded from source, AI context, t…",
+      "source_basis": [
+        "S02",
+        "S05"
+      ],
+      "required_method": "Use secret managers/environment injection with least privilege and rotation. Run secret scanning before commit and on generated output. Redact errors and structured logs by schema.",
+      "red_test": "Seed known canary secrets in prohibited locations; generated output and logs must be rejected. Rotate a secret and verify no old credential remains valid.",
+      "qualification_evidence": "Independent secret scanning and runtime redaction tests pass; incident response can identify exposure without exposing the secret itself.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:726",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "5d756f7e91eba7e82ae65a87666fb85df26aa693f2896fa2299cebdb95d1135e"
+    },
+    {
+      "id": "SEC-07",
+      "section": "9. Security and privacy",
+      "title": "Audit evidence is protected, attributable, and operationally usable",
+      "authority": "[C]",
+      "rule_verbatim": "Authoritative operations and privileged actions shall emit audit evidence containing actor, scope, operation, source, outcome, correlation, timing, and policy references; runtime actors cannot alter it.",
+      "gist": "Authoritative operations and privileged actions emit audit evidence containing actor, scope, operation, source, outcome, correlation, timin…",
+      "source_basis": [
+        "S03",
+        "S28"
+      ],
+      "required_method": "Use append-only or separately protected audit storage, separated credentials, integrity/retention controls, and operator-searchable correlation IDs. Avoid secrets and unnecessary personal data.",
+      "red_test": "Alter or delete an audit record as runtime user; omit actor/outcome; break correlation; inject log control characters; exceed retention without alert. The control must fail.",
+      "qualification_evidence": "Incident rehearsal reconstructs a posting, denial, retry, privilege change, and restatement from protected evidence.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:744",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "31e6af67a3acc3c44b971fd3e8a9bbabd2413fe1605a9ef47c66bad83bf8cf21"
+    },
+    {
+      "id": "SEC-08",
+      "section": "9. Security and privacy",
+      "title": "Personal data is classified, minimized, and purpose-limited at schema definition",
+      "authority": "[C/J]",
+      "rule_verbatim": "Every schema field containing or linking personal data shall declare classification, purpose, lawful/contractual basis where applicable, access scope, retention, and derived-copy behavior.",
+      "gist": "Every schema field containing or linking personal data declare classification, purpose, lawful/contractual basis where applicable, access s…",
+      "source_basis": [
+        "S30",
+        "S31"
+      ],
+      "required_method": "Add privacy metadata to schema definitions and generation inputs. Default to not collecting personal data. Treat persistent identifiers as personal data when linkable.",
+      "red_test": "Add an unclassified personal field; use data for a new purpose; copy into logs/search without policy; retain beyond limit. Governance must fail.",
+      "qualification_evidence": "Privacy inventory reconciles primary data and every derived copy; access and correction workflows are tested.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:762",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "7535bcb6a1b000b191d3f42ac93c58418cd649765176e6b993b8279b80693d95"
+    },
+    {
+      "id": "SEC-09",
+      "section": "9. Security and privacy",
+      "title": "Personal data is not embedded in immutable financial substance",
+      "authority": "[C]",
+      "rule_verbatim": "Append-only ledger facts shall reference governed subjects or counterparties through stable pseudonymous identifiers rather than inline names, addresses, contact details, or free-text personal data.",
+      "gist": "Append-only ledger facts reference governed subjects or counterparties through stable pseudonymous identifiers rather than inline names, ad…",
+      "source_basis": [
+        "S30",
+        "S31"
+      ],
+      "required_method": "Keep personal data in governed mutable/encrypted stores. Use sufficiently granular keys and controlled projections. Prohibit free-text personal identifiers in posting descriptions and dimensions.",
+      "red_test": "Insert a name, email, identity number, address, or linkable free text into immutable lines. Schema or content governance must reject it.",
+      "qualification_evidence": "Data-flow and erasure tests prove that ledger facts remain interpretable after permitted personal-data deletion or key destruction, subject to legal retention.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:780",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "12c141502db0110fdc3362b86e39f024a2dae0ec5ef48f72d684e243c6421ab2"
+    },
+    {
+      "id": "SEC-10",
+      "section": "9. Security and privacy",
+      "title": "Retention, erasure, backups, and derived copies form one privacy control",
+      "authority": "[J/C]",
+      "rule_verbatim": "Retention and erasure decisions shall cover primary records, projections, caches, indexes, logs, exports, backups, replicas, support snapshots, and processors, while recording legal-hold or statutory-retention overrides.",
+      "gist": "Retention and erasure decisions cover primary records, projections, caches, indexes, logs, exports, backups, replicas, support snapshots, a…",
+      "source_basis": [
+        "S30",
+        "S31",
+        "S29"
+      ],
+      "required_method": "Maintain a retention register per data class and jurisdiction. Track derived copies. Define backup expiry, restore-time re-erasure, processor obligations, and legal-hold authority.",
+      "red_test": "Erase only the primary row while a search index, export, backup restore, or processor copy still exposes the data. The privacy verification must turn red.",
+      "qualification_evidence": "Periodic erasure drills include restore from backup and prove reapplication of deletion/retention state.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:798",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "32f2042672044b3ade38cbdcc911ed976c6c01be2c04d4bc019edbaf2dbae69f"
+    },
+    {
+      "id": "DET-01",
+      "section": "10. Determinism and provenance",
+      "title": "AI authorship and deterministic generation are separate pipelines",
+      "authority": "[C]",
+      "rule_verbatim": "AI output is an authoring proposal, not a reproducible build artifact. Only deterministic compilation from a committed definition may claim byte-stable regeneration.",
+      "gist": "AI output is authoring proposal, not reproducible build artifact.",
+      "source_basis": [
+        "S22",
+        "S23"
+      ],
+      "required_method": "Pipeline A produces a reviewed definition committed to source control. Pipeline B deterministically compiles that definition. The committed definition is authoritative; model identity is provenance.",
+      "red_test": "Regenerate an AI proposal and require byte identity; the doctrine gate must reject that claim. Change deterministic compiler input/environment and hide it; reproducibility must fail.",
+      "qualification_evidence": "Independent rebuilds reproduce only the declared deterministic artifacts bit-for-bit.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:818",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "b589799a7b4584f2e31ddfa5a1e03b2662c6ba52abeaad5f54c23f67f5774fd9"
+    },
+    {
+      "id": "DET-02",
+      "section": "10. Determinism and provenance",
+      "title": "Generated expansions are subordinate to reviewed definitions",
+      "authority": "[D]",
+      "rule_verbatim": "Generated modules, schemas, APIs, and scaffolding shall be reproducible projections of small reviewed definitions; domain policy shall not hide only in expansion output.",
+      "gist": "Generated modules, schemas, APIs, and scaffolding be reproducible projections of small reviewed definitions; domain policy not hide only in…",
+      "source_basis": [
+        "S23",
+        "S24"
+      ],
+      "required_method": "Mark generated ownership, prevent hand edits, include generator/version provenance, and regenerate in CI. Escalate generated output when it crosses a risk boundary not covered by controls.",
+      "red_test": "Hand-edit a generated file; introduce behavior not represented in its definition; regenerate with drift. The gate must fail.",
+      "qualification_evidence": "Clean regeneration creates no diff, and representative semantic fixtures confirm the definition means what reviewers intended.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:836",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "713c0084a827971ad319eca4fc155d47a3b6c231b64c0dcf9e97634e36daf64d"
+    },
+    {
+      "id": "DET-03",
+      "section": "10. Determinism and provenance",
+      "title": "Authoring provenance and build provenance are distinct records",
+      "authority": "[C]",
+      "rule_verbatim": "Authoring provenance records how a proposal was created; build provenance records how committed definitions produced deterministic artifacts. Run-varying evidence is not embedded in byte-stable expansions.",
+      "gist": "Authoring provenance records how proposal was created; build provenance records how committed definitions produced deterministic artifacts.",
+      "source_basis": [
+        "S22",
+        "S23"
+      ],
+      "required_method": "Authoring provenance: model/revision, prompt contract, context hash, tools, sampling, proposal ID. Build provenance: source definition hash, deterministic compiler/formatter versions, source commit, run ID, artifact digests. Store sidecar attestations where appropriate.",
+      "red_test": "Embed timestamp or destination commit into a byte-stable artifact; omit source definition or compiler version; claim reproducibility from model identity. The provenance gate must fail.",
+      "qualification_evidence": "An assessor traces any artifact to committed source and qualified toolchain without changing its reproducible digest.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:854",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "ffce323176999fbf569f51d093e8c5dcab7cc367d0e44d334f7b5db929392ef1"
+    },
+    {
+      "id": "DET-04",
+      "section": "10. Determinism and provenance",
+      "title": "Qualification triggers on toolchain change, not ordinary run evidence",
+      "authority": "[C]",
+      "rule_verbatim": "A generator qualification event occurs only when a qualified toolchain component changes, not when definitions, timestamps, run IDs, artifact hashes, or destination commits change.",
+      "gist": "generator qualification event occurs only when qualified toolchain component changes, not when definitions, timestamps, run IDs, artifact h…",
+      "source_basis": [
+        "S22",
+        "S23"
+      ],
+      "required_method": "Qualified components include model family/revision where used, prompt contract, standing-context contract, generator wrapper, deterministic compiler, formatter semantics, tool capability, and generation policy. Qualification runs representative regeneration, semantic diff, full applicable controls, and explicit approval.",
+      "red_test": "Change a qualified component without qualification; or change only a definition/run ID and incorrectly demand qualification. Both governance tests must fail.",
+      "qualification_evidence": "Toolchain registry and qualification fixtures prove correct trigger classification.",
+      "declared_evidence_grade": "E1 — SPECIFIED; CORRECTS THE V5 D4/D5 CONTRADICTION",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:872",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "e15bbf88e4f1d135bb8145ec7a643247dfdd4778bf53927a5f357cafca529854"
+    },
+    {
+      "id": "DET-05",
+      "section": "10. Determinism and provenance",
+      "title": "Canonicalization precedes authoritative hashing or fingerprinting",
+      "authority": "[C]",
+      "rule_verbatim": "Any JSON used for request fingerprints, signatures, evidence digests, or canonical equality shall use a declared canonical form; long integers are strings where double precision cannot represent them exactly.",
+      "gist": "Any JSON used for request fingerprints, signatures, evidence digests, or canonical equality use declared canonical form; long integers are…",
+      "source_basis": [
+        "S21"
+      ],
+      "required_method": "Reject duplicate keys and invalid Unicode; preserve strings; sort properties per the chosen canonical scheme; normalize domain representations before hashing; version the canonicalization policy.",
+      "red_test": "Reorder keys, vary whitespace, encode 2^53+1 as a number, duplicate a property, or change Unicode representation. Semantically equivalent inputs must hash equally; unsafe inputs must fail.",
+      "qualification_evidence": "Independent implementations produce the same canonical bytes and digest for the approved corpus.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:890",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "4952790a6f37766b07719b2c875b80b5a21553516cf16418e7bee325e3a42738"
+    },
+    {
+      "id": "DET-06",
+      "section": "10. Determinism and provenance",
+      "title": "Dependency, source, and doctrine integrity are locked and verifiable",
+      "authority": "[C]",
+      "rule_verbatim": "Verification-bearing artifacts shall pin dependencies and identify the exact doctrine, source, migration, generator, and environment inputs.",
+      "gist": "Verification-bearing artifacts pin dependencies and identify exact doctrine, source, migration, generator, and environment inputs.",
+      "source_basis": [
+        "S02",
+        "S05",
+        "S22",
+        "S23"
+      ],
+      "required_method": "Commit package manifest and lockfile, source hashes, migration ordering, supported runtime/database versions, doctrine digest, and gate commands. CI rejects unpinned or mismatched inputs.",
+      "red_test": "Remove lockfile; alter doctrine/migration; resolve a different transitive version; run an unlisted script. Evidence validation must fail before tests are credited.",
+      "qualification_evidence": "A clean isolated build reproduces dependency resolution and all applicable gates from the sealed bundle.",
+      "declared_evidence_grade": "RED — CURRENT SUPPLIED BUNDLE LACKS PACKAGE MANIFEST/LOCK AND DOCTRINE SHA FILE",
+      "rule_status": "active",
+      "evidence_status": "historical-orphaned",
+      "historical_orphan_refs": [
+        {
+          "red_id": "RED-09",
+          "finding": "Verification package is incomplete for an independent clean run"
+        }
+      ],
+      "source_anchor": "doctrine/DOCTRINE.md:908",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "fe79984fc24ffe4e4b61a21bd258974a91dd60606d6d5cb5a8d9aa7198507af0"
+    },
+    {
+      "id": "EXT-01",
+      "section": "11. Extension and configuration",
+      "title": "Extensions depend only on declared public contracts",
+      "authority": "[C]",
+      "rule_verbatim": "An extension shall use versioned public capabilities and shall not depend on another module’s incidental internal structure.",
+      "gist": "extension use versioned public capabilities and not depend on another module’s incidental internal structure.",
+      "source_basis": [
+        "S24",
+        "S06"
+      ],
+      "required_method": "Publish typed contracts, semantic versions, compatibility metadata, and capability permissions. CI inventories extension dependencies and diffs the public surface.",
+      "red_test": "Import a private path, reach an internal table, rely on DOM structure, or remove/change a public contract without compatibility report. The gate must fail.",
+      "qualification_evidence": "A deployment-specific compatibility report identifies every affected extension before upgrade.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:928",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "0db1e04f795fd25c737bc98b75200cfc6cb6dc1c0b20a5e6d5ca0be7bd061926"
+    },
+    {
+      "id": "EXT-02",
+      "section": "11. Extension and configuration",
+      "title": "The extension-kind registry is closed by default",
+      "authority": "[D]",
+      "rule_verbatim": "Only registered extension kinds may alter system behavior. A new kind requires a bounded authority model, lifecycle, isolation, compatibility semantics, transaction/data scope, and proof that existing kinds cannot represent it honestly.",
+      "gist": "Only registered extension kinds may alter system behavior.",
+      "source_basis": [
+        "S24",
+        "S25"
+      ],
+      "required_method": "Default kinds: hook, policy, field-extension, view-slot, document-type, scheduled-operation. Keep the registry machine-readable and versioned.",
+      "red_test": "Introduce an unnamed injection mechanism or arbitrary callback and label it as an existing kind. Contract validation must reject it.",
+      "qualification_evidence": "Each kind has negative fixtures proving its authority boundary and failure isolation.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:946",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "563bc9dd2f1d4c26626eae9c0852a6528b13c70b6f7ce5c0a620d119ef70e316"
+    },
+    {
+      "id": "EXT-03",
+      "section": "11. Extension and configuration",
+      "title": "Arbitrary overrides, internal imports, and unnamed UI injection are forbidden",
+      "authority": "[C]",
+      "rule_verbatim": "Extensions shall not override arbitrary methods, import internals, monkey-patch runtime behavior, or inject UI at unnamed structural positions.",
+      "gist": "Extensions not override arbitrary methods, import internals, monkey-patch runtime behavior, or inject UI at unnamed structural positions.",
+      "source_basis": [
+        "S24",
+        "S25"
+      ],
+      "required_method": "Provide named hooks, typed policy interfaces, namespaced fields, and named view slots. Enforce import and composition rules statically and at package boundaries.",
+      "red_test": "Add an internal import, prototype/method override, eval-based extension, or XPath/selector injection. Structural gates must fail.",
+      "qualification_evidence": "Repository-wide static analysis and negative fixtures cover every supported extension mechanism.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:964",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "51b9176a22857e823c59524259e377295988f25cb070fe2984a2a986cb4020a9"
+    },
+    {
+      "id": "EXT-04",
+      "section": "11. Extension and configuration",
+      "title": "Configuration selects behavior; it does not contain executable expressions",
+      "authority": "[C]",
+      "rule_verbatim": "Tenant- or user-editable configuration shall contain validated data and enumerated selections, never executable code, expressions, templates with arbitrary evaluation, or dynamic queries.",
+      "gist": "Tenant- or user-editable configuration contain validated data and enumerated selections, never executable code, expressions, templates with…",
+      "source_basis": [
+        "S25"
+      ],
+      "required_method": "Use discriminated unions and allowlisted policy identifiers. Treat any expression language as code requiring version control, review, sandbox, capability restrictions, and a separate extension contract.",
+      "red_test": "Store `eval`, script, formula, SQL, or arbitrary template execution in a configuration row. Schema/static controls must reject it.",
+      "qualification_evidence": "Fuzzing and code-injection fixtures prove no configuration path reaches an execution sink.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:982",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "f94d17301745b810c65ed6e9500ffa48f465a945ba7b368311f41ece6874cd0b"
+    },
+    {
+      "id": "EXT-05",
+      "section": "11. Extension and configuration",
+      "title": "Extension execution declares trust, scope, resources, and failure policy",
+      "authority": "[C]",
+      "rule_verbatim": "Every extension declares execution trust level, data/network scope, resource budget, timeout, transaction participation, required capability, and failure behavior. Untrusted customer code never runs inside financial posting.",
+      "gist": "Every extension declares execution trust level, data/network scope, resource budget, timeout, transaction participation, required capabilit…",
+      "source_basis": [
+        "S03",
+        "S05",
+        "S25"
+      ],
+      "required_method": "Run untrusted work in an isolated process/service with explicit capabilities. Synchronous financial policies must be trusted, deterministic, bounded, and fully evidenced; observers default after commit.",
+      "red_test": "Exceed time/memory/network scope; crash; return malformed data; attempt ledger access; run untrusted code in posting transaction. The host must contain the failure and preserve transaction integrity.",
+      "qualification_evidence": "Resource, timeout, sandbox-escape, and failure-isolation tests pass in production-equivalent deployment.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:1000",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "46a5086472bd337774be40ae2e66494495f84c36f71e99bed5fb33d83b245609"
+    },
+    {
+      "id": "EXT-06",
+      "section": "11. Extension and configuration",
+      "title": "Extension lifecycle and scheduled operations are explicit",
+      "authority": "[C]",
+      "rule_verbatim": "Extensions declare install, migrate, enable, disable, remove, retention, dependency, permission, failure-isolation, and compatibility behavior. A scheduled operation invokes an existing typed operation and embeds no new business logic.",
+      "gist": "Extensions declare install, migrate, enable, disable, remove, retention, dependency, permission, failure-isolation, and compatibility behav…",
+      "source_basis": [
+        "S01",
+        "S06",
+        "S24"
+      ],
+      "required_method": "A scheduled-operation contract declares target operation, schedule/zone, scope, idempotency, overlap, retry, missed-run/catch-up, budget, capability, observability, and recovery.",
+      "red_test": "Disable/remove with retained data; run overlapping schedules; miss a run; change target contract; embed business logic in scheduler. Lifecycle tests must fail or follow the declared outcome.",
+      "qualification_evidence": "Install-upgrade-disable-remove and schedule recovery scenarios pass across supported versions.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:1018",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "78bfed5a6776774dce23d6f01119990010be4d610f18b96a4491c361cbbc86e3"
+    },
+    {
+      "id": "OPS-01",
+      "section": "12. Operations, concurrency, and recovery",
+      "title": "External side effects use durable state, idempotency, and reconciliation",
+      "authority": "[C]",
+      "rule_verbatim": "External submissions, notifications, payments, and other non-transactional effects shall use a durable state machine, idempotency/fingerprint, retry policy, reconciliation, and operator-visible ambiguity handling.",
+      "gist": "External submissions, notifications, payments, and other non-transactional effects use durable state machine, idempotency/fingerprint, retr…",
+      "source_basis": [
+        "S03",
+        "S28",
+        "S35"
+      ],
+      "required_method": "Use transactional outbox or an equivalent durable handoff. Persist request, fingerprint, attempt, acknowledgement, external ID, status transition, and reconciliation result. Treat transport as at-least-once and target effectively-once business effect.",
+      "red_test": "Crash before/after send, lose acknowledgement, duplicate callback, reorder statuses, reuse a key with changed payload, or retry concurrently. The system must converge without duplicate business effect.",
+      "qualification_evidence": "Fault-injection tests and a controlled integration pilot exercise every ambiguity state and operator action.",
+      "declared_evidence_grade": "RED/PARTIAL — CURRENT LEDGER IDEMPOTENCY IS INSUFFICIENT; OUTBOX NOT SUPPLIED",
+      "rule_status": "active",
+      "evidence_status": "historical-orphaned",
+      "historical_orphan_refs": [
+        {
+          "red_id": "RED-04",
+          "finding": "Same idempotency key with a different payload returns the previous batch; no canonical request digest conflict"
+        }
+      ],
+      "source_anchor": "doctrine/DOCTRINE.md:1038",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "067e809f32e87dabf980be77cdef9a5f553e3c4b7a14cea3c1d4652164319a04"
+    },
+    {
+      "id": "OPS-02",
+      "section": "12. Operations, concurrency, and recovery",
+      "title": "Each critical operation declares isolation and retry semantics",
+      "authority": "[C]",
+      "rule_verbatim": "Posting, close, numbering, valuation, allocation, restatement, and projection rebuild shall declare transaction isolation, retryable errors, maximum retries, idempotency identity, and conflict outcome.",
+      "gist": "Posting, close, numbering, valuation, allocation, restatement, and projection rebuild declare transaction isolation, retryable errors, maxi…",
+      "source_basis": [
+        "S13"
+      ],
+      "required_method": "Maintain an operation concurrency matrix. Retry only the complete idempotent operation with bounded backoff. Never reuse results from an aborted transaction.",
+      "red_test": "Inject serialization failure, deadlock, timeout, and connection loss at each step. Partial or duplicate effect must not survive.",
+      "qualification_evidence": "Multi-session tests repeat randomized schedules until the declared invariants hold under sustained contention.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:1056",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "da1c26128534914f1e3ba8232a4de4b918420eab6b5d3c78321d36550d8ff72a"
+    },
+    {
+      "id": "OPS-03",
+      "section": "12. Operations, concurrency, and recovery",
+      "title": "Lock ordering is global and executable",
+      "authority": "[C]",
+      "rule_verbatim": "Any operation acquiring multiple locks shall follow one documented global order and acquire the strongest required mode first where practical.",
+      "gist": "Any operation acquiring multiple locks follow one documented global order and acquire strongest required mode first where practical.",
+      "source_basis": [
+        "S14"
+      ],
+      "required_method": "Define canonical orders such as period → ledger → sequence → account/valuation bucket. Static helpers and runtime assertions enforce order. Transactions do not wait for user input.",
+      "red_test": "Reverse two locks, acquire weaker then upgrade, or hold a transaction through external input. Deadlock/order fixtures must fail.",
+      "qualification_evidence": "High-contention tests show bounded retries and no unhandled deadlocks across supported operations.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:1074",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "3feac8c648c77b5c37fc87dc3934c525d200ba5954b2e0b898ad232cc433e646"
+    },
+    {
+      "id": "OPS-04",
+      "section": "12. Operations, concurrency, and recovery",
+      "title": "Operational risk is observable as a condition with an action",
+      "authority": "[C]",
+      "rule_verbatim": "Projection lag, reconciliation differences, outbox backlog, privilege drift, extension failure, ambiguous submission, restore failure, and surviving mutants shall be observable conditions with owner, severity, and runbook action.",
+      "gist": "Projection lag, reconciliation differences, outbox backlog, privilege drift, extension failure, ambiguous submission, restore failure, and…",
+      "source_basis": [
+        "S03",
+        "S28"
+      ],
+      "required_method": "Define metrics, thresholds, alerts, evidence links, owners, and operator actions. Correlate across operation, batch, entity, request, and external submission.",
+      "red_test": "Create each failure state without emitting an actionable condition, or emit an alert with no owner/runbook. Observability tests must fail.",
+      "qualification_evidence": "Game-day exercises demonstrate detection, diagnosis, action, and closure within declared objectives.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:1092",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "31ce15b23249523ff7bf2857d52aa07ee7bdf77217fe2120a07106164c3373df"
+    },
+    {
+      "id": "OPS-05",
+      "section": "12. Operations, concurrency, and recovery",
+      "title": "Backup existence is not recovery; restore is tested",
+      "authority": "[C]",
+      "rule_verbatim": "Backups, role definitions, configuration, doctrine, migrations, and evidence are not accepted until restoration and post-restore reconciliation succeed.",
+      "gist": "Backups, role definitions, configuration, doctrine, migrations, and evidence are not accepted until restoration and post-restore reconcilia…",
+      "source_basis": [
+        "S16",
+        "S29"
+      ],
+      "required_method": "Test SQL dump or physical/PITR strategy according to recovery objectives. Restore into an isolated supported environment, recreate roles, run migrations and full verification, reconcile financial state, and reapply privacy deletion state.",
+      "red_test": "Corrupt or omit roles, grants, a WAL segment, extension, migration, or deletion register. The restore exercise must detect the defect.",
+      "qualification_evidence": "Governed restore drills meet RPO/RTO and produce reconciled canonical financial state.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:1110",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "8a23fb933baaae63698ad4929a4c4543a1b1d63204647fd5390edee45567f48a"
+    },
+    {
+      "id": "OPS-06",
+      "section": "12. Operations, concurrency, and recovery",
+      "title": "Reports derive from governed immutable facts and versioned projections",
+      "authority": "[C]",
+      "rule_verbatim": "Financial statements and ledger-based statutory reports read from reconciled ledger-derived projections. Other statutory outputs read from governed projections over relevant immutable authoritative facts and subledgers, never mutable live documents.",
+      "gist": "Financial statements and ledger-based statutory reports read from reconciled ledger-derived projections.",
+      "source_basis": [
+        "S18",
+        "S22",
+        "S23"
+      ],
+      "required_method": "Record projection algorithm version, source boundaries, reference data, as-of values, and successful reconciliation. Rebuild from empty projection state. Filed outputs preserve evidence and become authoritative artifacts.",
+      "red_test": "Change live document fields after posting and alter a filed report; rebuild with different result; omit algorithm version. Projection controls must fail.",
+      "qualification_evidence": "Independent rebuilds are canonically equal and reports reconcile to ledger/subledger sources.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:1128",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "b1c7d87b3baf4b15fd8a96328069d2b7ff46c3df6df14edafa4307eb58f18be5"
+    },
+    {
+      "id": "OPS-07",
+      "section": "12. Operations, concurrency, and recovery",
+      "title": "Every control account reconciles to its authoritative subledger",
+      "authority": "[C]",
+      "rule_verbatim": "Receivables, payables, cash/bank, tax, payroll, fixed assets, intercompany, inventory, and other control accounts shall reconcile to their authoritative subledgers under declared timing and exception policies.",
+      "gist": "Receivables, payables, cash/bank, tax, payroll, fixed assets, intercompany, inventory, and other control accounts reconcile to their author…",
+      "source_basis": [
+        "S01",
+        "S17",
+        "S18"
+      ],
+      "required_method": "Define reconciliation formula, timing, expected temporary differences, exception workflow, owner, and close gate. Inventory uses its declared valuation policy rather than a naive quantity-times-value identity.",
+      "red_test": "Drop a subledger item, post to wrong control account, alter a cost layer, create timing difference outside policy, or omit an intercompany item. Reconciliation must turn red.",
+      "qualification_evidence": "Close-cycle rehearsals produce zero unexplained differences and retain resolution evidence.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:1146",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "664bb30a100c0b9f0e946ceca806594d4592bd44d01a1504e36b38d04d6aba49"
+    },
+    {
+      "id": "OPS-08",
+      "section": "12. Operations, concurrency, and recovery",
+      "title": "Every production defect becomes a regression and, where material, a mutant",
+      "authority": "[C]",
+      "rule_verbatim": "A defect is not closed until a test reproduces it, the fix passes, and a domain mutant or equivalent negative fixture proves the controlling suite would detect its recurrence.",
+      "gist": "defect is not closed until test reproduces it, fix passes, and domain mutant or equivalent negative fixture proves controlling suite would…",
+      "source_basis": [
+        "S02",
+        "S27"
+      ],
+      "required_method": "Maintain incident lineage, reproduction, control mapping, regression, mutant, fix, and release evidence. The corpus only grows unless equivalence or obsolescence is proved.",
+      "red_test": "Fix code without a failing reproduction; add a test that passes before the fix; remove an incident mutant. Governance must fail.",
+      "qualification_evidence": "Release gate demonstrates the regression red on the faulty baseline or mutant and green on the fix.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:1164",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "ceb6d29bcdb1d94cd4c5dbc5cc294789868a17873e9bb84a996b3f7ea36d2c9c"
+    },
+    {
+      "id": "JUR-01",
+      "section": "13. Jurisdictional controls",
+      "title": "Jurisdiction rules are versioned deployment inputs, not global assumptions",
+      "authority": "[J]",
+      "rule_verbatim": "Numbering, tax point, retention, residency, statutory schema, correction window, rounding, filing calendar, and mandatory fields shall be declared per jurisdiction and effective period.",
+      "gist": "Numbering, tax point, retention, residency, statutory schema, correction window, rounding, filing calendar, and mandatory fields be declare…",
+      "source_basis": [
+        "S30",
+        "S31",
+        "S32"
+      ],
+      "required_method": "Maintain a jurisdiction register with source URL, publication/version, effective dates, applicability, interpretation owner, tests, and supersession. No jurisdiction is inherited by convenience.",
+      "red_test": "Deploy without a complete applicable register; use an expired schema/version; apply one jurisdiction’s rule globally. The launch gate must fail.",
+      "qualification_evidence": "Qualified legal/accounting review and regulator-sourced fixtures pass for the deployment’s effective date.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:1184",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "909024b9d5cca2571d35cf9b15d51475712f6853f74ce8d1b0a58e5cce50bb72"
+    },
+    {
+      "id": "JUR-02",
+      "section": "13. Jurisdictional controls",
+      "title": "Malaysia MyInvois integration tracks current official guideline and SDK versions",
+      "authority": "[J]",
+      "rule_verbatim": "For Malaysia, the integration shall pin the applicable LHDN e-Invoice Guideline, Specific Guideline, SDK/document version, validation rules, mandatory fields, and effective programme dates.",
+      "gist": "For Malaysia, integration pin applicable LHDN e-Invoice Guideline, Specific Guideline, SDK/document version, validation rules, mandatory fi…",
+      "source_basis": [
+        "S32",
+        "S33"
+      ],
+      "required_method": "Record exact document and SDK versions in the jurisdiction register and generated validation contracts. Requalify on regulator change; do not silently accept new versions.",
+      "red_test": "Change SDK document version, mandatory field, tax-exemption interpretation, or effective period without qualification. Jurisdiction gates must fail.",
+      "qualification_evidence": "Official sample/validation corpus and controlled sandbox/pilot submissions pass for the applicable taxpayer phase.",
+      "declared_evidence_grade": "E1 — SPECIFIED; GO-LIVE NOT QUALIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:1202",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "d40bf2c13cefd46419dbdff5fe134463cf4834f75f1d2fa43076bbd296c48051"
+    },
+    {
+      "id": "JUR-03",
+      "section": "13. Jurisdictional controls",
+      "title": "Statutory correction windows are authority-derived and time-aware",
+      "authority": "[J]",
+      "rule_verbatim": "MyInvois rejection/cancellation eligibility shall be determined from the authority’s document-type workflow parameters and validation timestamp; after the allowed window, correction uses the applicable credit/debit/refund mechanism.",
+      "gist": "MyInvois rejection/cancellation eligibility be determined from authority’s document-type workflow parameters and validation timestamp; afte…",
+      "source_basis": [
+        "S34"
+      ],
+      "required_method": "Persist authority validation time and workflow/version. Query or cache document-type workflow parameters under a versioned policy. Never infer the window from issue date or local clock alone.",
+      "red_test": "Use document date instead of validation time; accept after expiry; reject before expiry; hard-code a window inconsistent with authority parameters. Tests must fail.",
+      "qualification_evidence": "Sandbox/pilot scenarios cover boundary seconds, delayed callbacks, timezone conversion, and post-window correction.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:1220",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "223a0a7955793909eee3a73e245082abed173cc175f9aa2c32c28c7e68363026"
+    },
+    {
+      "id": "JUR-04",
+      "section": "13. Jurisdictional controls",
+      "title": "Privacy, retention, and launch readiness are explicit go-live gates",
+      "authority": "[J/C]",
+      "rule_verbatim": "No jurisdictional feature goes live until applicable privacy, retention, schema, submission, correction, numbering, monitoring, recovery, and operator procedures are qualified.",
+      "gist": "No jurisdictional feature goes live until applicable privacy, retention, schema, submission, correction, numbering, monitoring, recovery, a…",
+      "source_basis": [
+        "S30",
+        "S31",
+        "S32",
+        "S33",
+        "S34"
+      ],
+      "required_method": "Use a jurisdiction launch matrix mapping every rule to source, implementation, negative tests, qualification environment, accountable owner, and residual risk acceptance.",
+      "red_test": "Attempt production enablement with an open blocking item, unqualified regulator version, missing restore, or untested correction path. Deployment must fail closed.",
+      "qualification_evidence": "Named business, accounting/tax, privacy, security, and engineering owners approve a complete evidence package.",
+      "declared_evidence_grade": "E1 — SPECIFIED",
+      "rule_status": "active",
+      "evidence_status": "specified",
+      "historical_orphan_refs": [],
+      "source_anchor": "doctrine/DOCTRINE.md:1238",
+      "source_document_sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "rule_text_sha256": "2fb0a92e8b6dc7db7b83d34dcfd304e32fcbb3bfa988edd82663e814b9d68901"
+    }
+  ],
+  "verification_controls": [
+    {
+      "id": "V01",
+      "title": "Privilege topology",
+      "primary_rules": [
+        "LED-01",
+        "LED-02",
+        "SEC-01",
+        "SEC-04"
+      ],
+      "must_prove": "Runtime roles cannot update/delete or directly insert; capability grants/configuration exact",
+      "required_red_condition": "Grant or role-membership escalation"
+    },
+    {
+      "id": "V02",
+      "title": "Atomic batch balance",
+      "primary_rules": [
+        "LED-03"
+      ],
+      "must_prove": "No partial or functionally imbalanced batch commits",
+      "required_red_condition": "Remove/defer incorrectly the balance guard"
+    },
+    {
+      "id": "V03",
+      "title": "Source balance before rounding",
+      "primary_rules": [
+        "LED-04"
+      ],
+      "must_prove": "Economic source balances before conversion",
+      "required_red_condition": "Debit 100 / credit 99 at 1:1"
+    },
+    {
+      "id": "V04",
+      "title": "Rounding boundary",
+      "primary_rules": [
+        "LED-05",
+        "MON-04"
+      ],
+      "must_prove": "Correct registered policy and explicit line",
+      "required_red_condition": "Half-even→half-up; hidden adjustment"
+    },
+    {
+      "id": "V05",
+      "title": "Scope integrity",
+      "primary_rules": [
+        "LED-08",
+        "SEC-03"
+      ],
+      "must_prove": "Account/ledger/record scope cannot cross without explicit authority",
+      "required_red_condition": "Remove entity/scope predicate"
+    },
+    {
+      "id": "V06",
+      "title": "Idempotency fingerprint",
+      "primary_rules": [
+        "LED-07",
+        "OPS-01"
+      ],
+      "must_prove": "Same key+same digest repeats; changed digest conflicts; concurrency one effect",
+      "required_red_condition": "Reuse key with changed amount/account/entity"
+    },
+    {
+      "id": "V07",
+      "title": "Exact reversal",
+      "primary_rules": [
+        "LED-06",
+        "TIM-05"
+      ],
+      "must_prove": "Linkage, monetary and dimensional negation, original rate basis",
+      "required_red_condition": "Omit link; change dimension/rate"
+    },
+    {
+      "id": "V08",
+      "title": "Exact money transport",
+      "primary_rules": [
+        "MON-01",
+        "MON-06"
+      ],
+      "must_prove": "Values survive every boundary exactly",
+      "required_red_condition": "2^53+1 and bigint-range corpus"
+    },
+    {
+      "id": "V09",
+      "title": "Typed evidence",
+      "primary_rules": [
+        "LED-09"
+      ],
+      "must_prove": "Policy/reference versions are valid and resolvable",
+      "required_red_condition": "Non-empty meaningless JSON"
+    },
+    {
+      "id": "V10",
+      "title": "Temporal governance",
+      "primary_rules": [
+        "TIM-01–TIM-04"
+      ],
+      "must_prove": "Named governing dates/policies and as-of behavior",
+      "required_red_condition": "Substitute document date for accounting date"
+    },
+    {
+      "id": "V11",
+      "title": "Cross-scope authorization",
+      "primary_rules": [
+        "SEC-02",
+        "SEC-03"
+      ],
+      "must_prove": "All declared scopes fail closed",
+      "required_red_condition": "Tenant/entity/group bypass"
+    },
+    {
+      "id": "V12",
+      "title": "Mutation sensitivity",
+      "primary_rules": [
+        "GOV-03",
+        "OPS-08"
+      ],
+      "must_prove": "Critical corpus killed by real controls",
+      "required_red_condition": "Any surviving critical mutant"
+    },
+    {
+      "id": "V13",
+      "title": "Oracle diversity",
+      "primary_rules": [
+        "GOV-04",
+        "MON-05",
+        "OPS-06",
+        "OPS-07"
+      ],
+      "must_prove": "Independent calculation detects common-mode defects",
+      "required_red_condition": "Consistently wrong but self-balancing conversion"
+    },
+    {
+      "id": "V14",
+      "title": "Provenance and reproducibility",
+      "primary_rules": [
+        "GOV-05",
+        "DET-01–DET-06"
+      ],
+      "must_prove": "Complete bundle and byte-stable deterministic expansion",
+      "required_red_condition": "Missing lock/hash/input; hidden toolchain change"
+    },
+    {
+      "id": "V15",
+      "title": "Concurrency",
+      "primary_rules": [
+        "LED-10",
+        "OPS-02",
+        "OPS-03"
+      ],
+      "must_prove": "Declared interleavings, retries, one effect",
+      "required_red_condition": "Close/post race; lock inversion"
+    },
+    {
+      "id": "V16",
+      "title": "Projection and reconciliation",
+      "primary_rules": [
+        "OPS-06",
+        "OPS-07"
+      ],
+      "must_prove": "Canonical rebuild and subledger control-account equality",
+      "required_red_condition": "Drop/misclassify a subledger fact"
+    },
+    {
+      "id": "V17",
+      "title": "Restore",
+      "primary_rules": [
+        "OPS-05",
+        "SEC-10"
+      ],
+      "must_prove": "Restored roles/data/evidence reconcile and privacy state reapplies",
+      "required_red_condition": "Omit role/grant/deletion state"
+    },
+    {
+      "id": "V18",
+      "title": "Jurisdiction launch",
+      "primary_rules": [
+        "JUR-01–JUR-04"
+      ],
+      "must_prove": "Applicable regulator version, correction, privacy, recovery, operations",
+      "required_red_condition": "Enable with open blocking evidence"
+    }
+  ],
+  "forbidden": [
+    {
+      "number": 1,
+      "text": "Calling a citation proof of AFENDA implementation."
+    },
+    {
+      "number": 2,
+      "text": "Calling a green test proof when the mapped fault cannot make it red."
+    },
+    {
+      "number": 3,
+      "text": "Calling anything battle-proven below E6."
+    },
+    {
+      "number": 4,
+      "text": "Binary floating point in an authoritative monetary path."
+    },
+    {
+      "number": 5,
+      "text": "Direct request-role insertion into posted ledger tables."
+    },
+    {
+      "number": 6,
+      "text": "Runtime UPDATE or DELETE of posted financial substance."
+    },
+    {
+      "number": 7,
+      "text": "Rounding used to repair an economically unbalanced source."
+    },
+    {
+      "number": 8,
+      "text": "Silent rounding or an unregistered rounding boundary."
+    },
+    {
+      "number": 9,
+      "text": "Cross-scope access protected only by application filtering."
+    },
+    {
+      "number": 10,
+      "text": "An idempotency key accepted with a different canonical payload."
+    },
+    {
+      "number": 11,
+      "text": "A technical reversal without exact linkage and fact equality."
+    },
+    {
+      "number": 12,
+      "text": "An unnamed, inferred, or overloaded governing date."
+    },
+    {
+      "number": 13,
+      "text": "An authoritative decision based on ambient clock, randomness, locale, environment, or unrecorded external response."
+    },
+    {
+      "number": 14,
+      "text": "User-authored or runtime-editable executable business logic stored as data."
+    },
+    {
+      "number": 15,
+      "text": "Arbitrary method override, internal import, or unnamed injection point."
+    },
+    {
+      "number": 16,
+      "text": "Untrusted extension code inside financial posting."
+    },
+    {
+      "number": 17,
+      "text": "Personal data inline in immutable financial substance without a justified jurisdictional requirement and approved design."
+    },
+    {
+      "number": 18,
+      "text": "A critical invariant graded only through the implementation’s own calculation path."
+    },
+    {
+      "number": 19,
+      "text": "A verification claim without a complete reproducible evidence bundle."
+    },
+    {
+      "number": 20,
+      "text": "Loading a doctrine authority other than this hash-matched file."
+    }
+  ],
+  "gate_cadence": [
+    {
+      "gate": "Fast",
+      "contents": "Rule mapping, types/static checks, V01–V05, V08–V11 as affected",
+      "trigger": "Every commit"
+    },
+    {
+      "gate": "Merge",
+      "contents": "All affected controls, property sequences, affected V12 mutants, affected V13 oracle",
+      "trigger": "Every merge request"
+    },
+    {
+      "gate": "Nightly",
+      "contents": "Full V12 corpus, full V13 comparisons, V15 stress, V16 rebuild",
+      "trigger": "Scheduled"
+    },
+    {
+      "gate": "Qualification",
+      "contents": "V01–V18 in supported deployment topology, generator qualification, migration/restore",
+      "trigger": "Before release and on qualified toolchain/platform change"
+    },
+    {
+      "gate": "Production",
+      "contents": "Reconciliation, privilege/scope drift, outbox/submission ambiguity, restore cadence, incident regressions",
+      "trigger": "Governed operational cadence"
+    }
+  ],
+  "historical_orphan_findings": [
+    {
+      "red_id": "RED-01",
+      "mapped_rules": [
+        "LED-04",
+        "LED-05"
+      ],
+      "finding": "`post_batch` does not first prove source debit=credit; a small economic imbalance can be posted as “rounding” under `v_tol := line_count + 1`",
+      "required_proof_of_closure": "100 debit / 99 credit at 1:1 rejects; domain mutant killed"
+    },
+    {
+      "red_id": "RED-02",
+      "mapped_rules": [
+        "LED-08",
+        "SEC-03"
+      ],
+      "finding": "A batch can reference an account from another entity because `account.entity_id` is not matched to `posting_batch.entity_id`",
+      "required_proof_of_closure": "Composite ownership enforcement and cross-entity mutant"
+    },
+    {
+      "red_id": "RED-03",
+      "mapped_rules": [
+        "MON-01",
+        "MON-06"
+      ],
+      "finding": "JavaScript checks construct/convert authoritative amounts through `Number`, losing integers beyond 2^53−1",
+      "required_proof_of_closure": "String/bigint transport and boundary corpus"
+    },
+    {
+      "red_id": "RED-04",
+      "mapped_rules": [
+        "LED-07",
+        "OPS-01"
+      ],
+      "finding": "Same idempotency key with a different payload returns the previous batch; no canonical request digest conflict",
+      "required_proof_of_closure": "Same-key/different-payload rejection and concurrent test"
+    },
+    {
+      "red_id": "RED-05",
+      "mapped_rules": [
+        "LED-06"
+      ],
+      "finding": "V4 does not require `reverses_batch_id`, dimension equality, or independent original-basis comparison",
+      "required_proof_of_closure": "Independent exact-reversal control and mutants"
+    },
+    {
+      "red_id": "RED-06",
+      "mapped_rules": [
+        "SEC-04"
+      ],
+      "finding": "Search-path check accepts any `search_path=` value rather than the exact approved secure value",
+      "required_proof_of_closure": "Unsafe `public`/temp path mutants killed"
+    },
+    {
+      "red_id": "RED-07",
+      "mapped_rules": [
+        "LED-09"
+      ],
+      "finding": "Evidence constraint proves only non-empty JSON, not typed or resolvable policy/reference versions",
+      "required_proof_of_closure": "Registry/schema/reference validation and mutant"
+    },
+    {
+      "red_id": "RED-08",
+      "mapped_rules": [
+        "LED-01",
+        "SEC-01"
+      ],
+      "finding": "Immutability evidence does not yet cover update/delete on both batch and line through every runtime credential and membership path",
+      "required_proof_of_closure": "Complete role/operation matrix on supported PostgreSQL"
+    },
+    {
+      "red_id": "RED-09",
+      "mapped_rules": [
+        "GOV-05",
+        "DET-06"
+      ],
+      "finding": "Verification package is incomplete for an independent clean run",
+      "required_proof_of_closure": "Manifest, lockfile, dependency, hash seal, commands, supported environment"
+    }
+  ]
+}

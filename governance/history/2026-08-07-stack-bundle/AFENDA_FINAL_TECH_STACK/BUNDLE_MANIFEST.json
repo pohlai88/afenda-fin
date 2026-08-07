@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "bundle": "AFENDA Final Technology Stack",
+  "stack_version": "2.0",
+  "as_of": "2026-08-07",
+  "hash_algorithm": "SHA-256",
+  "files": [
+    {
+      "path": "ADOPTION_CHECKLIST.md",
+      "size_bytes": 3603,
+      "sha256": "bef250d805fe6282f4e45aa0b196456b28251a96ce3c9448f5846896fb04e273"
+    },
+    {
+      "path": "AFENDA_FINAL_TECH_STACK.docx",
+      "size_bytes": 37984,
+      "sha256": "092db6abf6e236d73b808471ab88757a43459fda6dcc062340801096d8aa88c9"
+    },
+    {
+      "path": "AFENDA_FINAL_TECH_STACK.pdf",
+      "size_bytes": 339283,
+      "sha256": "1042ad5b96a6d98e8bfd154c8d6c8a168fb5b77cb8d712802cde1514c543dec3"
+    },
+    {
+      "path": "FINAL_APPROVAL.md",
+      "size_bytes": 1960,
+      "sha256": "8c2d0da927273dd5579e73f17bd46d08714a892291bab6a84ac9697e45057b81"
+    },
+    {
+      "path": "README.md",
+      "size_bytes": 1205,
+      "sha256": "c895ae3b7eda61251014ccc4417a75cc071632b6ecdce3e1bf2421fb7aaf1764"
+    },
+    {
+      "path": "SOURCE_REGISTER.md",
+      "size_bytes": 5348,
+      "sha256": "74502b931bf448cb155297f60c5b3b6eb707d966b955a67250b2f768519ccb69"
+    },
+    {
+      "path": "STACK.md",
+      "size_bytes": 47327,
+      "sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65"
+    },
+    {
+      "path": "STACK.sha256",
+      "size_bytes": 75,
+      "sha256": "3a575c733c26b2daeb93f0fb16d2e6d2c53fb54f749fa481e53fc0a72e7ddf8b"
+    },
+    {
+      "path": "STACK_CONTROL_MAP.json",
+      "size_bytes": 12151,
+      "sha256": "5cf106d8d0cd1e7fa6fddfcc0b6a4d2e6b475487bc0c4195b1903f8ed1048026"
+    },
+    {
+      "path": "VALIDATION.md",
+      "size_bytes": 1706,
+      "sha256": "da958d3aeadea67dbf463ae4ee53314c65d1390aa4b1b2bf5808b2131876ea77"
+    },
+    {
+      "path": "VERSION_BASELINE.json",
+      "size_bytes": 1969,
+      "sha256": "1671ee7bd50b311747f57de0bb421a55c02f178673a69f8374f18988ef632045"
+    }
+  ]
+}

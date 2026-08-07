@@ -1,0 +1,462 @@
+{
+  "schema_version": 1,
+  "stack_version": "2.0",
+  "as_of": "2026-08-07",
+  "selections": [
+    {
+      "id": "SEL-01",
+      "title": "Strict TypeScript as the single application language",
+      "authority": "[C]",
+      "controls": [
+        "SCC-01",
+        "SCC-02",
+        "SCC-03"
+      ]
+    },
+    {
+      "id": "SEL-02",
+      "title": "TypeScript 7 native compiler plus TypeScript 6 compatibility tooling",
+      "authority": "[D]",
+      "controls": [
+        "SCC-01",
+        "SCC-04"
+      ]
+    },
+    {
+      "id": "SEL-03",
+      "title": "Node.js 24 LTS runtime",
+      "authority": "[C]",
+      "controls": [
+        "SCC-04"
+      ]
+    },
+    {
+      "id": "SEL-04",
+      "title": "pnpm workspaces and Turborepo",
+      "authority": "[D]",
+      "controls": [
+        "SCC-04",
+        "SCC-05"
+      ]
+    },
+    {
+      "id": "SEL-05",
+      "title": "Plain PostgreSQL 18 with PostgreSQL 17 compatibility floor",
+      "authority": "[C]",
+      "controls": [
+        "SCC-06",
+        "SCC-07"
+      ]
+    },
+    {
+      "id": "SEL-06",
+      "title": "node-postgres (pg) as canonical PostgreSQL driver",
+      "authority": "[C]",
+      "controls": [
+        "SCC-08",
+        "SCC-09"
+      ]
+    },
+    {
+      "id": "SEL-07",
+      "title": "Kysely plus schema-derived code generation",
+      "authority": "[C]",
+      "controls": [
+        "SCC-10"
+      ]
+    },
+    {
+      "id": "SEL-08",
+      "title": "Reviewed forward-only SQL migrations",
+      "authority": "[C]",
+      "controls": [
+        "SCC-07",
+        "SCC-11"
+      ]
+    },
+    {
+      "id": "SEL-09",
+      "title": "Hono as a Node-only thin HTTP adapter",
+      "authority": "[D]",
+      "controls": [
+        "SCC-12"
+      ]
+    },
+    {
+      "id": "SEL-10",
+      "title": "Zod 4 transport schemas and REST/OpenAPI contracts",
+      "authority": "[C]",
+      "controls": [
+        "SCC-03",
+        "SCC-12"
+      ]
+    },
+    {
+      "id": "SEL-11",
+      "title": "React 19.2 patched line with Vite 8.1 SPA",
+      "authority": "[C]",
+      "controls": [
+        "SCC-14"
+      ]
+    },
+    {
+      "id": "SEL-12",
+      "title": "TanStack Router, Query, Table and Virtual; React Hook Form",
+      "authority": "[D]",
+      "controls": [
+        "SCC-13"
+      ]
+    },
+    {
+      "id": "SEL-13",
+      "title": "Tailwind CSS 4 and shadcn/ui source-owned components",
+      "authority": "[D]",
+      "controls": [
+        "SCC-05"
+      ]
+    },
+    {
+      "id": "SEL-14",
+      "title": "Standard OIDC boundary with Keycloak as reference provider",
+      "authority": "[C] protocol / [D] provider",
+      "controls": [
+        "SCC-15"
+      ]
+    },
+    {
+      "id": "SEL-15",
+      "title": "Graphile Worker behind an owned JobQueue adapter",
+      "authority": "[D]",
+      "controls": [
+        "SCC-16"
+      ]
+    },
+    {
+      "id": "SEL-16",
+      "title": "AFENDA-owned transactional outbox for financial/statutory effects",
+      "authority": "[C]",
+      "controls": [
+        "SCC-17"
+      ]
+    },
+    {
+      "id": "SEL-17",
+      "title": "S3-compatible object storage and PostgreSQL search first",
+      "authority": "[D]",
+      "controls": [
+        "SCC-05"
+      ]
+    },
+    {
+      "id": "SEL-18",
+      "title": "OpenTelemetry-first observability",
+      "authority": "[C]",
+      "controls": [
+        "SCC-05"
+      ]
+    },
+    {
+      "id": "SEL-19",
+      "title": "Vitest, fast-check, StrykerJS and owned domain mutants",
+      "authority": "[C]",
+      "controls": [
+        "SCC-18"
+      ]
+    },
+    {
+      "id": "SEL-20",
+      "title": "PGlite fast lane and Testcontainers PostgreSQL authoritative lane",
+      "authority": "[C]",
+      "controls": [
+        "SCC-07",
+        "SCC-19"
+      ]
+    },
+    {
+      "id": "SEL-21",
+      "title": "Playwright for end-to-end ERP workflows",
+      "authority": "[D]",
+      "controls": [
+        "SCC-20"
+      ]
+    },
+    {
+      "id": "SEL-22",
+      "title": "Governed reporting schemas, read-only Metabase and CDC readiness",
+      "authority": "[C] model / [D] tool",
+      "controls": [
+        "SCC-21",
+        "SCC-22"
+      ]
+    },
+    {
+      "id": "SEL-23",
+      "title": "OCI containers and Docker Compose first",
+      "authority": "[C]",
+      "controls": [
+        "SCC-23"
+      ]
+    },
+    {
+      "id": "SEL-24",
+      "title": "Modular monolith in one repository",
+      "authority": "[C]",
+      "controls": [
+        "SCC-05",
+        "SCC-24"
+      ]
+    },
+    {
+      "id": "SEL-25",
+      "title": "Functions, immutable data and explicit capability objects",
+      "authority": "[C]",
+      "controls": [
+        "SCC-24"
+      ]
+    },
+    {
+      "id": "SEL-26",
+      "title": "AI as proposal-only capability",
+      "authority": "[C]",
+      "controls": [
+        "SCC-25"
+      ]
+    },
+    {
+      "id": "SEL-27",
+      "title": "Declarative/trusted extensions first; untrusted code out of process",
+      "authority": "[C]",
+      "controls": [
+        "SCC-26"
+      ]
+    }
+  ],
+  "controls": [
+    {
+      "id": "SCC-01",
+      "name": "TypeScript native/compat parity",
+      "applies_to": [
+        "SEL-01",
+        "SEL-02"
+      ],
+      "required_outcome": "TypeScript 7 native check, TypeScript 6 stable-order compatibility check, and type-aware lint all pass."
+    },
+    {
+      "id": "SCC-02",
+      "name": "Strictness and no-any",
+      "applies_to": [
+        "SEL-01"
+      ],
+      "required_outcome": "Strict compiler options enabled; application any and unchecked casts are rejected."
+    },
+    {
+      "id": "SCC-03",
+      "name": "Authoritative money type safety",
+      "applies_to": [
+        "SEL-01",
+        "SEL-10"
+      ],
+      "required_outcome": "No JavaScript number in authoritative money contracts or code paths; JSON money uses canonical integer strings."
+    },
+    {
+      "id": "SCC-04",
+      "name": "Exact toolchain pins",
+      "applies_to": [
+        "SEL-02",
+        "SEL-03",
+        "SEL-04"
+      ],
+      "required_outcome": "Runtime, compilers, package manager, dependencies and lockfile are exact and CI-verified."
+    },
+    {
+      "id": "SCC-05",
+      "name": "Module boundaries",
+      "applies_to": [
+        "SEL-24",
+        "SEL-25"
+      ],
+      "required_outcome": "Dependency graph forbids domain-to-adapter imports, internal subpaths and cycles."
+    },
+    {
+      "id": "SCC-06",
+      "name": "Provider-neutral financial core",
+      "applies_to": [
+        "SEL-05"
+      ],
+      "required_outcome": "No managed-vendor SDK or provider-only SQL primitive in ledger and database kernel paths."
+    },
+    {
+      "id": "SCC-07",
+      "name": "Dual PostgreSQL major qualification",
+      "applies_to": [
+        "SEL-05",
+        "SEL-08",
+        "SEL-20"
+      ],
+      "required_outcome": "Migrations and authoritative database controls pass separately on PostgreSQL 18 and PostgreSQL 17."
+    },
+    {
+      "id": "SCC-08",
+      "name": "Single-client transaction rule",
+      "applies_to": [
+        "SEL-06"
+      ],
+      "required_outcome": "Every transaction uses one checked-out node-postgres client from BEGIN through COMMIT/ROLLBACK."
+    },
+    {
+      "id": "SCC-09",
+      "name": "Exact database type parsing",
+      "applies_to": [
+        "SEL-06"
+      ],
+      "required_outcome": "bigint/numeric/date-time authoritative values are parsed under owned rules, not implicit JavaScript coercion."
+    },
+    {
+      "id": "SCC-10",
+      "name": "Schema-derived Kysely types",
+      "applies_to": [
+        "SEL-07"
+      ],
+      "required_outcome": "Kysely types regenerate from migrated PostgreSQL; drift fails CI."
+    },
+    {
+      "id": "SCC-11",
+      "name": "Migration integrity",
+      "applies_to": [
+        "SEL-08"
+      ],
+      "required_outcome": "Migration checksums, ordering and review status are verified; no schema push in shared or production environments."
+    },
+    {
+      "id": "SCC-12",
+      "name": "Hono runtime and contract path",
+      "applies_to": [
+        "SEL-09",
+        "SEL-10"
+      ],
+      "required_outcome": "Only @hono/node-server and @hono/zod-openapi appear in authoritative API code; Hono RPC is prohibited."
+    },
+    {
+      "id": "SCC-13",
+      "name": "One frontend routing mode",
+      "applies_to": [
+        "SEL-12"
+      ],
+      "required_outcome": "TanStack file-based routing only; generated route tree drift fails CI."
+    },
+    {
+      "id": "SCC-14",
+      "name": "No React Server Components",
+      "applies_to": [
+        "SEL-11"
+      ],
+      "required_outcome": "No react-server-dom-* dependency and no Server Components/Server Actions architecture."
+    },
+    {
+      "id": "SCC-15",
+      "name": "OIDC boundary",
+      "applies_to": [
+        "SEL-14"
+      ],
+      "required_outcome": "Authentication uses standard OIDC; contextual ERP authorization remains inside AFENDA operations."
+    },
+    {
+      "id": "SCC-16",
+      "name": "Queue adapter boundary",
+      "applies_to": [
+        "SEL-15"
+      ],
+      "required_outcome": "Graphile Worker appears only behind the owned JobQueue adapter; private worker tables are not queried."
+    },
+    {
+      "id": "SCC-17",
+      "name": "Financial outbox required",
+      "applies_to": [
+        "SEL-16"
+      ],
+      "required_outcome": "Every authoritative external financial/statutory effect is created through the owned outbox state machine in the source transaction."
+    },
+    {
+      "id": "SCC-18",
+      "name": "Critical mutation survival zero",
+      "applies_to": [
+        "SEL-19"
+      ],
+      "required_outcome": "All critical TypeScript and domain mutants are killed; exceptions require time-boxed Owned approval."
+    },
+    {
+      "id": "SCC-19",
+      "name": "Concurrency lane enforcement",
+      "applies_to": [
+        "SEL-20"
+      ],
+      "required_outcome": "Concurrency-tagged tests are rejected on PGlite and run on real multi-session PostgreSQL."
+    },
+    {
+      "id": "SCC-20",
+      "name": "Browser workflow gate",
+      "applies_to": [
+        "SEL-21"
+      ],
+      "required_outcome": "Playwright verifies the vertical ERP flow and audit evidence before release."
+    },
+    {
+      "id": "SCC-21",
+      "name": "Read-only BI boundary",
+      "applies_to": [
+        "SEL-22"
+      ],
+      "required_outcome": "BI role has SELECT only on reporting/analytics schemas and no posting-function execution."
+    },
+    {
+      "id": "SCC-22",
+      "name": "CDC slot safety",
+      "applies_to": [
+        "SEL-22"
+      ],
+      "required_outcome": "No logical replication slot exists without a named live consumer, lag alert, WAL budget and removal procedure."
+    },
+    {
+      "id": "SCC-23",
+      "name": "Reproducible self-host profile",
+      "applies_to": [
+        "SEL-23"
+      ],
+      "required_outcome": "After lockfile dependencies and digest-pinned images are acquired, the stack and verification run with external egress denied."
+    },
+    {
+      "id": "SCC-24",
+      "name": "Explicit application architecture",
+      "applies_to": [
+        "SEL-24",
+        "SEL-25"
+      ],
+      "required_outcome": "No decorator DI, service locator, class-based domain inheritance, implicit transaction or hidden runtime module discovery."
+    },
+    {
+      "id": "SCC-25",
+      "name": "AI cannot post",
+      "applies_to": [
+        "SEL-26"
+      ],
+      "required_outcome": "AI identities and proposal workers cannot call or insert into the ledger; human-approved operation path remains mandatory."
+    },
+    {
+      "id": "SCC-26",
+      "name": "Extension isolation",
+      "applies_to": [
+        "SEL-27"
+      ],
+      "required_outcome": "Untrusted executable extensions have no in-process execution and no direct database credential."
+    },
+    {
+      "id": "SCC-27",
+      "name": "Stack authority integrity",
+      "applies_to": [
+        "All"
+      ],
+      "required_outcome": "STACK.md hash matches STACK.sha256 and every selection/control has complete metadata."
+    }
+  ],
+  "policy": "Every constitutional selection must map to at least one executable control. Unmapped selections or controls fail validation."
+}

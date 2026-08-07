@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "generated_by": "scripts/build-authority-registry.mjs",
+  "documents": [
+    {
+      "id": "doctrine",
+      "canonical_path": "doctrine/DOCTRINE.md",
+      "document_role": "normative_authority",
+      "precedence": 1,
+      "precedence_source_quote": "DOCTRINE.md governs what must be true. The AFENDA Stack Selection Record governs the approved implementation stack. This document governs what AFENDA may claim, to whom, and on what evidence.",
+      "precedence_source_quote_origin": "position/POSITION.md (front matter)",
+      "version_declared": "Version 1.0",
+      "sha256": "a2dc5e59ed36293f3678622d4c2a2518863e739525a054a39e6f3dc456042ec2",
+      "seal_path": "doctrine/DOCTRINE.sha256",
+      "content_status": "verbatim-canonical-copy-of-source",
+      "adoption_status_verbatim": {
+        "source_section": "17.1 Ratification",
+        "quote": "Upon adoption, this file becomes the only doctrine authority. Record its SHA-256 in repository governance and require the hash before loading it as standing context."
+      },
+      "machine_projection_path": "governance/doctrine-registry.json",
+      "extracted_object_counts": {
+        "rules": 63,
+        "verification_controls": 18,
+        "forbidden": 20,
+        "authority_classes": 4,
+        "evidence_grades": 7,
+        "gate_cadence": 5,
+        "historical_orphan_findings": 9
+      }
+    },
+    {
+      "id": "stack",
+      "canonical_path": "stack/STACK.md",
+      "document_role": "implementation_authority_subordinate_to_doctrine",
+      "precedence": 2,
+      "precedence_source_quote": "DOCTRINE.md governs what must be true. This record governs the approved tools and implementation shape used to make those truths executable. Where the two conflict, the doctrine wins.",
+      "precedence_source_quote_origin": "stack/STACK.md §1",
+      "version_declared": "Version 2.0",
+      "sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "seal_path": "stack/STACK.sha256",
+      "content_status": "verbatim-canonical-copy-of-source",
+      "adoption_status_verbatim": {
+        "source_section": "12. Adoption and freeze",
+        "quote": "This record is ready for adoption after the checklist in `ADOPTION_CHECKLIST.md` is completed and `STACK.sha256` is committed."
+      },
+      "machine_projection_path": "governance/stack-registry.json",
+      "extracted_object_counts": {
+        "selections": 27,
+        "controls": 27,
+        "explicit_rejections": 13,
+        "escape_hatches": 4,
+        "gate_cadence": 5
+      }
+    },
+    {
+      "id": "position",
+      "canonical_path": "position/POSITION.md",
+      "document_role": "market_claim_authority",
+      "precedence": 3,
+      "precedence_source_quote": "This is not a third technical authority. It cannot amend the doctrine, relax a control, choose a technology, or create a customer exception. Where this document conflicts with the doctrine or stack record, this document loses.",
+      "precedence_source_quote_origin": "position/POSITION.md (front matter)",
+      "version_declared": "v1.0",
+      "sha256": "03846a9754277fbd7e7f5f2c99d8f1029d83b7cf2feb8ad1471a60a9c9ee5221",
+      "seal_path": "position/POSITION.sha256",
+      "content_status": "verbatim-canonical-copy-of-source",
+      "adoption_status_verbatim": {
+        "source_section": "15. Adoption status and open decisions",
+        "adopted_items_count": 9,
+        "pending_before_release_items_count": 8
+      },
+      "machine_projection_path": "governance/position-registry.json",
+      "extracted_object_counts": {
+        "obligations": 7,
+        "compatibility_result_classes": 6,
+        "evidence_ladder_grades": 7,
+        "revisit_triggers": 8
+      }
+    }
+  ]
+}

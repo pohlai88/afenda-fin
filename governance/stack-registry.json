@@ -1,0 +1,972 @@
+{
+  "schema_version": 1,
+  "generated_by": "scripts/build-authority-registry.mjs",
+  "generated_from": {
+    "path": "stack/STACK.md",
+    "sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65"
+  },
+  "selections": [
+    {
+      "id": "SEL-01",
+      "title": "Strict TypeScript as the single application language",
+      "authority": "[C]",
+      "vibe_grade": "A+",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S01"
+      ],
+      "executable_controls": [
+        "SCC-01",
+        "SCC-02",
+        "SCC-03"
+      ],
+      "decision_verbatim": "Use strict TypeScript for domain, API, worker, transport schemas, metadata, generators, frontend, tests and governance. SQL remains the database language; configuration formats are not additional application languages.",
+      "gist": "Use strict TypeScript for domain, API, worker, transport schemas, metadata, generators, frontend, tests and governance.",
+      "agent_case": "The compiler is the primary self-correction loop. A single application language maximizes useful model context and reduces duplicated concepts.",
+      "engineering_case": "The browser is TypeScript regardless; using TypeScript on the backend removes a language instead of adding one. Shared concepts have one naming and testing culture.",
+      "binding_constraints": "Enable strict, noUncheckedIndexedAccess, exactOptionalPropertyTypes, useUnknownInCatchVariables, noImplicitReturns, noFallthroughCasesInSwitch, noPropertyAccessFromIndexSignature, verbatimModuleSyntax, isolatedModules and noEmit. Ban application any, unchecked domain casts and number-based authoritative money.",
+      "revisit_trigger": "Only on measured evidence that TypeScript cannot meet an accepted requirement after SQL, worker-process and bounded-service mitigations, or when AI generation is no longer the primary implementation mode.",
+      "source_anchor": "stack/STACK.md:103",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "70342c0e869459f63f3205dc70e321fa732849ec94a3cdd9c09830ed3fae348c"
+    },
+    {
+      "id": "SEL-02",
+      "title": "TypeScript 7 native compiler plus TypeScript 6 compatibility tooling",
+      "authority": "[D]",
+      "vibe_grade": "A",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S01"
+      ],
+      "executable_controls": [
+        "SCC-01",
+        "SCC-04"
+      ],
+      "decision_verbatim": "Use TypeScript 7 for the fast command-line type check and TypeScript 6 through @typescript/typescript6 for type-aware tooling until the TypeScript 7 programmatic API is qualified.",
+      "gist": "Use TypeScript 7 for fast command-line type check and TypeScript 6 through @typescript/typescript6 for type-aware tooling until TypeScript…",
+      "agent_case": "TypeScript 7 materially shortens the red/green loop. The compatibility lane prevents speed from silently removing type-aware lint and ecosystem checks.",
+      "engineering_case": "The official TypeScript transition supports side-by-side use. Compiler parity is more important than choosing one prematurely.",
+      "binding_constraints": "Exact versions. Native and compatibility checks must both pass. Pin checker/builder parallelism; include a single-threaded parity lane. TypeScript or compiler upgrades are qualification events.",
+      "revisit_trigger": "When TypeScript 7.1+ exposes a stable programmatic API and all required tooling is qualified without the compatibility compiler.",
+      "source_anchor": "stack/STACK.md:124",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "c157b7dbd6474053ac3baf9ea683d4a14967b297635e9cd17e467df63b10a556"
+    },
+    {
+      "id": "SEL-03",
+      "title": "Node.js 24 LTS runtime",
+      "authority": "[C]",
+      "vibe_grade": "A+",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S02"
+      ],
+      "executable_controls": [
+        "SCC-04"
+      ],
+      "decision_verbatim": "Run API, workers, generators and governance on the exact patched Node.js 24 LTS baseline recorded in VERSION_BASELINE.json.",
+      "gist": "Run API, workers, generators and governance on exact patched Node.",
+      "agent_case": "Deep corpus, specific stack traces, broad library support and cheap local reproduction.",
+      "engineering_case": "The Node project recommends LTS for production. Runtime consistency lowers self-host and support variance.",
+      "binding_constraints": "Pin with .node-version or equivalent and assert process.version in CI. Do not adopt Current releases for production.",
+      "revisit_trigger": "At a scheduled LTS migration or security/support lifecycle event, followed by full qualification.",
+      "source_anchor": "stack/STACK.md:145",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "87b47d6b144b5d2c933ad2903c45a541424d6955e2d7da368a25be9d46cce8ce"
+    },
+    {
+      "id": "SEL-04",
+      "title": "pnpm workspaces and Turborepo",
+      "authority": "[D]",
+      "vibe_grade": "A",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S25"
+      ],
+      "executable_controls": [
+        "SCC-04",
+        "SCC-05"
+      ],
+      "decision_verbatim": "Use pnpm workspaces as package authority and Turborepo only for deterministic task orchestration and cacheable dependency ordering.",
+      "gist": "Use pnpm workspaces as package authority and Turborepo only for deterministic task orchestration and cacheable dependency ordering.",
+      "agent_case": "One lockfile and explicit task graph give the agent a predictable repository loop.",
+      "engineering_case": "Efficient workspace installs, exact dependency graph and simple monorepo execution without a second application framework.",
+      "binding_constraints": "Exact packageManager field, frozen lockfile, no implicit install scripts unless allowlisted, no Nx/Bazel parallel authority.",
+      "revisit_trigger": "Only when repository-scale evidence shows the task graph or workspace model cannot meet build and governance requirements.",
+      "source_anchor": "stack/STACK.md:166",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "709a663d32ef1871ff2525d9ecf56b9d9fa461581577290787077cbda7e1f80c"
+    },
+    {
+      "id": "SEL-05",
+      "title": "Plain PostgreSQL 18 with PostgreSQL 17 compatibility floor",
+      "authority": "[C]",
+      "vibe_grade": "A+",
+      "current_evidence": "E3-R for ledger kernel; stack selection E1",
+      "source_basis": [
+        "S03",
+        "S04"
+      ],
+      "executable_controls": [
+        "SCC-06",
+        "SCC-07"
+      ],
+      "decision_verbatim": "PostgreSQL is the permanent financial-system contract. Primary qualification runs on PostgreSQL 18; every declared database behavior also passes on PostgreSQL 17 until the floor is explicitly raised.",
+      "gist": "PostgreSQL is permanent financial-system contract.",
+      "agent_case": "SQL is visible, mature, locally reproducible and produces constraint-specific errors. Critical invariants can live below generated application code.",
+      "engineering_case": "Deferred constraints, composite foreign keys, exact numeric, roles, RLS, SECURITY DEFINER, transactional outbox and reporting projections are native capabilities.",
+      "binding_constraints": "No provider-only SQL or SDK in the financial core. Run migrations, ledger spine, role/grant, concurrency and restore lanes separately on both majors.",
+      "revisit_trigger": "Never for the PostgreSQL contract; only the supported major floor and hosting profile change through qualification.",
+      "source_anchor": "stack/STACK.md:187",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "5bab64506e53b23c605ec2dfa3199067a8e480bfa6095046bec2dcea297a2b16"
+    },
+    {
+      "id": "SEL-06",
+      "title": "node-postgres (pg) as canonical PostgreSQL driver",
+      "authority": "[C]",
+      "vibe_grade": "A",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S06",
+        "S07"
+      ],
+      "executable_controls": [
+        "SCC-08",
+        "SCC-09"
+      ],
+      "decision_verbatim": "Use node-postgres Pool and checked-out Client beneath Kysely and direct SQL. Every transaction uses the same client instance from BEGIN through COMMIT or ROLLBACK.",
+      "gist": "Use node-postgres Pool and checked-out Client beneath Kysely and direct SQL.",
+      "agent_case": "The driver is small, explicit and maps directly to PostgreSQL behavior. Transaction mistakes are easy to state and test.",
+      "engineering_case": "No hidden transaction abstraction. Type parsers can keep bigint, numeric and high-precision values as strings for owned conversion.",
+      "binding_constraints": "Never use pool.query inside a transaction. Own parsers for bigint/numeric/date-time. Parameterize data values and disallow dynamic identifiers outside reviewed helpers.",
+      "revisit_trigger": "Only if a replacement proves equal PostgreSQL fidelity, smaller surface and stronger exact-type behavior under the full database suite.",
+      "source_anchor": "stack/STACK.md:208",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "8706150c34738ccda8e25178023f6d9a3db0d716ab3231b671677b92d3dfe4dc"
+    },
+    {
+      "id": "SEL-07",
+      "title": "Kysely plus schema-derived code generation",
+      "authority": "[C]",
+      "vibe_grade": "A",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S05"
+      ],
+      "executable_controls": [
+        "SCC-10"
+      ],
+      "decision_verbatim": "Use Kysely for ordinary typed queries; generate database types from the migrated PostgreSQL schema. Use reviewed SQL for ledger, migrations and advanced integrity operations.",
+      "gist": "Use Kysely for ordinary typed queries; generate database types from migrated PostgreSQL schema.",
+      "agent_case": "SQL-shaped code and compile-time schema drift provide a short, legible feedback loop.",
+      "engineering_case": "The database remains the source of truth and raw SQL is first-class rather than an unsafe escape hatch.",
+      "binding_constraints": "No hand-maintained database type authority. Codegen after migration. No Kysely plugin may hide tenant, transaction or money semantics.",
+      "revisit_trigger": "If Kysely introduces breaking instability or cannot express a measured query need without unsafe loss of types; direct SQL remains the fallback.",
+      "source_anchor": "stack/STACK.md:229",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "280806ebf3881a5e2dc590457d1ebd5319a5cba2dd4756a80ba2a1ec13c53b19"
+    },
+    {
+      "id": "SEL-08",
+      "title": "Reviewed forward-only SQL migrations",
+      "authority": "[C]",
+      "vibe_grade": "A+",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S03",
+        "S04"
+      ],
+      "executable_controls": [
+        "SCC-07",
+        "SCC-11"
+      ],
+      "decision_verbatim": "Use checksummed numbered SQL migrations. Migrations are applied by a dedicated migration credential and verified before application code generation.",
+      "gist": "Use checksummed numbered SQL migrations.",
+      "agent_case": "The complete schema and constraint errors are visible. No migration DSL or competing schema language must be inferred.",
+      "engineering_case": "Production changes remain reviewable, recoverable and independent of the query library.",
+      "binding_constraints": "No schema push in shared or production environments. Destructive/data-transforming changes escalate. Test empty install, upgrade from prior release, realistic data, dual majors and restore.",
+      "revisit_trigger": "Only if another SQL-first migration runner improves evidence without becoming a second schema authority.",
+      "source_anchor": "stack/STACK.md:250",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "c81748dbc14146012a1abd0b86e4e0a21f35d7fb161905e36a414e47f80afe20"
+    },
+    {
+      "id": "SEL-09",
+      "title": "Hono as a Node-only thin HTTP adapter",
+      "authority": "[D]",
+      "vibe_grade": "A-",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S08"
+      ],
+      "executable_controls": [
+        "SCC-12"
+      ],
+      "decision_verbatim": "Use Hono only through @hono/node-server. Route code parses transport, resolves actor/scope, calls one typed operation and maps Result to HTTP.",
+      "gist": "Use Hono only through @hono/node-server.",
+      "agent_case": "Small visible API and no decorator/DI magic. Binding the runtime removes multi-runtime ambiguity.",
+      "engineering_case": "The HTTP framework remains replaceable and contains no domain or persistence policy.",
+      "binding_constraints": "Node adapter only. Default router only. No Hono RPC as authoritative client contract. No business logic, ad hoc SQL or transactions in route handlers.",
+      "revisit_trigger": "On a breaking major or evidence that the thin-adapter boundary cannot be maintained.",
+      "source_anchor": "stack/STACK.md:271",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "3122a9cd45be5058b6307682755c19fe81d7d71184964168672b4aa3fe96e077"
+    },
+    {
+      "id": "SEL-10",
+      "title": "Zod 4 transport schemas and REST/OpenAPI contracts",
+      "authority": "[C]",
+      "vibe_grade": "A+",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S09",
+        "S10"
+      ],
+      "executable_controls": [
+        "SCC-03",
+        "SCC-12"
+      ],
+      "decision_verbatim": "Use Zod 4 for every external boundary and @hono/zod-openapi as the sole API-schema path. Generate clients from OpenAPI; do not share server domain types over JSON.",
+      "gist": "Use Zod 4 for every external boundary and @hono/zod-openapi as sole API-schema path.",
+      "agent_case": "One schema produces runtime validation, static transport types and clear error paths.",
+      "engineering_case": "Transport/domain separation preserves bigint money, rational rates and explicit instants across a lossy JSON boundary.",
+      "binding_constraints": "Money minor units and rate components cross JSON as canonical integer strings. Validate request and response. Version authoritative endpoints. Hono RPC and hand-maintained duplicate client contracts are prohibited.",
+      "revisit_trigger": "If the approved Zod/OpenAPI path becomes unstable or cannot express required standards without a second authority.",
+      "source_anchor": "stack/STACK.md:292",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "3dffe4aefbc984df04c3ead613037cb46435cb4aca962123535e3734c02e82fd"
+    },
+    {
+      "id": "SEL-11",
+      "title": "React 19.2 patched line with Vite 8.1 SPA",
+      "authority": "[C]",
+      "vibe_grade": "A+",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S11",
+        "S12",
+        "S13"
+      ],
+      "executable_controls": [
+        "SCC-14"
+      ],
+      "decision_verbatim": "Build a client-side React ERP delivered as static assets by Vite. Pin a patched React 19.2 line and prohibit all react-server-dom packages.",
+      "gist": "Build client-side React ERP delivered as static assets by Vite.",
+      "agent_case": "The browser/server boundary is a literal HTTP call. There are no Server Components, Server Actions, framework cache modes or file-location execution rules to confuse.",
+      "engineering_case": "An authenticated ERP gains little from SSR while static deployment is simple across managed and self-hosted profiles.",
+      "binding_constraints": "No Next.js, React Server Components or Server Actions. Dependency graph rejects react-server-dom-*. Exact React patch lives in the lockfile.",
+      "revisit_trigger": "Only if a measured product requirement needs server rendering and a new architecture can preserve explicit authoritative boundaries.",
+      "source_anchor": "stack/STACK.md:313",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "0e290ceed85ec022c7f17abba241d7a2865af73b8bdb4d50791359947ac1c659"
+    },
+    {
+      "id": "SEL-12",
+      "title": "TanStack Router, Query, Table and Virtual; React Hook Form",
+      "authority": "[D]",
+      "vibe_grade": "A-",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S17"
+      ],
+      "executable_controls": [
+        "SCC-13"
+      ],
+      "decision_verbatim": "Use TanStack file-based routing only, TanStack Query for server state, Table/Virtual for dense grids, and React Hook Form integrated with the transport schemas.",
+      "gist": "Use TanStack file-based routing only, TanStack Query for server state, Table/Virtual for dense grids, and React Hook Form integrated with t…",
+      "agent_case": "Typed route/search state and headless explicit components make assumptions visible.",
+      "engineering_case": "ERP filters and drill-downs remain shareable URLs; grids remain license-safe and under design-system control.",
+      "binding_constraints": "One routing mode only. Generated route tree is generated output and drift-checked. Do not use generic un-narrowed router types that degrade TypeScript performance.",
+      "revisit_trigger": "If measured grid or route performance fails after documented narrowing and virtualization practices.",
+      "source_anchor": "stack/STACK.md:334",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "0562d398a832d552fcdd2a1542a6ebbf8af1e441476a74bb58264fae2f735962"
+    },
+    {
+      "id": "SEL-13",
+      "title": "Tailwind CSS 4 and shadcn/ui source-owned components",
+      "authority": "[D]",
+      "vibe_grade": "A+",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S14"
+      ],
+      "executable_controls": [
+        "SCC-05"
+      ],
+      "decision_verbatim": "Use Tailwind CSS 4 and source-owned shadcn/ui components as the UI-system implementation.",
+      "gist": "Use Tailwind CSS 4 and source-owned shadcn/ui components as UI-system implementation.",
+      "agent_case": "The actual component source is in the repository; the agent reads and edits behavior rather than guessing a remote component API.",
+      "engineering_case": "No runtime design-system lock-in and full control of ERP density and accessibility.",
+      "binding_constraints": "UI components obey owned design tokens, accessibility gates and Storybook/component contracts. Avoid arbitrary one-off class drift.",
+      "revisit_trigger": "Only on measured maintainability, accessibility or performance failure.",
+      "source_anchor": "stack/STACK.md:355",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "2903cf9316e769dc5dd10856c3c6b9a336cffc058be9273259b9c93a0a38ca96"
+    },
+    {
+      "id": "SEL-14",
+      "title": "Standard OIDC boundary with Keycloak as reference provider",
+      "authority": "[C] protocol / [D] provider",
+      "vibe_grade": "A-",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S15"
+      ],
+      "executable_controls": [
+        "SCC-15"
+      ],
+      "decision_verbatim": "Authentication integrates only through standard OIDC. Keycloak 26.7 is the reference self-hosted provider. AFENDA owns contextual business authorization.",
+      "gist": "Authentication integrates only through standard OIDC.",
+      "agent_case": "Identity-provider complexity is removed from generated application code; the integration surface is small and testable.",
+      "engineering_case": "SSO, MFA, federation and directory integration remain in a specialized identity system, while amount/entity/period/maker-checker authority stays under ERP doctrine.",
+      "binding_constraints": "No local password/auth framework in the core. Token validation and identity mapping are adapters. Keycloak roles do not replace AFENDA operation policies.",
+      "revisit_trigger": "Provider may change only after OIDC conformance, self-host, security, migration and operational qualification. Protocol boundary remains.",
+      "source_anchor": "stack/STACK.md:376",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "fe0f92d61d84c158393e6875c1fd18096dc85c131466228a9a5e12f88dac5180"
+    },
+    {
+      "id": "SEL-15",
+      "title": "Graphile Worker behind an owned JobQueue adapter",
+      "authority": "[D]",
+      "vibe_grade": "B+",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S16"
+      ],
+      "executable_controls": [
+        "SCC-16"
+      ],
+      "decision_verbatim": "Use Graphile Worker for generic at-least-once jobs such as email, PDFs, indexing and exports. Confine it behind one owned enqueue/worker adapter.",
+      "gist": "Use Graphile Worker for generic at-least-once jobs such as email, PDFs, indexing and exports.",
+      "agent_case": "The low-corpus library is reduced to a tiny local surface and current docs can be kept in context.",
+      "engineering_case": "It reuses PostgreSQL and avoids early queue infrastructure. It is not the authority for financial effect state.",
+      "binding_constraints": "Use public APIs only; never query private worker tables. Worker uses an appropriate direct/session-capable connection. Tasks are small, typed and idempotent.",
+      "revisit_trigger": "When measured throughput, isolation, retention or operational needs exceed the qualified adapter.",
+      "source_anchor": "stack/STACK.md:397",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "d645ad372c930353f1027f705214c2081b3c51eed9e136b85a854acca3319830"
+    },
+    {
+      "id": "SEL-16",
+      "title": "AFENDA-owned transactional outbox for financial/statutory effects",
+      "authority": "[C]",
+      "vibe_grade": "B",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S16"
+      ],
+      "executable_controls": [
+        "SCC-17"
+      ],
+      "decision_verbatim": "Create financial and statutory side effects through an owned durable state machine committed in the same database transaction as the source fact.",
+      "gist": "Create financial and statutory side effects through owned durable state machine committed in same database transaction as source fact.",
+      "agent_case": "The state transition is explicit and testable rather than hidden in queue retry behavior.",
+      "engineering_case": "Effectively-once business effect requires idempotency, acknowledgement, ambiguity handling and reconciliation beyond a generic job queue.",
+      "binding_constraints": "Generic queue executes work; it never defines financial truth. External calls never occur inside the posting transaction. States, attempts, fingerprints and operator actions are persisted.",
+      "revisit_trigger": "The implementation may move to another worker or workflow engine only if the owned state machine and evidence remain unchanged.",
+      "source_anchor": "stack/STACK.md:418",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "e2f92c80e06dbc3ec2174f99b0dfce085490c552c4ce3ba45daf7828e828df6e"
+    },
+    {
+      "id": "SEL-17",
+      "title": "S3-compatible object storage and PostgreSQL search first",
+      "authority": "[D]",
+      "vibe_grade": "A-",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S03"
+      ],
+      "executable_controls": [
+        "SCC-05"
+      ],
+      "decision_verbatim": "Use an owned S3-compatible storage port for documents and PostgreSQL full-text search plus pg_trgm for initial search.",
+      "gist": "Use owned S3-compatible storage port for documents and PostgreSQL full-text search plus pg_trgm for initial search.",
+      "agent_case": "Small explicit adapters and familiar SQL avoid early infrastructure complexity.",
+      "engineering_case": "Database stores immutable object metadata and digests; search remains a rebuildable projection.",
+      "binding_constraints": "No object-store vendor types outside the adapter. No OpenSearch or cache until measurements justify it. Search never becomes financial authority.",
+      "revisit_trigger": "On measured volume, linguistic or independent-scaling requirements.",
+      "source_anchor": "stack/STACK.md:439",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "f0ddd05194b15a1945486c8976fa3cbcd47815081edfab31bbe00f39c5f58e8c"
+    },
+    {
+      "id": "SEL-18",
+      "title": "OpenTelemetry-first observability",
+      "authority": "[C]",
+      "vibe_grade": "A-",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S24"
+      ],
+      "executable_controls": [
+        "SCC-05"
+      ],
+      "decision_verbatim": "Instrument API, worker and browser with OpenTelemetry; export through an OpenTelemetry Collector to chosen backends.",
+      "gist": "Instrument API, worker and browser with OpenTelemetry; export through OpenTelemetry Collector to chosen backends.",
+      "agent_case": "One standard correlation model and specific runtime evidence improve agent diagnosis.",
+      "engineering_case": "Backend vendor remains replaceable while traces, metrics and structured operation attributes are consistent.",
+      "binding_constraints": "Initialize instrumentation before application code. Correlate actor, tenant/entity, operation, source and batch IDs without leaking money, personal data or secrets.",
+      "revisit_trigger": "Only if the standard cannot meet a qualified operational requirement.",
+      "source_anchor": "stack/STACK.md:460",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "cbf2c3a20c73fe2a5f44b02d19634fc032bf34004ea7c72ab8cec1e288f77b94"
+    },
+    {
+      "id": "SEL-19",
+      "title": "Vitest, fast-check, StrykerJS and owned domain mutants",
+      "authority": "[C]",
+      "vibe_grade": "A",
+      "current_evidence": "E1 for stack; historical ledger evidence E3-R",
+      "source_basis": [
+        "S20",
+        "S21",
+        "S22"
+      ],
+      "executable_controls": [
+        "SCC-18"
+      ],
+      "decision_verbatim": "Use Vitest for the main test loop, fast-check for properties, StrykerJS for broad mutation and an independently maintained corpus of domain mutants for critical ERP invariants.",
+      "gist": "Use Vitest for main test loop, fast-check for properties, StrykerJS for broad mutation and independently maintained corpus of domain mutant…",
+      "agent_case": "Fast, specific failures enable self-correction; properties and mutants expose plausible but wrong generated code.",
+      "engineering_case": "Generic mutation score is secondary. Critical domain faults—money, scope, idempotency, time, locks, outbox and reversal—must have zero survival.",
+      "binding_constraints": "Tests may not be weakened without Reviewed approval. Critical mutant survival zero. Equivalent mutants require retained proof. Incident defects become permanent regression mutants.",
+      "revisit_trigger": "Tool may change only if fault sensitivity and evidence quality are preserved or improved.",
+      "source_anchor": "stack/STACK.md:481",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "edd4d63c05a4d19bf044b05a4816d9bf85e9c94b40673eff98e64ee853dd6de3"
+    },
+    {
+      "id": "SEL-20",
+      "title": "PGlite fast lane and Testcontainers PostgreSQL authoritative lane",
+      "authority": "[C]",
+      "vibe_grade": "A",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S18",
+        "S19"
+      ],
+      "executable_controls": [
+        "SCC-07",
+        "SCC-19"
+      ],
+      "decision_verbatim": "Use PGlite for fast deterministic SQL feedback and Testcontainers with real PostgreSQL for roles, concurrency, isolation, recovery and supported-major qualification.",
+      "gist": "Use PGlite for fast deterministic SQL feedback and Testcontainers with real PostgreSQL for roles, concurrency, isolation, recovery and supp…",
+      "agent_case": "Fast local checks preserve the generation loop; the server lane prevents WASM convenience from becoming false assurance.",
+      "engineering_case": "PGlite is single-connection; real role topology, multi-session races and restore behavior require actual PostgreSQL.",
+      "binding_constraints": "Concurrency-tagged tests cannot run only on PGlite. Testcontainers images are digest-pinned. Both PostgreSQL 18 and 17 lanes are independent.",
+      "revisit_trigger": "Only if another local/server pair gives equal speed and stronger PostgreSQL fidelity.",
+      "source_anchor": "stack/STACK.md:502",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "74d89e0edb815e1aef1c6b7e34b78c8e46b91633e34f6006dedc5987b0fd6b98"
+    },
+    {
+      "id": "SEL-21",
+      "title": "Playwright for end-to-end ERP workflows",
+      "authority": "[D]",
+      "vibe_grade": "A",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S20"
+      ],
+      "executable_controls": [
+        "SCC-20"
+      ],
+      "decision_verbatim": "Use Playwright for browser qualification of the complete vertical slice and critical operator workflows.",
+      "gist": "Use Playwright for browser qualification of complete vertical slice and critical operator workflows.",
+      "agent_case": "Browser traces, screenshots and explicit actions provide a reproducible visible failure.",
+      "engineering_case": "The system must prove API, UI, database and audit behavior together, not only isolated functions.",
+      "binding_constraints": "At minimum: create invoice, approve, post, reverse, rebuild/view trial balance and inspect audit evidence. Trace retained on failure.",
+      "revisit_trigger": "Only if a replacement provides equal cross-browser reliability and debugging evidence.",
+      "source_anchor": "stack/STACK.md:523",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "3273d18f47a38948e8af346a61b7e3cb14bb0760da2dc25cfad6a32ad129a05b"
+    },
+    {
+      "id": "SEL-22",
+      "title": "Governed reporting schemas, read-only Metabase and CDC readiness",
+      "authority": "[C] model / [D] tool",
+      "vibe_grade": "A",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S23",
+        "S03"
+      ],
+      "executable_controls": [
+        "SCC-21",
+        "SCC-22"
+      ],
+      "decision_verbatim": "Use afenda for authoritative data, reporting for governed projections and analytics for BI marts. Metabase is the optional read-only self-host BI profile. Design for CDC but create a slot only with a live monitored consumer.",
+      "gist": "Use afenda for authoritative data, reporting for governed projections and analytics for BI marts.",
+      "agent_case": "Clear schema boundaries and SQL projections are visible and locally testable.",
+      "engineering_case": "BI is language-independent. Core dimensions use entity-scoped columns/FKs; analytical extension dimensions use normalized bridges; JSONB remains opaque metadata.",
+      "binding_constraints": "BI role has read-only schema access. No posting EXECUTE. CDC slot requires owner, consumer, lag monitoring, WAL budget, snapshot and removal procedure.",
+      "revisit_trigger": "BI tool may change; reporting schema contract and CDC safety remain.",
+      "source_anchor": "stack/STACK.md:544",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "cf278b441177718a96c7f3ca343d39c10d40c58c796c537fa5a128bb8b8029a8"
+    },
+    {
+      "id": "SEL-23",
+      "title": "OCI containers and Docker Compose first",
+      "authority": "[C]",
+      "vibe_grade": "A",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S02",
+        "S03"
+      ],
+      "executable_controls": [
+        "SCC-23"
+      ],
+      "decision_verbatim": "Ship web, api, worker, PostgreSQL, Keycloak, optional object storage, Metabase and OpenTelemetry Collector as digest-pinned OCI profiles; Docker Compose is the first self-host profile.",
+      "gist": "Ship web, api, worker, PostgreSQL, Keycloak, optional object storage, Metabase and OpenTelemetry Collector as digest-pinned OCI profiles; D…",
+      "agent_case": "The full failure surface is reproducible locally without a cloud control plane.",
+      "engineering_case": "Self-hostability and provider portability are product requirements; Kubernetes is a later deployment profile, not an application dependency.",
+      "binding_constraints": "After dependency and image acquisition, verification runs with external egress denied. Fresh-airgapped installation is not claimed without an artifact mirror. Helm later only after demand.",
+      "revisit_trigger": "Add HA/Kubernetes profiles on customer/SLA evidence, not fashion.",
+      "source_anchor": "stack/STACK.md:565",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "017f1b339fce709670099370004300fd9de399751d8afbbd278de5be13a9f246"
+    },
+    {
+      "id": "SEL-24",
+      "title": "Modular monolith in one repository",
+      "authority": "[C]",
+      "vibe_grade": "A+",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S05"
+      ],
+      "executable_controls": [
+        "SCC-05",
+        "SCC-24"
+      ],
+      "decision_verbatim": "Build one modular application with deployable api and worker processes. Domain modules expose commands, queries, events and read contracts—not repositories, tables or internals.",
+      "gist": "Build one modular application with deployable api and worker processes.",
+      "agent_case": "The agent can inspect end-to-end behavior without distributed-service context loss.",
+      "engineering_case": "Strong boundaries without the operational cost, partial failure modes and data ownership complexity of premature microservices.",
+      "binding_constraints": "Feature-first packages, root public APIs, dependency graph checks, no cross-module data writes, no transport concerns in domain packages.",
+      "revisit_trigger": "Extract a service only on measured scaling, isolation, deployment or ownership evidence with a stable contract.",
+      "source_anchor": "stack/STACK.md:586",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "067e0d43fab9be883062db38d014494a3e165c2411fb66f1c30e8691ea8df2e7"
+    },
+    {
+      "id": "SEL-25",
+      "title": "Functions, immutable data and explicit capability objects",
+      "authority": "[C]",
+      "vibe_grade": "A+",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S01"
+      ],
+      "executable_controls": [
+        "SCC-24"
+      ],
+      "decision_verbatim": "Domain/application operations use functions, immutable data and explicit dependency objects. Classes are allowed only at adapters where a library requires them and behavior remains visible.",
+      "gist": "Domain/application operations use functions, immutable data and explicit dependency objects.",
+      "agent_case": "An operation is understandable from its input, dependencies, control flow, result and tests.",
+      "engineering_case": "Avoids hidden proxy transactions, decorator DI, inheritance state and service-locator coupling.",
+      "binding_constraints": "Forbidden: class-based domain inheritance, decorator-driven DI, reflection, service locators, implicit transactions, ambient global state and runtime module discovery.",
+      "revisit_trigger": "Only if a pattern proves equally visible and mechanically enforceable.",
+      "source_anchor": "stack/STACK.md:607",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "c7260dab4b0cb07b90d328f04bb5bcd79f5445750f635fb0f6749c0a78cfc870"
+    },
+    {
+      "id": "SEL-26",
+      "title": "AI as proposal-only capability",
+      "authority": "[C]",
+      "vibe_grade": "A",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S10"
+      ],
+      "executable_controls": [
+        "SCC-25"
+      ],
+      "decision_verbatim": "AI may extract, classify, explain, match and propose structured changes. It never holds a ledger capability and cannot create an authoritative financial fact.",
+      "gist": "AI may extract, classify, explain, match and propose structured changes.",
+      "agent_case": "Structured Zod outputs keep AI behavior inside the same TypeScript feedback and validation system.",
+      "engineering_case": "Model uncertainty, provider change and prompt behavior remain outside the accounting authority. Human-approved operations own posting.",
+      "binding_constraints": "Store model/prompt/input provenance and confidence. AI writes proposals only. No autonomous posting, payment release, period close or statutory submission.",
+      "revisit_trigger": "Automation may increase only after qualified accuracy, control, audit and regulatory evidence; ledger authority remains human-governed.",
+      "source_anchor": "stack/STACK.md:628",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "fa336a147e43892f1f448da8719810db9dbf7e20b0f318e27f096a364b564cd9"
+    },
+    {
+      "id": "SEL-27",
+      "title": "Declarative/trusted extensions first; untrusted code out of process",
+      "authority": "[C]",
+      "vibe_grade": "B",
+      "current_evidence": "E1",
+      "source_basis": [
+        "S03"
+      ],
+      "executable_controls": [
+        "SCC-26"
+      ],
+      "decision_verbatim": "Phase-one extensions are declarative fields, view slots, document types, trusted version-controlled policies and after-commit hooks. Untrusted executable code runs only in a separate isolated process/service with capability-scoped APIs.",
+      "gist": "Phase-one extensions are declarative fields, view slots, document types, trusted version-controlled policies and after-commit hooks.",
+      "agent_case": "Avoids low-corpus, security-sensitive in-process sandbox semantics.",
+      "engineering_case": "The operating-system/process boundary is more auditable than a clever JavaScript isolate with direct database reach.",
+      "binding_constraints": "No direct database credential for untrusted extensions. No execution inside posting. Time, memory, network, data and failure scopes are declared.",
+      "revisit_trigger": "Only after a separately qualified extension-host design and threat model.",
+      "source_anchor": "stack/STACK.md:649",
+      "source_document_sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65",
+      "rule_text_sha256": "d3870de905bbf16222aa80cb6fb818fcbfb0ff2f7f07ab5d7c3923e908022988"
+    }
+  ],
+  "controls": [
+    {
+      "id": "SCC-01",
+      "name": "TypeScript native/compat parity",
+      "applies_to": [
+        "SEL-01",
+        "SEL-02"
+      ],
+      "required_outcome": "TypeScript 7 native check, TypeScript 6 stable-order compatibility check, and type-aware lint all pass."
+    },
+    {
+      "id": "SCC-02",
+      "name": "Strictness and no-any",
+      "applies_to": [
+        "SEL-01"
+      ],
+      "required_outcome": "Strict compiler options enabled; application any and unchecked casts are rejected."
+    },
+    {
+      "id": "SCC-03",
+      "name": "Authoritative money type safety",
+      "applies_to": [
+        "SEL-01",
+        "SEL-10"
+      ],
+      "required_outcome": "No JavaScript number in authoritative money contracts or code paths; JSON money uses canonical integer strings."
+    },
+    {
+      "id": "SCC-04",
+      "name": "Exact toolchain pins",
+      "applies_to": [
+        "SEL-02",
+        "SEL-03",
+        "SEL-04"
+      ],
+      "required_outcome": "Runtime, compilers, package manager, dependencies and lockfile are exact and CI-verified."
+    },
+    {
+      "id": "SCC-05",
+      "name": "Module boundaries",
+      "applies_to": [
+        "SEL-24",
+        "SEL-25"
+      ],
+      "required_outcome": "Dependency graph forbids domain-to-adapter imports, internal subpaths and cycles."
+    },
+    {
+      "id": "SCC-06",
+      "name": "Provider-neutral financial core",
+      "applies_to": [
+        "SEL-05"
+      ],
+      "required_outcome": "No managed-vendor SDK or provider-only SQL primitive in ledger and database kernel paths."
+    },
+    {
+      "id": "SCC-07",
+      "name": "Dual PostgreSQL major qualification",
+      "applies_to": [
+        "SEL-05",
+        "SEL-08",
+        "SEL-20"
+      ],
+      "required_outcome": "Migrations and authoritative database controls pass separately on PostgreSQL 18 and PostgreSQL 17."
+    },
+    {
+      "id": "SCC-08",
+      "name": "Single-client transaction rule",
+      "applies_to": [
+        "SEL-06"
+      ],
+      "required_outcome": "Every transaction uses one checked-out node-postgres client from BEGIN through COMMIT/ROLLBACK."
+    },
+    {
+      "id": "SCC-09",
+      "name": "Exact database type parsing",
+      "applies_to": [
+        "SEL-06"
+      ],
+      "required_outcome": "bigint/numeric/date-time authoritative values are parsed under owned rules, not implicit JavaScript coercion."
+    },
+    {
+      "id": "SCC-10",
+      "name": "Schema-derived Kysely types",
+      "applies_to": [
+        "SEL-07"
+      ],
+      "required_outcome": "Kysely types regenerate from migrated PostgreSQL; drift fails CI."
+    },
+    {
+      "id": "SCC-11",
+      "name": "Migration integrity",
+      "applies_to": [
+        "SEL-08"
+      ],
+      "required_outcome": "Migration checksums, ordering and review status are verified; no schema push in shared or production environments."
+    },
+    {
+      "id": "SCC-12",
+      "name": "Hono runtime and contract path",
+      "applies_to": [
+        "SEL-09",
+        "SEL-10"
+      ],
+      "required_outcome": "Only @hono/node-server and @hono/zod-openapi appear in authoritative API code; Hono RPC is prohibited."
+    },
+    {
+      "id": "SCC-13",
+      "name": "One frontend routing mode",
+      "applies_to": [
+        "SEL-12"
+      ],
+      "required_outcome": "TanStack file-based routing only; generated route tree drift fails CI."
+    },
+    {
+      "id": "SCC-14",
+      "name": "No React Server Components",
+      "applies_to": [
+        "SEL-11"
+      ],
+      "required_outcome": "No react-server-dom-* dependency and no Server Components/Server Actions architecture."
+    },
+    {
+      "id": "SCC-15",
+      "name": "OIDC boundary",
+      "applies_to": [
+        "SEL-14"
+      ],
+      "required_outcome": "Authentication uses standard OIDC; contextual ERP authorization remains inside AFENDA operations."
+    },
+    {
+      "id": "SCC-16",
+      "name": "Queue adapter boundary",
+      "applies_to": [
+        "SEL-15"
+      ],
+      "required_outcome": "Graphile Worker appears only behind the owned JobQueue adapter; private worker tables are not queried."
+    },
+    {
+      "id": "SCC-17",
+      "name": "Financial outbox required",
+      "applies_to": [
+        "SEL-16"
+      ],
+      "required_outcome": "Every authoritative external financial/statutory effect is created through the owned outbox state machine in the source transaction."
+    },
+    {
+      "id": "SCC-18",
+      "name": "Critical mutation survival zero",
+      "applies_to": [
+        "SEL-19"
+      ],
+      "required_outcome": "All critical TypeScript and domain mutants are killed; exceptions require time-boxed Owned approval."
+    },
+    {
+      "id": "SCC-19",
+      "name": "Concurrency lane enforcement",
+      "applies_to": [
+        "SEL-20"
+      ],
+      "required_outcome": "Concurrency-tagged tests are rejected on PGlite and run on real multi-session PostgreSQL."
+    },
+    {
+      "id": "SCC-20",
+      "name": "Browser workflow gate",
+      "applies_to": [
+        "SEL-21"
+      ],
+      "required_outcome": "Playwright verifies the vertical ERP flow and audit evidence before release."
+    },
+    {
+      "id": "SCC-21",
+      "name": "Read-only BI boundary",
+      "applies_to": [
+        "SEL-22"
+      ],
+      "required_outcome": "BI role has SELECT only on reporting/analytics schemas and no posting-function execution."
+    },
+    {
+      "id": "SCC-22",
+      "name": "CDC slot safety",
+      "applies_to": [
+        "SEL-22"
+      ],
+      "required_outcome": "No logical replication slot exists without a named live consumer, lag alert, WAL budget and removal procedure."
+    },
+    {
+      "id": "SCC-23",
+      "name": "Reproducible self-host profile",
+      "applies_to": [
+        "SEL-23"
+      ],
+      "required_outcome": "After lockfile dependencies and digest-pinned images are acquired, the stack and verification run with external egress denied."
+    },
+    {
+      "id": "SCC-24",
+      "name": "Explicit application architecture",
+      "applies_to": [
+        "SEL-24",
+        "SEL-25"
+      ],
+      "required_outcome": "No decorator DI, service locator, class-based domain inheritance, implicit transaction or hidden runtime module discovery."
+    },
+    {
+      "id": "SCC-25",
+      "name": "AI cannot post",
+      "applies_to": [
+        "SEL-26"
+      ],
+      "required_outcome": "AI identities and proposal workers cannot call or insert into the ledger; human-approved operation path remains mandatory."
+    },
+    {
+      "id": "SCC-26",
+      "name": "Extension isolation",
+      "applies_to": [
+        "SEL-27"
+      ],
+      "required_outcome": "Untrusted executable extensions have no in-process execution and no direct database credential."
+    },
+    {
+      "id": "SCC-27",
+      "name": "Stack authority integrity",
+      "applies_to": [
+        "All"
+      ],
+      "required_outcome": "STACK.md hash matches STACK.sha256 and every selection/control has complete metadata."
+    }
+  ],
+  "explicit_rejections": [
+    {
+      "rejected_option": "Java/Spring or C# backend",
+      "reason": "Strong conventional engineering but violates the one-language, fast-feedback, vibe-code-primary constraint."
+    },
+    {
+      "rejected_option": "Next.js, React Server Components and Server Actions",
+      "reason": "Invisible server/client and cache semantics on authoritative code; RSC dependency is explicitly prohibited."
+    },
+    {
+      "rejected_option": "NestJS and decorator-heavy dependency injection",
+      "reason": "Hidden provider resolution, lifecycle and reflection."
+    },
+    {
+      "rejected_option": "Drizzle before a settled stable 1.x",
+      "reason": "API-churn risk under the project’s version-mixing criterion."
+    },
+    {
+      "rejected_option": "Prisma as database authority",
+      "reason": "Second schema language and migration authority outside reviewed SQL."
+    },
+    {
+      "rejected_option": "GraphQL for authoritative commands",
+      "reason": "Weakens explicit operation identity, idempotency and audit semantics."
+    },
+    {
+      "rejected_option": "Bun or Deno as primary runtime",
+      "reason": "Less stable primary corpus and additional runtime-specific behavior."
+    },
+    {
+      "rejected_option": "Microservices, Kafka, Redis or Temporal on day one",
+      "reason": "Unjustified operational and failure surface."
+    },
+    {
+      "rejected_option": "Vendor-specific ledger primitives",
+      "reason": "Breaks plain PostgreSQL portability and self-host qualification."
+    },
+    {
+      "rejected_option": "Direct browser-to-database access",
+      "reason": "Bypasses operation contracts, evidence, idempotency and authorization."
+    },
+    {
+      "rejected_option": "In-process untrusted extension sandbox",
+      "reason": "Security boundary is too subtle for the project’s generation model."
+    },
+    {
+      "rejected_option": "Runtime-editable executable business scripts",
+      "reason": "Unversioned behavior outside code review and verification."
+    },
+    {
+      "rejected_option": "AI autonomous posting",
+      "reason": "Model output cannot become authoritative financial substance."
+    }
+  ],
+  "escape_hatches": [
+    {
+      "id": "ESC-01",
+      "title": "CPU-bound workloads",
+      "text_verbatim": "Use, in order: **set-based SQL**, then **Node worker processes/worker threads**, then a **bounded specialist service** only after profiling proves CPU—not database or I/O—is the limiting factor. The specialist service owns no ledger credential and returns a proposal/result through a narrow versioned contract.",
+      "gist": "Use, in order: set-based SQL, then Node worker processes/worker threads, then bounded specialist service only after profiling proves CPU—no…"
+    },
+    {
+      "id": "ESC-02",
+      "title": "Concurrency",
+      "text_verbatim": "Concurrency remains an Owned surface. Posting, period close, numbering, idempotency, valuation and restatement coordination live in one small package. Nothing passes without real multi-session PostgreSQL tests, killed lock-order/isolation mutants, whole-transaction retry evidence and an independent final-state oracle.",
+      "gist": "Concurrency remains Owned surface."
+    },
+    {
+      "id": "ESC-03",
+      "title": "Untrusted extensions",
+      "text_verbatim": "Do not build an in-process sandbox initially. Untrusted code runs in a separate killable process/service with no database credential and a capability-scoped API. Phase-one extensions remain declarative or trusted/version-controlled.",
+      "gist": "Do not build in-process sandbox initially."
+    },
+    {
+      "id": "ESC-04",
+      "title": "Future service extraction",
+      "text_verbatim": "A module may become a service only after a measured scaling, isolation, deployment or ownership requirement exists and the stable contract, data ownership, failure handling and reconciliation are already executable in the monolith.",
+      "gist": "module may become service only after measured scaling, isolation, deployment or ownership requirement exists and stable contract, data owne…"
+    }
+  ],
+  "version_policies": [
+    "Release lines are selected here; exact patches and image digests are machine authority.",
+    "Agents may not upgrade Node, TypeScript, PostgreSQL, React, Vite, Keycloak or constitutional dependencies.",
+    "A runtime/compiler/database major or qualified toolchain change requires representative regeneration, semantic diff, full applicable controls and explicit approval.",
+    "Security patch upgrades are expedited but still run affected qualification.",
+    "`package.json`, `pnpm-lock.yaml`, `.node-version`, container digests and CI image constants must agree with `VERSION_BASELINE.json`.",
+    "No unbounded `latest`, caret or tilde range is allowed for constitutional dependencies in the committed application manifest."
+  ],
+  "architecture_constraints": {
+    "repository_tree": "/\n├── apps/\n│   ├── web/                 # React + Vite\n│   ├── api/                 # Hono Node adapter\n│   └── worker/              # Graphile Worker adapter + outbox executor\n├── packages/\n│   ├── domain/              # pure types, value objects and rules\n│   ├── operations/          # commands and queries\n│   ├── contracts/           # Zod + OpenAPI transport schemas\n│   ├── db/                  # Kysely types and transaction adapters\n│   ├── errors/              # canonical Result/failure contracts\n│   ├── authz/               # operation authorization\n│   ├── money/               # exact money, FX and rounding boundaries\n│   ├── time/                # clocks and temporal policies\n│   ├── testing/             # fixtures, oracles and mutant support\n│   └── ui/                  # source-owned UI system\n├── db/\n│   ├── migrations/\n│   ├── functions/\n│   ├── verification/\n│   └── mutants/\n├── doctrine/\n├── stack/\n├── scripts/\n├── pnpm-workspace.yaml\n├── turbo.json\n└── tsconfig.base.json",
+    "application_flow": "Hono route\n  → parse Zod/OpenAPI transport\n  → resolve authenticated actor and entity scope\n  → call one typed operation with explicit capabilities\n  → execute one explicit node-postgres/Kysely transaction when needed\n  → return canonical Result mapped to HTTP"
+  },
+  "gate_cadence": [
+    {
+      "gate": "Fast",
+      "required_contents": "TypeScript native check; TypeScript 6 compatibility check; type-aware lint; module boundaries; affected Vitest/property tests; lightweight PGlite checks",
+      "trigger": "Every commit"
+    },
+    {
+      "gate": "Merge",
+      "required_contents": "PostgreSQL 18 and 17 affected migrations/tests; role/grant and posting controls; affected Stryker/domain mutants; API contract diff; build",
+      "trigger": "Every pull request"
+    },
+    {
+      "gate": "Nightly",
+      "required_contents": "Full domain mutation corpus; multi-session concurrency; projection rebuild/reconciliation; full Playwright critical paths",
+      "trigger": "Scheduled"
+    },
+    {
+      "gate": "Qualification",
+      "required_contents": "Clean install from lockfile; all SCC controls; both PostgreSQL majors; migration upgrade; credential topology; restore; exact version/digest evidence",
+      "trigger": "Release and toolchain/platform change"
+    },
+    {
+      "gate": "Production",
+      "required_contents": "Reconciliation, privilege/scope drift, outbox ambiguity, backup/restore cadence, incident regressions, operational objectives",
+      "trigger": "Governed cadence"
+    }
+  ]
+}
