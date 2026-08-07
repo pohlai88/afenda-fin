@@ -19,6 +19,7 @@ import { evaluateToolchain } from './verify-toolchain-baseline.ts';
 import { checkControlMapCompleteness, checkDependencyPinsAreExact } from './lib/control-map.ts';
 import { checkApplicationArchitecture } from './check-architecture.ts';
 import { checkMoneySafety } from './check-money-safety.ts';
+import { checkTransactionSafety } from './check-transaction-safety.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -725,6 +726,129 @@ function runInstantTransportCalendarGuardMutationFixture(): RedFixtureResult {
   }
 }
 
+/**
+ * Phase 3C: SCC-08 static control must catch a real `pool.query(...)` call site
+ * injected into packages/db/src (the production checkTransactionSafety scanner).
+ */
+function runDbPoolQueryStaticFixture(): RedFixtureResult {
+  const fixturePath = path.join(ROOT, 'packages', 'db', 'src', '__red_pool_query__.ts');
+  try {
+    writeFileSync(
+      fixturePath,
+      [
+        "import type { Pool } from 'pg';",
+        'export async function redFixturePoolQuery(pool: Pool): Promise<void> {',
+        "  await pool.query('SELECT 1');",
+        '}',
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+    const violations = checkTransactionSafety();
+    const failed = violations.some((v) => v.filePath.includes('__red_pool_query__'));
+    return { name: 'SCC-08: pool.query call site detected in packages/db/src', expectFail: true, failed };
+  } catch (err) {
+    const e = err as { message: string };
+    return { name: 'SCC-08: pool.query call site detected in packages/db/src', expectFail: true, failed: false, error: e.message };
+  } finally {
+    rmSync(fixturePath, { force: true });
+  }
+}
+
+/**
+ * Phase 3C: mutate withTransaction to BEGIN on the pool (wrong client). Invokes
+ * the DB-integration gate lane specifically — not `pnpm gate`.
+ */
+function runDbTransactionPoolBeginMutationFixture(): RedFixtureResult {
+  const filePath = path.join(ROOT, 'packages', 'db', 'src', 'transaction.ts');
+  const original = readFileSync(filePath, 'utf8');
+  const target = "await client.query('BEGIN');";
+  if (!original.includes(target)) {
+    return {
+      name: 'mutation-kill: withTransaction BEGIN routed through pool.query',
+      expectFail: true,
+      failed: true,
+      error: 'BEGIN snippet not found; fixture is stale',
+    };
+  }
+  try {
+    writeFileSync(filePath, original.replace(target, "await pool.query('BEGIN');"), 'utf8');
+    execFileSync('pnpm', ['--filter', '@afenda/db', 'run', 'test:integration'], {
+      encoding: 'utf8',
+      cwd: ROOT,
+      shell: true,
+    });
+    return { name: 'mutation-kill: withTransaction BEGIN routed through pool.query', expectFail: true, failed: false };
+  } catch {
+    return { name: 'mutation-kill: withTransaction BEGIN routed through pool.query', expectFail: true, failed: true };
+  } finally {
+    writeFileSync(filePath, original, 'utf8');
+  }
+}
+
+/**
+ * Phase 3C: register a lossy int8 parser (the correct mutant direction — defaults
+ * already return strings). Invokes DB-integration lane.
+ */
+function runDbLossyInt8ParserMutationFixture(): RedFixtureResult {
+  const filePath = path.join(ROOT, 'packages', 'db', 'src', 'type-parsers.ts');
+  const original = readFileSync(filePath, 'utf8');
+  const target = 'pg.types.setTypeParser(PG_OID.INT8, identityString);';
+  const mutant = 'pg.types.setTypeParser(PG_OID.INT8, (value: string) => Number.parseInt(value, 10));';
+  if (!original.includes(target)) {
+    return {
+      name: 'mutation-kill: lossy int8 TypeParser registered (parseInt)',
+      expectFail: true,
+      failed: true,
+      error: 'INT8 identity registration not found; fixture is stale',
+    };
+  }
+  try {
+    writeFileSync(filePath, original.replace(target, mutant), 'utf8');
+    execFileSync('pnpm', ['--filter', '@afenda/db', 'run', 'test:integration'], {
+      encoding: 'utf8',
+      cwd: ROOT,
+      shell: true,
+    });
+    return { name: 'mutation-kill: lossy int8 TypeParser registered (parseInt)', expectFail: true, failed: false };
+  } catch {
+    return { name: 'mutation-kill: lossy int8 TypeParser registered (parseInt)', expectFail: true, failed: true };
+  } finally {
+    writeFileSync(filePath, original, 'utf8');
+  }
+}
+
+/**
+ * Phase 3C: disable checksum mismatch detection in migrate.ts; the integration
+ * test that mutates an applied migration file must then fail to observe a reject.
+ */
+function runDbMigrationChecksumGuardMutationFixture(): RedFixtureResult {
+  const filePath = path.join(ROOT, 'packages', 'db', 'src', 'migrate.ts');
+  const original = readFileSync(filePath, 'utf8');
+  const target = 'if (prior !== undefined && prior.checksum !== migration.checksum) {';
+  if (!original.includes(target)) {
+    return {
+      name: 'mutation-kill: migration checksum mismatch guard disabled',
+      expectFail: true,
+      failed: true,
+      error: 'checksum guard snippet not found; fixture is stale',
+    };
+  }
+  try {
+    writeFileSync(filePath, original.replace(target, 'if (prior !== undefined && false && prior.checksum !== migration.checksum) {'), 'utf8');
+    execFileSync('pnpm', ['--filter', '@afenda/db', 'run', 'test:integration'], {
+      encoding: 'utf8',
+      cwd: ROOT,
+      shell: true,
+    });
+    return { name: 'mutation-kill: migration checksum mismatch guard disabled', expectFail: true, failed: false };
+  } catch {
+    return { name: 'mutation-kill: migration checksum mismatch guard disabled', expectFail: true, failed: true };
+  } finally {
+    writeFileSync(filePath, original, 'utf8');
+  }
+}
+
 async function main(): Promise<void> {
   const results: RedFixtureResult[] = [];
   results.push(runAuthoritySelfTest());
@@ -756,6 +880,10 @@ async function main(): Promise<void> {
   results.push(runMoneyTransportDecimalGuardMutationFixture());
   results.push(runMoneyTransportPrecisionLossMutationFixture());
   results.push(runInstantTransportCalendarGuardMutationFixture());
+  results.push(runDbPoolQueryStaticFixture());
+  results.push(runDbTransactionPoolBeginMutationFixture());
+  results.push(runDbLossyInt8ParserMutationFixture());
+  results.push(runDbMigrationChecksumGuardMutationFixture());
 
   console.log('\n=== AFENDA red harness (gate exists -> injected violation -> real gate fails) ===\n');
   let allOk = true;

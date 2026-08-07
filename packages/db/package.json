@@ -1,0 +1,36 @@
+{
+  "name": "@afenda/db",
+  "version": "0.0.0",
+  "private": true,
+  "description": "AFENDA persistence boundary: node-postgres pool/transaction capability, exact type parsing, checksummed forward-only migrations, and Testcontainers integration lane. No ledger/business schema in this package yet.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "typecheck:native": "tsc --noEmit -p tsconfig.json",
+    "typecheck:compat": "tsc6 --noEmit -p tsconfig.json",
+    "test": "vitest run --exclude \"**/*.integration.test.ts\"",
+    "test:integration": "vitest run tests/persistence.integration.test.ts"
+  },
+  "dependencies": {
+    "@afenda/errors": "workspace:*",
+    "@afenda/time": "workspace:*",
+    "@afenda/money": "workspace:*",
+    "pg": "8.22.0"
+  },
+  "devDependencies": {
+    "@types/pg": "8.21.0",
+    "@typescript/native": "npm:typescript@7.0.2",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "vitest": "4.1.10",
+    "testcontainers": "12.1.0",
+    "@testcontainers/postgresql": "12.1.0"
+  }
+}

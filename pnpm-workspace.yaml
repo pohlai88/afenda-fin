@@ -3,6 +3,13 @@
 # packages/money under this glob — see governance/PHASE_3A_KERNEL_REPORT.md.
 # The apps/* glob remains forward-declared per stack/STACK.md §8; no apps exist
 # yet (no API/frontend/worker in this phase), which is valid for pnpm.
+# Phase 3C adds packages/db under the packages/* glob.
 packages:
   - "apps/*"
   - "packages/*"
+allowBuilds:
+  cpu-features: true
+  protobufjs: true
+  ssh2: true
+minimumReleaseAgeExclude:
+  - '@types/pg@8.21.0'

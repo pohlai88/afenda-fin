@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "as_of": "2026-08-08",
-  "generation_method": "Manually assessed against executable evidence gathered during AFENDA Phase 2 (control plane), Phase 2.1 (control plane hardening), Phase 2.2 (toolchain authority/CI-evidence reconciliation), Phase 3A (first doctrine-bearing application kernel: packages/errors, packages/time, packages/money), Phase 3B (first external transport boundary: packages/contracts, Zod 4.4.3), and Phase 3B.1 (lint control repair/hardening: fixed a false-red lint fixture, enabled @typescript-eslint/no-unsafe-assignment and no-unsafe-argument, added exact-rule-ID red evidence). Unlike doctrine-registry.json / stack-registry.json / position-registry.json / authority-index.json, this file is not a pure deterministic text-extraction projection: implementation state is a judgment call that requires running real checks, not parsing prose. Structural completeness (every SCC-01..27 and V01..18 present exactly once, states drawn from the fixed enum) is itself verified by scripts/gate.ts's control-map-completeness step. See governance/PHASE_3A_KERNEL_REPORT.md, governance/PHASE_3B_CONTRACTS_REPORT.md and governance/PHASE_3B1_LINT_REPORT.md for full evidence detail.",
+  "generation_method": "Manually assessed against executable evidence gathered during AFENDA Phase 2 (control plane), Phase 2.1 (control plane hardening), Phase 2.2 (toolchain authority/CI-evidence reconciliation), Phase 3A (first doctrine-bearing application kernel: packages/errors, packages/time, packages/money), Phase 3B (first external transport boundary: packages/contracts, Zod 4.4.3), Phase 3B.1 (lint control repair/hardening), and Phase 3C commit 1 (first persistence boundary: packages/db, db/migrations, node-postgres, Testcontainers PostgreSQL 18 via pnpm gate:db-integration). Unlike doctrine-registry.json / stack-registry.json / position-registry.json / authority-index.json, this file is not a pure deterministic text-extraction projection: implementation state is a judgment call that requires running real checks, not parsing prose. Structural completeness (every SCC-01..27 and V01..18 present exactly once, states drawn from the fixed enum) is itself verified by scripts/gate.ts's control-map-completeness step. See governance/PHASE_3A_KERNEL_REPORT.md, governance/PHASE_3B_CONTRACTS_REPORT.md, governance/PHASE_3B1_LINT_REPORT.md and governance/PHASE_3C_DB_REPORT.md for full evidence detail.",
   "state_enum": ["implemented", "partial", "not-yet-built", "blocked", "not-applicable-current-tree"],
   "policy": [
     "A control is never 'implemented' merely because a document describes it; implementation requires an executable check.",
@@ -121,12 +121,13 @@
       "state": "implemented",
       "gate": "pnpm run boundary:check (depcruise packages --config .dependency-cruiser.cjs; wired into `pnpm gate` step 4e)",
       "evidence": [
-        "Phase 3B: .dependency-cruiser.cjs now graphs the real 4-package tree packages/{errors,time,money,contracts}, zero violations",
+        "Phase 3C: .dependency-cruiser.cjs graphs the real 5-package tree packages/{errors,time,money,contracts,db}, zero violations",
         "Rule no-cross-package-internal-import: uses dependency-cruiser's documented capturing-group/backreference mechanism (`from: { path: '^packages/([^/]+)/' }`, `to: { path: '^packages/([^/]+)/src/', pathNot: '^packages/$1/src/' }`) to forbid any package reaching into another package's src/* subpath directly, while still allowing a package's own internal src/* imports — enforcing 'root public API only, no consumer imports src/* internal paths'; now proven against the new packages/contracts package too",
         "Rule no-errors-depends-upward + no-money-depends-on-time + no-time-depends-on-money: enforce the preferred dependency direction (errors is the base; money and time depend on it but not on each other)",
         "Phase 3B: new rule no-kernel-depends-on-contracts forbids packages/errors, packages/time, and packages/money from depending on packages/contracts — enforcing that contracts sits ABOVE the kernel (contracts -> {errors,time,money}), never the reverse",
+        "Phase 3C: no-kernel-depends-on-db, no-db-depends-on-contracts, no-contracts-depends-on-db enforce packages/db sits above the kernel and stays separate from the JSON transport boundary",
         "Rule no-circular: forbids dependency cycles anywhere in the graph",
-        "Rule no-domain-to-adapter: kept, but explicitly marked forward-declared/not-yet-matched in its own comment (packages/domain, apps/*, packages/db do not exist yet) — NOT counted as current evidence on its own"
+        "Rule no-domain-to-adapter: kept, but explicitly marked forward-declared/not-yet-matched in its own comment (packages/domain, apps/* do not exist yet) — NOT counted as current evidence on its own"
       ],
       "red_fixtures": [
         "Phase 3A red.ts runDepCruiseInternalImportFixture(): injects packages/money/src/__red_fixture_internal_import__.ts importing packages/errors/src/result.ts directly (correct dependency direction, but bypassing the package's exports root) — confirmed caught by the real `pnpm run boundary:check` CLI command, file removed after",
@@ -135,8 +136,8 @@
         "Phase 3B red.ts runDepCruiseReverseDependencyFixture(): injects packages/money/src/__red_fixture_reverse_dependency__.ts importing packages/contracts/src/index.ts (the exact reverse dependency the transport boundary exists to forbid), confirmed caught by the new no-kernel-depends-on-contracts rule via the real CLI command, file removed after",
         "Manually verified during implementation (not committed as a fixture): a cross-package internal import against the FORBIDDEN direction (packages/errors reaching into packages/money/src) is caught by two rules simultaneously (no-errors-depends-upward AND no-cross-package-internal-import), confirming the rules compose correctly rather than masking each other"
       ],
-      "notes": "Implemented for the current, actual 4-package graph: every rule is justified by an existing dependency relationship or an existing prohibition the brief specified (cycle, internal-subpath import, forbidden direction, reverse-dependency), and every currently-applicable rule outcome is mechanically checked with a passing clean run plus four red fixtures (two from Phase 3A, two new in Phase 3B) proving real violations are caught. This does NOT claim SCC-05 is complete for a future, larger package graph (apps/*, packages/db) — the domain->adapter rule remains explicitly forward-declared and unevidenced, and new rules will be needed as new package kinds are added.",
-      "revisit_trigger": "When packages/domain, packages/db, or apps/* exist, add real (not forward-declared) rules and red fixtures for those specific new boundaries."
+      "notes": "Implemented for the current, actual 5-package graph (errors/time/money/contracts/db). Domain->adapter remains forward-declared (no packages/domain or apps/* yet).",
+      "revisit_trigger": "When packages/domain or apps/* exist, add real (not forward-declared) rules and red fixtures for those specific new boundaries."
     },
     {
       "control_id": "SCC-06",
@@ -144,35 +145,59 @@
       "applies_to": ["SEL-05"],
       "state": "not-yet-built",
       "gate": null, "evidence": [], "red_fixtures": [],
-      "notes": "No database/ledger kernel code exists.",
-      "revisit_trigger": "When db/migrations and the ledger kernel exist."
+      "notes": "Phase 3C adds packages/db infrastructure only (plain PostgreSQL via node-postgres). No ledger kernel / provider-specific SQL exists yet — SCC-06 stays not-yet-built until financial-core paths exist to audit.",
+      "revisit_trigger": "When the ledger kernel exists on top of packages/db."
     },
     {
       "control_id": "SCC-07",
       "name": "Dual PostgreSQL major qualification",
       "applies_to": ["SEL-05", "SEL-08", "SEL-20"],
-      "state": "not-yet-built",
-      "gate": null, "evidence": [], "red_fixtures": [],
-      "notes": "No PostgreSQL instances, migrations, or dual-major test lanes exist.",
-      "revisit_trigger": "When migrations exist and are qualified on both PostgreSQL 18 and 17."
+      "state": "partial",
+      "gate": "pnpm gate:db-integration (PostgreSQL 18 Testcontainers lane only in Phase 3C commit 1)",
+      "evidence": [
+        "Phase 3C commit 1: packages/db/tests/persistence.integration.test.ts runs migrations, transactions, and type-parser proofs against digest-pinned postgres@sha256:a02db8cac496f15b094798a38254f14d6e00741f709360e5e00bb6668ea31636 (PostgreSQL 18) via Testcontainers",
+        "docker-compose.yml pins the same PostgreSQL 18 digest for local development (`pnpm db:up`)"
+      ],
+      "red_fixtures": [
+        "Phase 3C red.ts DB-integration mutation fixtures invoke `pnpm --filter @afenda/db run test:integration` (the DB lane), never the fast `pnpm gate`"
+      ],
+      "notes": "PARTIAL: only the primary major (PostgreSQL 18) is qualified in commit 1. PostgreSQL 17 dual-major lane, disagreement policy enforcement, and STACK_ADOPTION dual-major tick are deferred to Phase 3C commit 2. A 17-vs-18 difference must be a build failure, never a silent floor bump.",
+      "revisit_trigger": "When Phase 3C commit 2 adds an independent PostgreSQL 17 Testcontainers lane and both majors pass the same migration/transaction/type-parser corpus."
     },
     {
       "control_id": "SCC-08",
       "name": "Single-client transaction rule",
       "applies_to": ["SEL-06"],
-      "state": "not-yet-built",
-      "gate": null, "evidence": [], "red_fixtures": [],
-      "notes": "No node-postgres usage exists.",
-      "revisit_trigger": "When packages/db exists with transaction-taking code."
+      "state": "implemented",
+      "gate": "pnpm gate step 4i (scripts/check-transaction-safety.ts) && pnpm gate:db-integration",
+      "evidence": [
+        "packages/db/src/transaction.ts withTransaction checks out one PoolClient, BEGIN/COMMIT/ROLLBACK on that client only, always releases",
+        "scripts/check-transaction-safety.ts AST-scans packages/db/src for `pool.query(...)` call sites (wired into pnpm gate step 4i)",
+        "packages/db/tests/persistence.integration.test.ts proves commit of two inserts and full rollback on throw against real PostgreSQL 18"
+      ],
+      "red_fixtures": [
+        "Phase 3C red.ts runDbPoolQueryStaticFixture(): injects pool.query into packages/db/src; checkTransactionSafety catches it",
+        "Phase 3C red.ts runDbTransactionPoolBeginMutationFixture(): mutates BEGIN onto pool.query; DB-integration rollback test turns red"
+      ],
+      "notes": "Implemented for the current packages/db topology. No business/ledger transactions exist yet; when they do, they must use this same withTransaction capability.",
+      "revisit_trigger": "When ledger/posting transactions exist; confirm they use withTransaction and extend static scan scope if new packages issue SQL."
     },
     {
       "control_id": "SCC-09",
       "name": "Exact database type parsing",
       "applies_to": ["SEL-06"],
-      "state": "not-yet-built",
-      "gate": null, "evidence": [], "red_fixtures": [],
-      "notes": "No database driver configuration exists.",
-      "revisit_trigger": "When packages/db exists with owned bigint/numeric/date-time parsers."
+      "state": "implemented",
+      "gate": "pnpm gate:db-integration",
+      "evidence": [
+        "Empirical probe (same integration suite, before owned configuration): node-postgres 8.22.0 + PostgreSQL 18 returns int8 (OID 20) and numeric (OID 1700) as JS strings by default; money (OID 790) also returns a string",
+        "packages/db/src/type-parsers.ts installs owned identity string parsers for int8/numeric/timestamp/timestamptz/date and a throwing parser for OID 790 (PostgreSQL money — forbidden)",
+        "Round-trip at 2^53+1 (9007199254740993) remains an exact string under owned parsers"
+      ],
+      "red_fixtures": [
+        "Phase 3C red.ts runDbLossyInt8ParserMutationFixture(): registers parseInt for OID 20 (correct mutant direction — removing a registration would be a false-red because defaults are already strings); exact-string integration test turns red"
+      ],
+      "notes": "Implemented for the current driver surface. Domain conversion into @afenda/money / @afenda/time remains at call sites that hold currency/civil-vs-instant context — parsers intentionally return canonical strings, not domain brands.",
+      "revisit_trigger": "When authoritative money/time columns are read through packages/db into domain types; add decode helpers and fixtures at that boundary."
     },
     {
       "control_id": "SCC-10",
@@ -180,17 +205,26 @@
       "applies_to": ["SEL-07"],
       "state": "not-yet-built",
       "gate": null, "evidence": [], "red_fixtures": [],
-      "notes": "No Kysely usage or generated types exist.",
-      "revisit_trigger": "When a migrated PostgreSQL schema and Kysely codegen exist."
+      "notes": "Deferred to Phase 3C commit 2. Codegen must use exactly one canonical source (Testcontainers PostgreSQL 18); PGlite must be structurally incapable of producing committed types.",
+      "revisit_trigger": "When Kysely codegen + drift gate exist against Testcontainers PG18 only."
     },
     {
       "control_id": "SCC-11",
       "name": "Migration integrity",
       "applies_to": ["SEL-08"],
-      "state": "not-yet-built",
-      "gate": null, "evidence": [], "red_fixtures": [],
-      "notes": "No db/migrations directory or migration runner exists.",
-      "revisit_trigger": "When forward-only SQL migrations with checksums exist."
+      "state": "implemented",
+      "gate": "pnpm gate:db-integration && packages/db unit tests for header policy",
+      "evidence": [
+        "db/migrations/0001_bootstrap.sql: checksummed forward-only bootstrap creating afenda_migration_history, afenda_migrator/afenda_app roles, lock_timeout/statement_timeout, one SECURITY DEFINER recorder function with $$ quoting + ALTER OWNER + GRANT",
+        "packages/db/src/migrate.ts: SHA-256 checksums, strict NNNN ordering, transactional by default, `-- afenda:transactional=false` requires `-- afenda:non-transactional-note:`",
+        "Bootstrap identity is explicitly the container/image superuser `postgres` (not afenda_migrator/afenda_app), documented in the migration header"
+      ],
+      "red_fixtures": [
+        "Phase 3C integration test mutates 0001 on disk after apply and expects MIGRATION_CHECKSUM_MISMATCH",
+        "Phase 3C red.ts runDbMigrationChecksumGuardMutationFixture(): disables the checksum guard; that integration test turns red"
+      ],
+      "notes": "Implemented for the migration runner + 0001 bootstrap. No ledger schema migrations exist yet. Dev-only role passwords are embedded in 0001 for local/CI reproducibility and must be replaced by secret injection before any shared/production deployment.",
+      "revisit_trigger": "When further migrations ship; confirm checksum/order/transactionality policy still holds and expand role topology beyond migrator/app as needed."
     },
     {
       "control_id": "SCC-12",

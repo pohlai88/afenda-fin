@@ -2,16 +2,13 @@
 //
 // Phase 3A (AFENDA kernel) gave this config a real, non-empty package graph:
 // packages/errors, packages/time, packages/money. Phase 3B adds
-// packages/contracts as a fourth package that sits ABOVE the other three
-// (errors/time/money must never depend on it) — see
-// governance/PHASE_3B_CONTRACTS_REPORT.md. Every rule below is justified by
-// that actual 4-package graph. Do not add rules describing packages/modules
-// that do not exist yet; a rule matching zero current modules is not
-// evidence.
+// packages/contracts. Phase 3C adds packages/db (depends on errors/time/money;
+// must not depend on contracts; kernel packages must not depend on db).
+// See governance/PHASE_3C_DB_REPORT.md.
 //
 // `no-domain-to-adapter` remains forward-declared per stack/STACK.md §8 (no
-// packages/domain, apps/*, or packages/db exist yet) and is NOT counted as
-// current SCC-05 evidence on its own.
+// packages/domain or apps/* exist yet) and is NOT counted as current SCC-05
+// evidence on its own.
 
 /** @type {import('dependency-cruiser').IConfiguration} */
 module.exports = {
@@ -64,6 +61,30 @@ module.exports = {
       severity: 'error',
       from: { path: '^packages/(errors|time|money)/' },
       to: { path: '^packages/contracts/' },
+    },
+    {
+      name: 'no-kernel-depends-on-db',
+      comment:
+        'Phase 3C: packages/db sits above errors/time/money; the kernel packages must never depend on packages/db.',
+      severity: 'error',
+      from: { path: '^packages/(errors|time|money)/' },
+      to: { path: '^packages/db/' },
+    },
+    {
+      name: 'no-db-depends-on-contracts',
+      comment:
+        'Phase 3C: packages/db is a persistence boundary, not a JSON transport boundary; it must not depend on packages/contracts.',
+      severity: 'error',
+      from: { path: '^packages/db/' },
+      to: { path: '^packages/contracts/' },
+    },
+    {
+      name: 'no-contracts-depends-on-db',
+      comment:
+        'Phase 3C: packages/contracts remains a pure Zod transport layer with no database dependency.',
+      severity: 'error',
+      from: { path: '^packages/contracts/' },
+      to: { path: '^packages/db/' },
     },
     {
       name: 'no-circular',

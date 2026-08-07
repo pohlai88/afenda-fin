@@ -94,12 +94,12 @@ Complete each item before marking the stack `ADOPTED`.
 
 ### Database
 
-- [ ] Pin PostgreSQL 18 and 17 container digests.
-- [ ] Configure `pg` type parsing so authoritative bigint/numeric/time values do not silently lose precision.
-- [ ] Implement a same-client transaction capability; forbid transactional `pool.query()`.
-- [ ] Run every migration and authoritative DB control on both PostgreSQL majors.
-- [ ] Generate Kysely types from the migrated schema and fail on drift.
-- [ ] Separate request, posting, migration, audit and backup credentials.
+- [ ] Pin PostgreSQL 18 and 17 container digests. *(Phase 3C commit 1 pinned PostgreSQL 18 only; 17 deferred to commit 2 — left unchecked until both digests are present.)*
+- [x] Configure `pg` type parsing so authoritative bigint/numeric/time values do not silently lose precision. *(Phase 3C commit 1: packages/db/src/type-parsers.ts; OID 790 money forbidden; lossy-parser red fixture.)*
+- [x] Implement a same-client transaction capability; forbid transactional `pool.query()`. *(Phase 3C commit 1: withTransaction + scripts/check-transaction-safety.ts + red fixtures.)*
+- [ ] Run every migration and authoritative DB control on both PostgreSQL majors. *(commit 2)*
+- [ ] Generate Kysely types from the migrated schema and fail on drift. *(commit 2)*
+- [ ] Separate request, posting, migration, audit and backup credentials. *(Phase 3C commit 1 established migrator vs app roles only; request/posting/audit/backup not yet applicable — left unchecked.)*
 
 ### API and frontend
 
@@ -219,3 +219,9 @@ Phase 3B (`packages/contracts`, the first external/JSON transport boundary — s
 - Every API/frontend/identity/jobs/database item in §3 remains unchecked because Phase 3B explicitly did not build apps/api, apps/web, a database, identity, or jobs — `packages/contracts` is a pure Zod transport-schema package with zero Hono/OpenAPI/HTTP dependency, deliberately, per the phase brief.
 
 The stack remains **architecturally approved, not adopted**. No ratifier signature, no CI-enforced `stack/STACK.sha256` on a live runner, and no completed §3 checklist exist as of this phase.
+
+---
+
+## 9. Phase 3C persistence-boundary review (2026-08-08) — commit 1
+
+Phase 3C commit 1 (`packages/db`, `db/migrations/0001_bootstrap.sql`, Testcontainers PostgreSQL 18 via `pnpm gate:db-integration`) was reviewed against §3. Items ticked above for type parsing and single-client transactions have real mechanical evidence (see `governance/PHASE_3C_DB_REPORT.md`). The PostgreSQL 18 digest pin is evidenced; PostgreSQL 17 is not yet. Dual-major qualification, Kysely codegen/drift, PGlite structural gating, and full credential topology remain unchecked. **Ticking these items is not a stack adoption event.**
