@@ -17,6 +17,7 @@
     "typecheck:native:single": "tsc --noEmit -p tsconfig.json --singleThreaded",
     "typecheck:compat": "tsc6 --noEmit -p tsconfig.json",
     "lint": "eslint .",
+    "boundary:check": "depcruise packages --config .dependency-cruiser.cjs",
     "agent-docs": "node scripts/generate-agent-docs.ts",
     "gate": "node scripts/gate.ts",
     "red": "node scripts/red.ts"
@@ -30,6 +31,8 @@
     "typescript-eslint": "8.66.0",
     "dependency-cruiser": "18.1.1",
     "@types/node": "24.9.2",
-    "globals": "17.9.0"
+    "globals": "17.9.0",
+    "@afenda/time": "workspace:*",
+    "@afenda/money": "workspace:*"
   }
 }

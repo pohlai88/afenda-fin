@@ -1,7 +1,8 @@
 # SEL-04 (stack/STACK.md): pnpm workspaces as package authority.
-# Forward-declared per stack/STACK.md §8's required repository architecture.
-# No packages exist yet in this tree (Phase 2 is governance/tooling only);
-# these globs currently match zero packages, which is valid for pnpm.
+# Phase 3A (AFENDA kernel) populated packages/errors, packages/time and
+# packages/money under this glob — see governance/PHASE_3A_KERNEL_REPORT.md.
+# The apps/* glob remains forward-declared per stack/STACK.md §8; no apps exist
+# yet (no API/frontend/worker in this phase), which is valid for pnpm.
 packages:
   - "apps/*"
   - "packages/*"

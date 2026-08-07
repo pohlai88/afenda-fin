@@ -573,3 +573,9 @@ Full final verification suite (§14 of the task — frozen install, authority bu
 None of these require a normative-authority decision to *record* (all recorded above); finding 2, if ever *resolved*, would require an explicit governance decision between two named options, not a default assumption.
 
 **No application readiness claim. No stack adoption. No E5/E6 claim.**
+
+---
+
+## 36. Phase 3A forward reference (2026-08-08)
+
+AFENDA Phase 3A built the first doctrine-bearing application kernel (`packages/errors`, `packages/time`, `packages/money`) and, with real packages finally present, closed two of this report's carried-forward findings for real: finding 3 (`turbo.json` orchestrated 0 tasks) — Turbo now orchestrates 9 real package tasks, proven via `--dry=json`; finding 4 (`.dependency-cruiser.cjs` was a rule scaffold only) — it now graphs the real 3-package tree with zero violations and two red fixtures. It also activated a new SCC-03 money-safety AST gate and a new SCC-24 application-architecture AST control (both partial by design), and added two hand-authored mutation-kill red fixtures. Findings 1 and 2 above (no git remote; TS6 compat-engine range) are unchanged and not addressed by Phase 3A. Full detail, evidence, and honest state-change reasoning: `governance/PHASE_3A_KERNEL_REPORT.md`. This forward reference does not duplicate that report's content and is not itself new evidence.

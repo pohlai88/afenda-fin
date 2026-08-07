@@ -18,11 +18,14 @@
     "lint": {
       "cache": false
     },
+    "test": {
+      "cache": false
+    },
     "verify:toolchain": {
       "cache": false
     },
     "gate": {
-      "dependsOn": ["gate:authority", "typecheck:native", "typecheck:compat", "lint", "verify:toolchain"],
+      "dependsOn": ["gate:authority", "typecheck:native", "typecheck:compat", "lint", "test", "verify:toolchain"],
       "cache": false
     }
   }

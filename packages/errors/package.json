@@ -1,0 +1,27 @@
+{
+  "name": "@afenda/errors",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Canonical typed failure/result vocabulary shared by AFENDA application packages.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "typecheck:native": "tsc --noEmit -p tsconfig.json",
+    "typecheck:compat": "tsc6 --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@typescript/native": "npm:typescript@7.0.2",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "vitest": "4.1.10",
+    "fast-check": "4.9.0"
+  }
+}

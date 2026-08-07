@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "as_of": "2026-08-08",
-  "generation_method": "Manually assessed against executable evidence gathered during AFENDA Phase 2 (control plane), Phase 2.1 (control plane hardening) and Phase 2.2 (toolchain authority/CI-evidence reconciliation). Unlike doctrine-registry.json / stack-registry.json / position-registry.json / authority-index.json, this file is not a pure deterministic text-extraction projection: implementation state is a judgment call that requires running real checks, not parsing prose. Structural completeness (every SCC-01..27 and V01..18 present exactly once, states drawn from the fixed enum) is itself verified by scripts/gate.ts's control-map-completeness step.",
+  "generation_method": "Manually assessed against executable evidence gathered during AFENDA Phase 2 (control plane), Phase 2.1 (control plane hardening), Phase 2.2 (toolchain authority/CI-evidence reconciliation) and Phase 3A (first doctrine-bearing application kernel: packages/errors, packages/time, packages/money). Unlike doctrine-registry.json / stack-registry.json / position-registry.json / authority-index.json, this file is not a pure deterministic text-extraction projection: implementation state is a judgment call that requires running real checks, not parsing prose. Structural completeness (every SCC-01..27 and V01..18 present exactly once, states drawn from the fixed enum) is itself verified by scripts/gate.ts's control-map-completeness step. See governance/PHASE_3A_KERNEL_REPORT.md for full Phase 3A evidence detail.",
   "state_enum": ["implemented", "partial", "not-yet-built", "blocked", "not-applicable-current-tree"],
   "policy": [
     "A control is never 'implemented' merely because a document describes it; implementation requires an executable check.",
@@ -21,15 +21,18 @@
         "tsconfig.json include = \"scripts/**/*.ts\" — every live governance source file, with zero exclusions",
         "package.json scripts typecheck:native / typecheck:native:single / typecheck:compat",
         "eslint.config.mjs (type-aware lint via typescript-eslint), 0 errors",
-        "Phase 2.1: all 8 governance scripts (previously .mjs) rewritten as .ts with real types (no any, no unchecked casts, no @ts-ignore/@ts-nocheck) and confirmed to run directly under Node 24.18.0 with zero build step and zero emitted artifacts"
+        "Phase 2.1: all 8 governance scripts (previously .mjs) rewritten as .ts with real types (no any, no unchecked casts, no @ts-ignore/@ts-nocheck) and confirmed to run directly under Node 24.18.0 with zero build step and zero emitted artifacts",
+        "Phase 3A: each of packages/errors, packages/time, packages/money has its own tsconfig.json (extends tsconfig.base.json) and its own typecheck:native/typecheck:compat scripts, orchestrated for real by Turborepo (`pnpm exec turbo run typecheck:native typecheck:compat` — proven by `turbo run ... --dry=json` listing 9 real @afenda/{errors,time,money}#{typecheck:native,typecheck:compat,test} taskIds, not 0); wired into `pnpm gate` step 4d",
+        "Phase 3A: eslint.config.mjs switched from a fixed `project` array to typescript-eslint's `projectService: true`, so `eslint .` (gate step 4c) type-checks every packages/*/src and packages/*/tests file against its own tsconfig automatically, with zero errors"
       ],
       "red_fixtures": [
         "red:lint-ts-suppression (scripts/red.ts)",
         "red:typecheck-native-injected-type-error (scripts/red.ts) — writes a disposable .ts file with a genuine type defect into the real tsconfig.json include scope and invokes the actual `pnpm run typecheck:native` command, confirming it exits non-zero, then removes the fixture",
-        "red:typecheck-compat-injected-type-error (scripts/red.ts) — same defect, `pnpm run typecheck:compat`"
+        "red:typecheck-compat-injected-type-error (scripts/red.ts) — same defect, `pnpm run typecheck:compat`",
+        "Phase 3A: tests/type-invalid/*.ts (5 fixtures + 1 must-compile control), invoked via scripts/check-type-invalid.ts against the REAL `tsc --noEmit -p tests/type-invalid/tsconfig.json` command — proves Money/MinorUnits reject `number` and Money/AsOf reject a missing required field at compile time, delegated into `pnpm red` via runTypeInvalidDelegatedFixture"
       ],
-      "notes": "Phase 2.1 closed both gaps recorded at the end of Phase 2. (1) The Phase 1 authority scripts (build-authority-registry, check-authority-integrity, lib/authority-parser) were migrated from .mjs to .ts with full types and are now included in tsconfig.json's strict scope alongside the Phase 2 scripts — there is no more excluded governance source and no ~180-error debt; both typecheck:native and typecheck:compat report 0 errors across all 8 files. (2) Two new red fixtures inject a real type error into the live tsconfig scope and invoke the production typecheck:native/typecheck:compat commands directly (not a helper-function mock), proving both compiler lanes actually turn red on a genuine defect. Implemented for the full scope that currently exists (governance tooling); there is still no application code, so this control's application-layer proof remains deferred to when packages/apps exist (see SCC-24).",
-      "revisit_trigger": "When application packages exist, extend the same red-fixture pattern (real command, real injected defect) to the application typecheck scope."
+      "notes": "Phase 2.1 closed both gaps recorded at the end of Phase 2. (1) The Phase 1 authority scripts (build-authority-registry, check-authority-integrity, lib/authority-parser) were migrated from .mjs to .ts with full types and are now included in tsconfig.json's strict scope alongside the Phase 2 scripts — there is no more excluded governance source and no ~180-error debt; both typecheck:native and typecheck:compat report 0 errors across all 8 files. (2) Two new red fixtures inject a real type error into the live tsconfig scope and invoke the production typecheck:native/typecheck:compat commands directly (not a helper-function mock), proving both compiler lanes actually turn red on a genuine defect. Phase 3A extends this from governance tooling to the first real application packages: packages/errors, packages/time and packages/money each typecheck cleanly under both compiler lanes, are orchestrated through Turborepo (closing the previous 'Turbo orchestrates 0 tasks' finding), and are additionally proven via compile-time negative fixtures that the type system actually rejects specific invalid states (not just 'currently has zero errors').",
+      "revisit_trigger": "When apps/api, apps/web, or further packages exist, extend the same red-fixture pattern (real command, real injected defect) to their typecheck scope too."
     },
     {
       "control_id": "SCC-02",
@@ -41,25 +44,37 @@
         "tsconfig.base.json sets strict, noUncheckedIndexedAccess, exactOptionalPropertyTypes, useUnknownInCatchVariables, noImplicitReturns, noFallthroughCasesInSwitch, noPropertyAccessFromIndexSignature, verbatimModuleSyntax, isolatedModules, noEmit exactly as SEL-01 binding constraints require",
         "eslint.config.mjs @typescript-eslint/no-explicit-any and ban-ts-comment rules",
         "Grep-verified: zero `any` type annotations and zero @ts-ignore/@ts-nocheck/@ts-expect-error directives in any scripts/**/*.ts file (the one string literal containing the text \"@ts-ignore\" is red-fixture test data in scripts/red.ts, not a live suppression)",
-        "Phase 2.1 typing work exercised noPropertyAccessFromIndexSignature and exactOptionalPropertyTypes for real (not just declared): both surfaced genuine compile errors during migration that were fixed with proper generics/bracket-access rather than casts or suppressions"
+        "Phase 2.1 typing work exercised noPropertyAccessFromIndexSignature and exactOptionalPropertyTypes for real (not just declared): both surfaced genuine compile errors during migration that were fixed with proper generics/bracket-access rather than casts or suppressions",
+        "Phase 3A: packages/errors, packages/time, packages/money contain zero `any`, zero @ts-ignore/@ts-nocheck, and zero unchecked casts except one single sanctioned brand-attaching cast per smart constructor (toCurrencyCode, toMinorUnits), each immediately preceded by the validating range/format check in the same function — this pattern, plus the strict compiler options, is what makes Money/MinorUnits/CurrencyCode structurally non-assignable from `number` (proven at compile time by tests/type-invalid/money-cannot-accept-number.ts and minor-units-cannot-accept-number.ts)"
       ],
       "red_fixtures": [
         "red:lint-ts-suppression (scripts/red.ts)",
-        "red:typecheck-native-injected-type-error / red:typecheck-compat-injected-type-error (scripts/red.ts) — also exercise strictness generally, since the injected fixture only fails because strict mode is on"
+        "red:typecheck-native-injected-type-error / red:typecheck-compat-injected-type-error (scripts/red.ts) — also exercise strictness generally, since the injected fixture only fails because strict mode is on",
+        "Phase 3A: tests/type-invalid/money-cannot-accept-number.ts, minor-units-cannot-accept-number.ts, money-currency-cannot-be-omitted.ts (application-layer 'any/loose-type is rejected' evidence, delegated into `pnpm red`)"
       ],
-      "notes": "Compiler strictness is genuinely enabled and enforced across the full, now-unified governance tooling surface. There is no application code yet for 'application any is rejected' to be exercised against at scale; that remains deferred (see SCC-24), but the governance-layer proof is now complete rather than partial.",
-      "revisit_trigger": "Once application packages exist, add a red fixture that injects a literal any/unchecked cast into application code and confirms lint/typecheck rejects it."
+      "notes": "Compiler strictness is genuinely enabled and enforced across the full, now-unified governance tooling surface. Phase 3A closes the previously-deferred application-layer gap: packages/errors, packages/time and packages/money are real application code, exercised under the identical strict tsconfig.base.json, with zero any/unsafe-cast debt and compile-time negative evidence that structurally-invalid states are rejected, not merely absent.",
+      "revisit_trigger": "As further application packages (contracts, domain, db, etc.) are added, confirm each inherits tsconfig.base.json unmodified and add fixtures for any new smart-constructor/branding pattern introduced."
     },
     {
       "control_id": "SCC-03",
       "name": "Authoritative money type safety",
       "applies_to": ["SEL-01", "SEL-10"],
-      "state": "not-yet-built",
-      "gate": null,
-      "evidence": [],
-      "red_fixtures": [],
-      "notes": "No money contracts, domain types, or Zod transport schemas exist yet.",
-      "revisit_trigger": "When packages/money and packages/contracts exist with authoritative money fields."
+      "state": "partial",
+      "gate": "pnpm run typecheck:native (structural, packages/money) && node scripts/check-money-safety.ts (static AST gate, wired into `pnpm gate` step 4f)",
+      "evidence": [
+        "packages/money/src/{currency,minor-units,money,rate,rounding}.ts: Money's `minorUnits` field is a branded bigint (MinorUnits); there is no code path, overload, or cast that accepts a JavaScript `number` as an authoritative amount",
+        "packages/money/src/money.ts parseMoney(): rejects any input whose `minorUnits` is not a string (a JSON `number` is rejected, not silently coerced) — comment cites 'MON-01 / SCC-03' at the exact rejection site",
+        "scripts/check-money-safety.ts: a real TypeScript-compiler-API (ts.createSourceFile + AST traversal) static gate scoped to packages/money/src/**/*.ts (not a global grep) that rejects bare Number(...)/parseFloat(...)/parseInt(...) calls, an object-literal `minorUnits`/`amount` property with a numeric-literal initializer (unsafe JSON money shape), and a plain `number` type annotation on any amount/money/minorUnits-named field — verified to have zero false positives against this package's own doc-comments (which mention these strings in prose) and legitimate patterns (Number.isSafeInteger, string-valued minorUnits, an unrelated `sign: number` field)",
+        "tests/type-invalid/money-cannot-accept-number.ts + minor-units-cannot-accept-number.ts: compile-time proof (real `tsc --noEmit`) that `Money`/`MinorUnits` cannot accept a `number` literal"
+      ],
+      "red_fixtures": [
+        "Phase 3A red.ts runMoneySafetyFixtures(): injects a disposable file with an unsafe `{ minorUnits: 12345 }` JSON-number shape into packages/money/src, confirms the real checkMoneySafety() catches it, removes the file",
+        "Phase 3A red.ts runMoneySafetyFixtures(): injects a disposable file with a bare `Number(\"12345\")` call into packages/money/src, confirms the real checkMoneySafety() catches it, removes the file",
+        "Phase 3A red.ts runMoneyCurrencyGuardMutationFixture() / runMoneyRangeGuardMutationFixture(): mutation-kill fixtures (see SCC-18)",
+        "Phase 3A tests/type-invalid delegated fixtures (see SCC-01/SCC-02 red_fixtures)"
+      ],
+      "notes": "Deliberately PARTIAL, not implemented, per the phase brief: packages/money itself is clean and mechanically enforced, but there is still no packages/contracts, no API, and no database — SCC-03's full scope ('authoritative money type safety' across every boundary the money type crosses) cannot be proven until those boundaries exist. What IS real: a genuine AST-based static gate (not a heuristic grep) scoped semantically to the one authoritative money surface that exists, with red fixtures proving it actually catches the specific violation classes it claims to, plus compile-time (not just runtime) proof for the 'cannot accept number' invariant.",
+      "revisit_trigger": "When packages/contracts and/or an API boundary exist with authoritative money fields, extend scripts/check-money-safety.ts's glob scope and add fixtures for that boundary too."
     },
     {
       "control_id": "SCC-04",
@@ -91,12 +106,22 @@
       "control_id": "SCC-05",
       "name": "Module boundaries",
       "applies_to": ["SEL-24", "SEL-25"],
-      "state": "not-yet-built",
-      "gate": null,
-      "evidence": [".dependency-cruiser.cjs (rule scaffold only, declares the domain->adapter forbidden pattern from stack/STACK.md §6-7)"],
-      "red_fixtures": [],
-      "notes": "A dependency-cruiser config is scaffolded, but there are zero packages/apps for it to graph. A depcruise run over an empty tree trivially reports no violations; that is not counted as implemented evidence per the no-fake-green rule.",
-      "revisit_trigger": "When packages/domain and at least one adapter package exist so a real forbidden-import violation can be injected and caught."
+      "state": "implemented",
+      "gate": "pnpm run boundary:check (depcruise packages --config .dependency-cruiser.cjs; wired into `pnpm gate` step 4e)",
+      "evidence": [
+        ".dependency-cruiser.cjs now graphs the real, non-empty packages/{errors,time,money} tree: 30 modules, 59 dependencies cruised, zero violations",
+        "Rule no-cross-package-internal-import: uses dependency-cruiser's documented capturing-group/backreference mechanism (`from: { path: '^packages/([^/]+)/' }`, `to: { path: '^packages/([^/]+)/src/', pathNot: '^packages/$1/src/' }`) to forbid any package reaching into another package's src/* subpath directly, while still allowing a package's own internal src/* imports — enforcing 'root public API only, no consumer imports src/* internal paths'",
+        "Rule no-errors-depends-upward + no-money-depends-on-time + no-time-depends-on-money: enforce the phase brief's preferred dependency direction (errors is the base; money and time depend on it but not on each other) for the actual 3-package graph",
+        "Rule no-circular: forbids dependency cycles anywhere in the graph",
+        "Rule no-domain-to-adapter: kept, but explicitly marked forward-declared/not-yet-matched in its own comment (packages/domain, apps/*, packages/db do not exist yet) — NOT counted as current evidence on its own"
+      ],
+      "red_fixtures": [
+        "Phase 3A red.ts runDepCruiseInternalImportFixture(): injects packages/money/src/__red_fixture_internal_import__.ts importing packages/errors/src/result.ts directly (correct dependency direction, but bypassing the package's exports root) — confirmed caught by the real `pnpm run boundary:check` CLI command, file removed after",
+        "Phase 3A red.ts runDepCruiseCycleFixture(): injects two files inside packages/money/src that import each other, confirmed caught by no-circular via the real CLI command, files removed after",
+        "Manually verified during implementation (not committed as a fixture): a cross-package internal import against the FORBIDDEN direction (packages/errors reaching into packages/money/src) is caught by two rules simultaneously (no-errors-depends-upward AND no-cross-package-internal-import), confirming the rules compose correctly rather than masking each other"
+      ],
+      "notes": "Implemented for the current, actual 3-package graph: every rule is justified by an existing dependency relationship or an existing prohibition the brief specified (cycle, internal-subpath import, forbidden direction), and every currently-applicable rule outcome is mechanically checked with a passing clean run plus two red fixtures proving real violations are caught. This does NOT claim SCC-05 is complete for a future, larger package graph (apps/*, packages/db, packages/contracts) — the domain->adapter rule remains explicitly forward-declared and unevidenced, and new rules will be needed as new package kinds are added.",
+      "revisit_trigger": "When packages/domain, packages/db, or apps/* exist, add real (not forward-declared) rules and red fixtures for those specific new boundaries."
     },
     {
       "control_id": "SCC-06",
@@ -210,10 +235,18 @@
       "control_id": "SCC-18",
       "name": "Critical mutation survival zero",
       "applies_to": ["SEL-19"],
-      "state": "not-yet-built",
-      "gate": null, "evidence": [], "red_fixtures": [],
-      "notes": "No Vitest/StrykerJS/domain mutant suite exists.",
-      "revisit_trigger": "When domain packages and mutation testing exist."
+      "state": "partial",
+      "gate": "pnpm red (runMoneyCurrencyGuardMutationFixture, runMoneyRangeGuardMutationFixture)",
+      "evidence": [
+        "Two hand-authored, real (not tool-generated) mutants of genuine domain-critical guards in packages/money/src, each proven killed by the existing Vitest suite: (1) addMoney's currency-equality guard (`if (a.currency !== b.currency) { return err('CURRENCY_MISMATCH', ...) }`) deleted entirely; (2) toMinorUnits's range guard (`if (value < MIN_MINOR_UNITS || value > MAX_MINOR_UNITS)`) replaced with `if (false)`",
+        "packages/money/src/money.ts carries an inline comment naming the exact red-harness fixture that exercises its currency guard, so the guard and its mutation-kill proof stay co-located for future maintainers"
+      ],
+      "red_fixtures": [
+        "Phase 3A red.ts runMoneyCurrencyGuardMutationFixture(): mutates the real packages/money/src/money.ts file in place, runs the REAL production `pnpm --filter @afenda/money test` command (not a helper reimplementation), confirms Vitest's own currency-mismatch tests fail, restores the file byte-for-byte in a `finally` block",
+        "Phase 3A red.ts runMoneyRangeGuardMutationFixture(): same pattern against packages/money/src/minor-units.ts's range guard and Vitest's own range-boundary tests"
+      ],
+      "notes": "Deliberately PARTIAL, not implemented: this is real, executed mutation-kill evidence for two specific, hand-picked domain-critical guards — not StrykerJS, not a domain-wide automated mutation run, and not 'critical mutation survival zero' across the full money/time/errors surface. StrykerJS was deliberately NOT installed for this phase per the brief ('Add StrykerJS only if you actually execute meaningful mutation evidence' / 'do not install it merely to check a checklist box') — the two hand-authored mutants above are the meaningful evidence this phase actually produced, using the existing real toolchain (Vitest) rather than adding a new dependency to satisfy a checklist.",
+      "revisit_trigger": "When either (a) StrykerJS is introduced with a real, executed mutation run across packages/money and packages/time reporting an actual survival count, or (b) enough additional hand-authored mutation-kill fixtures exist to argue broader (not just two-guard) coverage."
     },
     {
       "control_id": "SCC-19",
@@ -264,10 +297,18 @@
       "control_id": "SCC-24",
       "name": "Explicit application architecture",
       "applies_to": ["SEL-24", "SEL-25"],
-      "state": "not-yet-built",
-      "gate": null, "evidence": [], "red_fixtures": [],
-      "notes": "No application code exists to check for decorator DI, service locators, class-based domain inheritance, or hidden module discovery. This governance/tooling layer itself uses plain functions and explicit imports only, but that is scripts/, not the application architecture the control targets.",
-      "revisit_trigger": "When application packages exist."
+      "state": "partial",
+      "gate": "node scripts/check-architecture.ts (wired into `pnpm gate` step 4g)",
+      "evidence": [
+        "scripts/check-architecture.ts: a real TypeScript-compiler-API (ts.createSourceFile + AST traversal, not a regex/grep) static control scoped to packages/*/src/**/*.ts, detecting 4 concrete, AST-verifiable patterns: (1) any `ts.isDecorator` node (decorator-driven DI), (2) any `class X extends Y` heritage clause where Y is not a built-in error type (class-based domain inheritance), (3) `Reflect.*` property access, non-string-literal dynamic `import(...)`, or bare `require(...)` calls (runtime module discovery), (4) `Date.now()` or zero-argument `new Date()` anywhere in packages/*/src except the one explicitly allow-listed adapter packages/time/src/system-clock.ts (ambient authoritative time, TIM-03/TIM-04/Forbidden #13)",
+        "Verified zero false positives against real code: `Number.isSafeInteger(...)` is not flagged as ambient time, `new Date(explicitEpochMillis)` (pure calendar math on an already-known value, as packages/time/src/instant.ts does twice) is not flagged as ambient time, and `class Foo extends Error` is not flagged as domain inheritance",
+        "Run against the real packages/*/src tree (14 files): zero violations"
+      ],
+      "red_fixtures": [
+        "Phase 3A red.ts runArchitectureFixtures(): 4 fixtures, one per detected pattern (decorator, class-inheritance, Reflect-based module discovery, ambient Date.now()), each injecting a disposable file with a real violation into packages/errors/src or packages/time/src, confirming the real checkApplicationArchitecture() catches it, then removing the file"
+      ],
+      "notes": "Deliberately PARTIAL, not implemented, exactly as the phase brief requires for a control that 'only detects a subset': service-locator pattern and implicit-transaction-abstraction detection are explicitly NOT implemented (the control's own header comment names them as out of scope, with the reason — no single reliable AST shape for either yet exists to detect against). What IS implemented is real: 4 named patterns, each backed by a specific AST node shape (not a string match), each with a red fixture proving the control actually fails closed on a genuine violation, and zero false positives against the real codebase's legitimate uses of superficially similar syntax (Number.isSafeInteger, new Date(explicitValue), extends Error).",
+      "revisit_trigger": "If a concrete, reliably-AST-detectable shape for service-locator or implicit-transaction-abstraction patterns is identified (e.g. once packages/db or packages/operations exist and a real anti-pattern needs to be forbidden), add it with its own red fixture and re-assess toward 'implemented'."
     },
     {
       "control_id": "SCC-25",
@@ -346,8 +387,15 @@
     },
     {
       "control_id": "V08", "title": "Exact money transport", "primary_rules": ["MON-01", "MON-06"],
-      "related_scc": ["SCC-03"], "state": "not-yet-built", "gate": null, "evidence": [], "red_fixtures": [],
-      "notes": "Requires packages/contracts and packages/money.", "revisit_trigger": "When Zod money transport schemas exist."
+      "related_scc": ["SCC-03"], "state": "partial",
+      "gate": "pnpm --filter @afenda/money test (packages/money/tests/money.test.ts, money.property.test.ts)",
+      "evidence": [
+        "packages/money/src/money.ts: serializeMoney/parseMoney define the one canonical transport shape (`{ currency: string, minorUnits: string }`) and round-trip exactly; parseMoney rejects a JSON `number` for minorUnits rather than coercing it",
+        "packages/money/tests/money.property.test.ts (fast-check): `parseMoney(serializeMoney(x)) = x` verified across a wide generated range, plus canonical-string-format and currency-mismatch-rejection properties"
+      ],
+      "red_fixtures": ["Phase 3A red.ts runMoneySafetyFixtures() unsafe-JSON-shape fixture (see SCC-03)"],
+      "notes": "PARTIAL, as the phase brief explicitly anticipates ('V08 requires exact money transport through every supported boundary. There is no API/database/queue/export yet. Therefore likely PARTIAL at most.'). What exists: packages/money's own canonical serialize/parse round-trip is exact and property-tested, and the JSON-number rejection is real. What does NOT exist: packages/contracts, any Zod/OpenAPI schema, any API/database/queue boundary that actually carries a Money value across a process or trust boundary — V08's full scope is the latter, not the former.",
+      "revisit_trigger": "When packages/contracts and/or a real API/database/queue boundary exist carrying Money values, and a red fixture proves that boundary rejects an unsafe shape too."
     },
     {
       "control_id": "V09", "title": "Typed evidence", "primary_rules": ["LED-09"],
@@ -356,8 +404,19 @@
     },
     {
       "control_id": "V10", "title": "Temporal governance", "primary_rules": ["TIM-01\u2013TIM-04"],
-      "related_scc": [], "state": "not-yet-built", "gate": null, "evidence": [], "red_fixtures": [],
-      "notes": "Requires packages/time.", "revisit_trigger": "When packages/time exists."
+      "related_scc": [], "state": "partial",
+      "gate": "pnpm --filter @afenda/time test && node scripts/check-architecture.ts",
+      "evidence": [
+        "packages/time/src/{instant,civil-date,as-of,clock,system-clock}.ts: Instant (absolute UTC instant, unambiguous canonical RFC 3339 string), CivilDate (separate YYYY-MM-DD type, no hidden timezone conversion), AsOf (requires BOTH businessAsOf and knowledgeAsOf — compile-time proven non-optional by tests/type-invalid/asof-missing-*.ts), and an explicit Clock capability with no package-owned ambient clock",
+        "scripts/check-architecture.ts's ambient-authoritative-time detector: mechanically enforces 'no implicit new Date()/Date.now() inside authoritative functions' across packages/*/src, allow-listing only the one explicitly named packages/time/src/system-clock.ts adapter",
+        "packages/time/tests/time.property.test.ts (fast-check): Instant and CivilDate canonical round-trip verified across a wide generated range"
+      ],
+      "red_fixtures": [
+        "Phase 3A red.ts runArchitectureFixtures() ambient-clock fixture (see SCC-24)",
+        "tests/type-invalid/asof-missing-business-boundary.ts + asof-missing-knowledge-boundary.ts (delegated into `pnpm red`)"
+      ],
+      "notes": "PARTIAL, as the phase brief explicitly anticipates ('V10 covers temporal governance broadly. Time primitives alone are not full implementation.'). What exists: the primitives themselves, the bitemporal AsOf shape, the explicit-Clock discipline, and a real static control proving the ambient-time prohibition is mechanically enforced, not just documented. What does NOT exist: any actual business logic governed by these primitives (effective-dating rules, replay, as-of query resolution against real data) — TIM-01/TIM-02 full qualification requires that governed behavior to exist first.",
+      "revisit_trigger": "When a domain package exists that actually resolves AsOf-governed facts against stored data."
     },
     {
       "control_id": "V11", "title": "Cross-scope authorization", "primary_rules": ["SEC-02", "SEC-03"],
@@ -366,13 +425,26 @@
     },
     {
       "control_id": "V12", "title": "Mutation sensitivity", "primary_rules": ["GOV-03", "OPS-08"],
-      "related_scc": ["SCC-18"], "state": "not-yet-built", "gate": null, "evidence": [], "red_fixtures": [],
-      "notes": "Requires domain packages and a mutation testing corpus.", "revisit_trigger": "When domain packages and StrykerJS exist."
+      "related_scc": ["SCC-18"], "state": "partial",
+      "gate": "pnpm red (runMoneyCurrencyGuardMutationFixture, runMoneyRangeGuardMutationFixture)",
+      "evidence": ["Identical to SCC-18's evidence: two real, executed mutation-kill fixtures against packages/money/src domain-critical guards, proven via the real Vitest suite, not a mock."],
+      "red_fixtures": ["See SCC-18."],
+      "notes": "PARTIAL: two hand-picked domain-critical guards are proven mutation-sensitive by executed evidence, which is a genuine (if narrow) instance of GOV-03's 'a critical executable control must demonstrably be able to fail'. This is not a domain-wide mutation testing corpus (no StrykerJS run exists) — see SCC-18 for the identical honest scope statement.",
+      "revisit_trigger": "Same as SCC-18."
     },
     {
       "control_id": "V13", "title": "Oracle diversity", "primary_rules": ["GOV-04", "MON-05", "OPS-06", "OPS-07"],
-      "related_scc": ["SCC-18"], "state": "not-yet-built", "gate": null, "evidence": [], "red_fixtures": [],
-      "notes": "Requires property-based/oracle test suites over real domain logic.", "revisit_trigger": "When domain packages and fast-check property tests exist."
+      "related_scc": ["SCC-18"], "state": "partial",
+      "gate": "pnpm --filter @afenda/money test (packages/money/tests/rounding.test.ts, rounding.property.test.ts)",
+      "evidence": [
+        "packages/money/tests/oracles/rounding-oracle.ts: independentHalfEvenRoundOracle — a genuinely independent second calculation path for half-even rounding (magnitude-first-then-reapply-sign strategy), authored separately from and never calling packages/money/src/rounding.ts's production roundExactRateToMinorUnits",
+        "packages/money/tests/rounding.test.ts: explicit example-based agreement assertions between the production function and the independent oracle for positive/negative/tie cases",
+        "packages/money/tests/rounding.property.test.ts (fast-check): production-vs-oracle agreement verified across a wide generated range of exact rational inputs, plus a 'rounded result is always within 0.5 of the exact value' property",
+        "packages/money/tests/{money,rate,minor-units}.property.test.ts (fast-check): additional property coverage (round-trip, add/subtract inverse, normalization) that is not a line-for-line reproduction of the implementation"
+      ],
+      "red_fixtures": [],
+      "notes": "PARTIAL, as the phase brief explicitly anticipates ('Do not prematurely claim V13. ... If no sufficiently independent oracle exists: mark V13 not-yet-built/partial rather than pretending.'). What exists: exactly one critical calculation (half-even rounding) has a real, independently-authored second calculation path, cross-verified by both example and property tests. What does NOT exist: oracle diversity across other calculations (there are currently no other 'critical calculations' in packages/errors/time/money beyond rounding — addition/subtraction are exact by construction and do not need a second oracle the way an inexact rounding boundary does), and no red fixture yet proves the oracle-agreement check itself would fail if the production function regressed (a natural next mutation-kill fixture).",
+      "revisit_trigger": "When a second critical calculation requiring an independent oracle is introduced (e.g. FX rate conversion), or when a red fixture is added proving the oracle-agreement test itself turns red on a genuine rounding regression."
     },
     {
       "control_id": "V14", "title": "Provenance and reproducibility", "primary_rules": ["GOV-05", "DET-01\u2013DET-06"],
@@ -383,13 +455,14 @@
         "scripts/check-authority-integrity.ts registry-drift checks are the executable red condition for 'hidden change without regeneration'",
         "pnpm-lock.yaml + .node-version + package.json engines/packageManager give a real dependency/toolchain lock (contributes to GOV-05's 'complete verification bundle' requirement, which did not exist before Phase 2)",
         "Phase 2.1: the toolchain-lock layer's own exactness was investigated more deeply (see SCC-04) and found to have a real gap (TypeScript-6 compatibility engine resolves via a transitive semver range to a patch different from the declared baseline) — this is additional, more precise evidence about the boundary of what is and is not yet provenance-proven, not a new capability",
-        "Phase 2.2: the toolchain-lock layer's reproducibility was independently verified, not just inspected — the TypeScript-6 engine resolution was reproduced from a from-scratch disposable install of only the exact declared package specifier, ruling out this-repository-local lockfile contamination as the cause. stack/VERSION_BASELINE.json was also completed with previously-absent pnpm/Turborepo reference patches, so the toolchain-lock layer's own DECLARED-vs-ACTUAL provenance surface (still governance-registry/toolchain-lock scope, not extended into the application layer) is now more completely covered than at end of Phase 2.1"
+        "Phase 2.2: the toolchain-lock layer's reproducibility was independently verified, not just inspected — the TypeScript-6 engine resolution was reproduced from a from-scratch disposable install of only the exact declared package specifier, ruling out this-repository-local lockfile contamination as the cause. stack/VERSION_BASELINE.json was also completed with previously-absent pnpm/Turborepo reference patches, so the toolchain-lock layer's own DECLARED-vs-ACTUAL provenance surface (still governance-registry/toolchain-lock scope, not extended into the application layer) is now more completely covered than at end of Phase 2.1",
+        "Phase 3A: a first, narrow instance of application-layer determinism now exists and is real, not merely governance-registry provenance — packages/money/src/{minor-units,money}.ts define exactly one canonical textual form per value (DET-05: 'exactly one textual form is accepted/produced') for MinorUnits (integer string, leading zeros/'-0'/decimal/exponential all rejected) and Money (currency + minorUnits string pair), each proven by an explicit round-trip property test (packages/money/tests/money.property.test.ts). This is application-layer, not governance-registry, evidence — the first such evidence this control has had — but it covers only the money package's canonical-form invariant, not GOV-05's broader 'complete verification bundle' (still no CI execution, no application dependency graph beyond 3 packages, and the SCC-04 compat-engine gap is unchanged)"
       ],
       "red_fixtures": [
         "check-authority-integrity.ts --self-test registry-drift-sensitive fixtures (alter rule_verbatim, omit V08, etc., plus Phase 2.1's new stack-seal/position-seal fixtures, all cause byte-identity/completeness to fail)",
         "red:toolchain-mismatch (scripts/red.ts) for 'hidden toolchain change', plus Phase 2.2's 5 isolated single-component toolchain fixtures and the lockfile-disagreement fixture"
       ],
-      "notes": "Proven only for the governance-registry generation layer (doctrine/stack/position -> governance/*.json) and the toolchain pin layer. NOT proven for the application/financial system: there is no migration, ledger, or generator determinism to test yet, and GOV-05's 'complete verification bundle' is not yet fully assembled (no CI execution observed from this environment — confirmed in Phase 2.2 that no git remote is even configured here, not just that a run wasn't checked — no application dependency graph, and the toolchain lock itself still has the SCC-04 compat-engine gap, now more precisely documented). Marking this V-control implemented for the whole doctrine would overstate reality; 'partial' remains the honest state. Phase 2.2 did not expand this control's scope beyond governance-registry/toolchain-lock provenance — no application-layer generator or codegen determinism claim was added.",
+      "notes": "Proven only for the governance-registry generation layer (doctrine/stack/position -> governance/*.json), the toolchain pin layer, and now (Phase 3A) one narrow application-layer canonical-form invariant. NOT proven for the application/financial system as a whole: there is no migration, ledger, or generator determinism to test yet, and GOV-05's 'complete verification bundle' is not yet fully assembled (no CI execution observed from this environment — confirmed in Phase 2.2 that no git remote is even configured here, not just that a run wasn't checked — no application dependency graph beyond 3 kernel packages, and the toolchain lock itself still has the SCC-04 compat-engine gap, now more precisely documented). Marking this V-control implemented for the whole doctrine would overstate reality; 'partial' remains the honest state. Phase 3A's addition is real but intentionally narrow (one invariant, one package) and does not by itself close the gap to 'implemented'.",
       "revisit_trigger": "When application-layer generators (codegen, migrations) exist and can be shown to regenerate byte-identically with a red fixture for hidden toolchain change at that layer too, and when the SCC-04 compat-engine gap is closed."
     },
     {

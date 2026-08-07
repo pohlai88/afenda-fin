@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Deterministic generator. Reads governance/authority-index.json and a small set of
-// fixed Phase 2 control-plane policy statements, then writes:
+// fixed control-plane policy statements (kept current across phases as repository
+// truth changes — see governance/PHASE_3A_KERNEL_REPORT.md for the latest), then writes:
 //   governance/rules.json        (generated data projection)
 //   .cursor/rules/afenda.mdc     (Cursor-facing rule, generated from rules.json)
 //   AGENTS.md                    (generic agent-facing instructions, same source)
@@ -65,7 +66,8 @@ export function buildAgentRulesData(authorityIndex: AuthorityIndex): AgentRulesD
       { path: 'position/', role: 'Normative market-claim authority; not technical authority.' },
       { path: 'governance/', role: 'Generated JSON projections, integrity/control-plane reports, and archived history. Never hand-authored authority.' },
       { path: 'scripts/', role: 'Deterministic build/check/gate tooling, written in strict TypeScript and executed directly by Node (no build step). scripts/lib/ holds shared parsing logic used by both build and check scripts.' },
-      { path: 'package.json, tsconfig*.json, pnpm-workspace.yaml, .node-version, turbo.json', role: 'Repository/tooling control-plane shell established in Phase 2/2.1/2.2. No apps/ or packages/ application code exists yet; see stack/STACK.md §8 for the target architecture at adoption.' },
+      { path: 'packages/errors, packages/time, packages/money', role: 'Phase 3A application kernel: canonical Result/error vocabulary, explicit temporal primitives (Instant/CivilDate/AsOf/Clock), and exact bigint-based money primitives (CurrencyCode/MinorUnits/Money/Rate/rounding). No apps/, database, API, or business-module code exists yet; see governance/PHASE_3A_KERNEL_REPORT.md for full evidence and stack/STACK.md §8 for the target architecture at adoption.' },
+      { path: 'package.json, tsconfig*.json, pnpm-workspace.yaml, .node-version, turbo.json', role: 'Repository/tooling control-plane shell established in Phase 2/2.1/2.2 and populated with real Turborepo package tasks in Phase 3A.' },
     ],
     before_finishing: 'Run `pnpm gate`. If it fails, fix the code — never the gate, the test, the seals, or the canonical authority documents. A failing or NOT-YET-BUILT gate is information; report it and stop.',
     stack_adoption_status: 'architecturally approved; not yet adopted (stack/STACK_ADOPTION.md is intentionally unchecked pending mechanical evidence)',
@@ -77,7 +79,7 @@ function renderMarkdownBody(data: AgentRulesData): string {
   lines.push('# AFENDA rules');
   lines.push('');
   lines.push(
-    'AFENDA is a vibe-code-first ERP under construction. This repository currently holds the sealed authority layer and its governance/tooling control plane; no application code exists yet.',
+    'AFENDA is a vibe-code-first ERP under construction. This repository currently holds the sealed authority layer, its governance/tooling control plane, and a first application kernel (packages/errors, packages/time, packages/money); no API, frontend, database, jobs, identity, ledger, or other business-module code exists yet.',
   );
   lines.push('');
   lines.push('## Precedence');

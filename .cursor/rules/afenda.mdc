@@ -3,7 +3,7 @@
 <!-- A hand edit here will fail the AGENT-DOCS-DRIFT gate. -->
 # AFENDA rules
 
-AFENDA is a vibe-code-first ERP under construction. This repository currently holds the sealed authority layer and its governance/tooling control plane; no application code exists yet.
+AFENDA is a vibe-code-first ERP under construction. This repository currently holds the sealed authority layer, its governance/tooling control plane, and a first application kernel (packages/errors, packages/time, packages/money); no API, frontend, database, jobs, identity, ledger, or other business-module code exists yet.
 
 ## Precedence
 
@@ -31,7 +31,8 @@ AFENDA is a vibe-code-first ERP under construction. This repository currently ho
 | `position/` | Normative market-claim authority; not technical authority. |
 | `governance/` | Generated JSON projections, integrity/control-plane reports, and archived history. Never hand-authored authority. |
 | `scripts/` | Deterministic build/check/gate tooling, written in strict TypeScript and executed directly by Node (no build step). scripts/lib/ holds shared parsing logic used by both build and check scripts. |
-| `package.json, tsconfig*.json, pnpm-workspace.yaml, .node-version, turbo.json` | Repository/tooling control-plane shell established in Phase 2/2.1/2.2. No apps/ or packages/ application code exists yet; see stack/STACK.md §8 for the target architecture at adoption. |
+| `packages/errors, packages/time, packages/money` | Phase 3A application kernel: canonical Result/error vocabulary, explicit temporal primitives (Instant/CivilDate/AsOf/Clock), and exact bigint-based money primitives (CurrencyCode/MinorUnits/Money/Rate/rounding). No apps/, database, API, or business-module code exists yet; see governance/PHASE_3A_KERNEL_REPORT.md for full evidence and stack/STACK.md §8 for the target architecture at adoption. |
+| `package.json, tsconfig*.json, pnpm-workspace.yaml, .node-version, turbo.json` | Repository/tooling control-plane shell established in Phase 2/2.1/2.2 and populated with real Turborepo package tasks in Phase 3A. |
 
 ## Stack adoption status
 

@@ -2,8 +2,12 @@
 // Deterministic governance dispatcher: `pnpm gate`.
 // Runs, in order: (1) authority build+integrity, (2) registry drift (delegated to
 // step 1's own check), (3) toolchain baseline, (4) implemented static governance
-// controls, (5) control-map completeness, (6) dependency pin policy, (7) generated
-// agent-doc drift, (8) red-fixture registration.
+// controls — root scripts/** typecheck+lint (4a-4c), Turbo-orchestrated
+// packages/{errors,time,money} typecheck+test (4d), module-boundary/SCC-05
+// (4e), authoritative-money safety/SCC-03 (4f), application-architecture
+// subset/SCC-24 (4g), compile-time negative fixtures (4h) — (5) control-map
+// completeness, (6) dependency pin policy, (7) generated agent-doc drift,
+// (8) red-fixture registration.
 //
 // Distinguishes PASS / FAIL / NOT-YET-BUILT / NOT-APPLICABLE. A NOT-YET-BUILT or
 // NOT-APPLICABLE control never counts as PASS and never fails the overall gate by
@@ -11,7 +15,7 @@
 // steps below fails the gate.
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, globSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { checkControlMapCompleteness, checkDependencyPinsAreExact } from './lib/control-map.ts';
@@ -33,6 +37,20 @@ function runNodeScript(scriptRelPath: string, args: string[] = []): { ok: boolea
     const output = execFileSync('node', [path.join(ROOT, scriptRelPath), ...args], {
       encoding: 'utf8',
       cwd: ROOT,
+    });
+    return { ok: true, output };
+  } catch (err) {
+    const e = err as { stdout?: string; stderr?: string; message: string };
+    return { ok: false, output: e.stdout ?? e.stderr ?? e.message };
+  }
+}
+
+function runTurbo(taskNames: string[]): { ok: boolean; output: string } {
+  try {
+    const output = execFileSync('pnpm', ['exec', 'turbo', 'run', ...taskNames], {
+      encoding: 'utf8',
+      cwd: ROOT,
+      shell: true,
     });
     return { ok: true, output };
   } catch (err) {
@@ -118,6 +136,41 @@ function main(): StepResult[] {
     detail: lint.ok ? 'clean' : lint.output,
   });
 
+  const turboPackages = runTurbo(['typecheck:native', 'typecheck:compat', 'test']);
+  steps.push({
+    step: '4d. Turbo-orchestrated package typecheck+test (packages/errors, packages/time, packages/money)',
+    status: turboPackages.ok ? 'PASS' : 'FAIL',
+    detail: turboPackages.ok ? 'all package tasks passed' : turboPackages.output,
+  });
+
+  const depCruise = runPnpmScript('boundary:check');
+  steps.push({
+    step: '4e. static governance control: module-boundary graph (SCC-05, dependency-cruiser over packages/*)',
+    status: depCruise.ok ? 'PASS' : 'FAIL',
+    detail: depCruise.ok ? 'clean' : depCruise.output,
+  });
+
+  const moneySafety = runNodeScript('scripts/check-money-safety.ts');
+  steps.push({
+    step: '4f. static governance control: authoritative-money type safety (SCC-03, packages/money surface)',
+    status: moneySafety.ok ? 'PASS' : 'FAIL',
+    detail: moneySafety.ok ? 'clean' : moneySafety.output,
+  });
+
+  const archControl = runNodeScript('scripts/check-architecture.ts');
+  steps.push({
+    step: '4g. static governance control: application architecture (SCC-24 subset incl. no-ambient-clock, packages/* source)',
+    status: archControl.ok ? 'PASS' : 'FAIL',
+    detail: archControl.ok ? 'clean' : archControl.output,
+  });
+
+  const typeInvalid = runNodeScript('scripts/check-type-invalid.ts');
+  steps.push({
+    step: '4h. compile-time negative fixtures (tests/type-invalid; Money/MinorUnits/AsOf)',
+    status: typeInvalid.ok ? 'PASS' : 'FAIL',
+    detail: typeInvalid.ok ? 'all fixtures failed for their declared reason' : typeInvalid.output,
+  });
+
   const controlMap = JSON.parse(readFileSync(path.join(ROOT, 'governance', 'control-implementation.json'), 'utf8')) as unknown;
   const completeness = checkControlMapCompleteness(controlMap);
   steps.push({
@@ -127,11 +180,17 @@ function main(): StepResult[] {
   });
 
   const packageJson = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8')) as Record<string, unknown>;
-  const pinCheck = checkDependencyPinsAreExact(packageJson);
+  const rootPinCheck = checkDependencyPinsAreExact(packageJson);
+  const packagePinFailures: string[] = rootPinCheck.failures.map((f) => `package.json: ${f}`);
+  for (const pkgDir of globSync('packages/*/package.json', { cwd: ROOT }).sort()) {
+    const pkgJson = JSON.parse(readFileSync(path.join(ROOT, pkgDir), 'utf8')) as Record<string, unknown>;
+    const result = checkDependencyPinsAreExact(pkgJson);
+    packagePinFailures.push(...result.failures.map((f) => `${pkgDir}: ${f}`));
+  }
   steps.push({
-    step: '5b. dependency pin policy (no ^/~/latest ranges in package.json)',
-    status: pinCheck.ok ? 'PASS' : 'FAIL',
-    detail: pinCheck.ok ? 'all exact' : pinCheck.failures.join('; '),
+    step: '5b. dependency pin policy (no ^/~/latest ranges in package.json, root + every packages/*/package.json)',
+    status: packagePinFailures.length === 0 ? 'PASS' : 'FAIL',
+    detail: packagePinFailures.length === 0 ? 'all exact' : packagePinFailures.join('; '),
   });
 
   let agentDocsDrift: { ok: boolean; detail: string };
@@ -209,7 +268,7 @@ console.log(`  not-yet-built: ${summary.notYetBuilt}`);
 console.log(`  blocked: ${summary.blocked}`);
 console.log(`  not-applicable-current-tree: ${summary.notApplicable}`);
 console.log(
-  '\nPolicy: not-yet-built/blocked/not-applicable controls are visible above and never counted as PASS. This governance-only repository phase does not claim application qualification.',
+  '\nPolicy: not-yet-built/blocked/not-applicable controls are visible above and never counted as PASS. Phase 3A establishes foundational kernel packages (errors/time/money) only; this does not claim API, database, frontend, or business-module readiness.',
 );
 
 console.log(`\nOverall gate: ${anyFail ? 'FAIL' : 'PASS'}\n`);
