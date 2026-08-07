@@ -256,7 +256,21 @@ No state was advanced merely because fixture count increased, per instruction.
 ## 13. Limitations
 
 - `@typescript-eslint/no-unsafe-member-access` and `no-unsafe-call` remain `'off'`. No current codebase violation makes enabling them mechanically necessary, and doing so was explicitly out of scope for this narrow commit.
-- `no-non-null-assertion` and the other rules listed in §9 remain unadded; no evidence was gathered this phase to justify them.
+- **Residual: transient untrusted `any` (highest-ranked follow-up).** The two enabled rules close ingress at the *binding* site and the *argument* site. Untrusted `any` that is never bound and never passed still escapes both. Probed on disk at `a67ac88` under the real config:
+
+  ```
+  MISSED | any in if-condition        | -
+  MISSED | any bare call statement    | -
+  MISSED | any in template literal    | -
+  MISSED | any in === comparison      | -
+  MISSED | any thrown                 | -
+  MISSED | any in arithmetic only     | -
+  CAUGHT | any pushed to typed array  | @typescript-eslint/no-unsafe-argument
+  ```
+
+  So the two `'off'` rules are not redundant with the two enabled ones — they cover a narrower but real band. For an authoritative-money kernel the sharpest case is a control-flow decision taken directly on untrusted input, e.g. `if (JSON.parse(body).authorized) { ... }`, which lints clean today. This is recorded as a scoped follow-up with probe evidence already in hand; it is **not** a defect in this phase's stated scope, which was ingress into typed data.
+- `no-non-null-assertion` and the other rules listed in §9 remain unadded; no evidence was gathered this phase to justify them. It ranks **below** the transient-`any` residual above.
+- A prior audit recommendation to enable `no-unsafe-member-access`/`no-unsafe-call` alongside the two ingress rules was **over-cautious and is superseded**. Re-running that audit's own eight-path leak probe against the hardened config shows all 8 of 8 paths now caught — including the four the audit predicted would need those rules — because `no-unsafe-assignment` fires at the binding site regardless of how the `any` was produced. The `'off'` decision recorded in `eslint.config.mjs` is empirically correct for those paths; its remaining justification is the transient band above, not the ingress band.
 - The lint:dev cache timing numbers (§8) are single-session observations on this machine, not a controlled benchmark; no percentage improvement is claimed, matching the prior audit's own caution about concurrent-load contamination.
 - SEC-05 has no dedicated control entry in `governance/control-implementation.json` because doctrine's own V-control table does not map it to any V-control's `primary_rules`; this phase strengthens SEC-05-relevant evidence inside SCC-03/V08 rather than fabricating a new control ID.
 - This phase proves the lint mechanism prevents untrusted-`any` ingress into a **typed variable or a typed function parameter**. It does not (and does not claim to) prevent unsafe **member access** or unsafe **calls** on an `any`-typed value, since those two rules remain off.
@@ -265,6 +279,46 @@ No state was advanced merely because fixture count increased, per instruction.
 ## 14. Concurrent-writer caveat (carried forward)
 
 The prior lint audit that discovered this defect observed another session writing `packages/contracts` during measurement. This phase's preflight (§1) found the tree stable and clean at the required baseline commit before any edit was made, and it remained clean (verified with `git status --short`) after every fixture-design experiment and after both full `pnpm red` runs in this session. No evidence of a concurrent writer was found during this phase's own work.
+
+**Correction (recorded 2026-08-08).** The sentence above is accurate for *this phase's* execution window, which began at `8c6923e`. It should not be read as saying the tree was quiet throughout the audit that preceded it. It was not. The audit session sampled write activity every 10s for 60s and observed writes in 5 of 6 windows:
+
+```
+[sample 1 @ 04:25:08] writes in last 30s: 1   packages/time/src/instant.ts
+[sample 2 @ 04:25:20] writes in last 30s: 1   packages/time/src/instant.ts
+[sample 3 @ 04:25:32] writes in last 30s: 1   packages/time/src/instant.ts
+[sample 4 @ 04:25:43] writes in last 30s: 0
+[sample 5 @ 04:25:56] writes in last 30s: 1   scripts/red.ts
+[sample 6 @ 04:26:08] writes in last 30s: 1   scripts/red.ts
+```
+
+Two details matter for the evidence record and were not previously stated:
+
+1. The concurrent writer was actively editing **`scripts/red.ts`** — the file this phase repairs — not only `packages/contracts`. At that moment the tree carried 7 modified and 8 untracked paths; that work became `8c6923e`.
+2. That session added **+160 lines** to `scripts/red.ts` without fixing the false red. The defect survived into `8c6923e` intact: `lintText` against the invented `scripts/__red_fixture__.mjs` path with an `errorCount > 0` assertion. The audit session declined to edit a moving tree and stopped rather than produce evidence against it; the repair is this phase, on a quiet tree.
+
+Neither detail invalidates any result in this report — `8c6923e` landed first, and this phase's preflight was genuinely clean. It is recorded because §1's "none observed" is scoped to this phase alone, and a reader tracing when the defect was introduced, observed, and repaired needs the ordering.
+
+---
+
+## 14a. Independent post-commit mutation verification (added 2026-08-08, at `a67ac88`)
+
+Everything in §12 verifies the harness is *green*. Green is exactly what the old fixture was, so a passing run is not by itself evidence that the repair worked. The repaired fixtures were therefore mutation-tested at `a67ac88`: the control was removed and the harness re-run, to confirm it turns red for the intended defect.
+
+**Mutation:** `@typescript-eslint/no-unsafe-assignment` flipped `'error'` → `'off'` in `eslint.config.mjs`. No other change.
+
+```
+[PASS] lint-ts-suppression (@ts-ignore + explicit any, real on-disk path, exact rule IDs) (expected FAIL-detected, got FAIL-detected)
+[FAIL] lint: no-unsafe-assignment fires on untrusted JSON.parse() assigned to a typed shape (expected FAIL-detected, got no-fail)
+[PASS] lint: no-unsafe-argument fires on untrusted JSON.parse() value passed to a typed parameter (expected FAIL-detected, got FAIL-detected)
+[FAIL] lint: untrusted JSON->Money ingress fails without Zod; decodeMoneyTransport(JSON.parse(...)) lints clean (expected FAIL-detected, got no-fail)
+Red harness result: SOME FIXTURES DID NOT BEHAVE AS EXPECTED
+
+pnpm red EXIT CODE (control removed) = 1
+```
+
+**Result:** exactly the two fixtures that depend on the removed rule flipped, and both flipped with `got no-fail` — the harness detected an *absent rule*, not a parser error. The `no-unsafe-argument` fixture correctly stayed green, confirming the fixtures are rule-scoped rather than co-triggering. `pnpm red` exits `1`, so CI cannot pass over a removed control.
+
+`eslint.config.mjs` was restored with `git checkout --`; `git status --short` empty; `HEAD` still `a67ac88`. This is the property §10 of the phase brief asked for, stated as evidence rather than as intent: **a red test is evidence only if it turns red for the defect it claims to detect** — now demonstrated, not asserted.
 
 ---
 
