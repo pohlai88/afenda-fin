@@ -13,15 +13,17 @@
 //   domain control flow
 // - `ErrorShape.cause` is diagnostic/internal evidence and is never present in the
 //   JSON-safe public projection produced by `toPublicJson`
+// - `wrapErr` = provenance-preserving re-code (original ErrorShape becomes cause).
+//   `mapErr` = lossy replace of the failure shape (spread the original when you
+//   need non-lossy). Prefer wrapErr for audit/driver re-coding; see README.md.
+// - detail records are shallow-copied at construction and public projection.
+//   Nesting is not representable: PublicErrorDetailValue is scalar-only, so
+//   shallow copy is sufficient without forging.
+// - non-finite number detail scalars normalize to canonical strings at err /
+//   mapErr / wrapErr / toPublicJson. Decided: `-0` → `'-0'` (JSON.stringify
+//   would emit `0` and silently drop the sign — byte-level determinism wins).
 // - `PublicErrorDetails` values are restricted to JSON primitives. `number` here is
-//   a generic, non-authoritative diagnostic scalar (e.g. "how many rows", "retry
-//   count"). It is NOT authoritative money. @afenda/money's `Money`/`MinorUnits`
-//   types are branded and structurally cannot be assigned into this `number` slot;
-//   an authoritative amount that needs to appear in a diagnostic must be passed as
-//   its canonical decimal STRING (see @afenda/money's `minorUnitsToCanonicalString`
-//   / `serializeMoney`), never as a JS number. SCC-03 (packages/money type-safety
-//   gate) separately rejects any Money/MinorUnits value written into a JSON
-//   `number` field at its own authoritative surface.
+//   a generic, non-authoritative diagnostic scalar — NOT authoritative money.
 
 /** JSON-safe scalar allowed inside a public error detail record. */
 export type PublicErrorDetailValue = string | number | boolean | null;
@@ -72,19 +74,56 @@ export interface ErrOptions {
   readonly cause?: unknown;
 }
 
+export interface WrapErrOptions {
+  readonly details?: PublicErrorDetails;
+}
+
+/**
+ * Normalizes a single detail scalar so JSON round-trips cannot silently drop
+ * NaN / ±Infinity / -0 into null / 0.
+ */
+function normalizeDetailValue(value: PublicErrorDetailValue): PublicErrorDetailValue {
+  if (typeof value !== 'number') return value;
+  if (Number.isNaN(value)) return 'NaN';
+  if (value === Number.POSITIVE_INFINITY) return 'Infinity';
+  if (value === Number.NEGATIVE_INFINITY) return '-Infinity';
+  if (Object.is(value, -0)) return '-0';
+  return value;
+}
+
+/** Shallow-copies and normalizes a details record (never aliases the caller's object). */
+function normalizeDetails(details: PublicErrorDetails): PublicErrorDetails {
+  const copy: Record<string, PublicErrorDetailValue> = {};
+  for (const [key, value] of Object.entries(details)) {
+    copy[key] = normalizeDetailValue(value);
+  }
+  return copy;
+}
+
+function materializeErrorShape<C extends string>(shape: ErrorShape<C>): ErrorShape<C> {
+  return {
+    code: shape.code,
+    message: shape.message,
+    ...(shape.details !== undefined ? { details: normalizeDetails(shape.details) } : {}),
+    ...(shape.cause !== undefined ? { cause: shape.cause } : {}),
+  };
+}
+
 /**
  * Constructs a failed result with a stable, code-narrowable failure code.
  * `options.details` must already be JSON-safe; `options.cause` is retained only
  * as internal/diagnostic evidence and is never emitted by `toPublicJson`.
  */
 export function err<C extends string>(code: C, message: string, options: ErrOptions = {}): Err<C> {
-  const error: ErrorShape<C> = {
-    code,
-    message,
-    ...(options.details !== undefined ? { details: options.details } : {}),
-    ...(options.cause !== undefined ? { cause: options.cause } : {}),
+  return {
+    ok: false,
+    error: materializeErrorShape({
+      code,
+      message,
+      ...(options.details !== undefined ? { details: options.details } : {}),
+      ...(options.cause !== undefined ? { cause: options.cause } : {}),
+    }),
   };
-  return { ok: false, error };
 }
 
 /** Narrows `result` to `Ok<T>`. */
@@ -102,16 +141,46 @@ export function mapOk<T, U, C extends string>(result: Result<T, C>, fn: (value: 
   return result.ok ? ok(fn(result.value)) : result;
 }
 
-/** Transforms the failure of `result` into a (possibly differently-coded) failure, leaving success untouched. */
+/**
+ * Transforms the failure of `result` into a (possibly differently-coded) failure,
+ * leaving success untouched. Lossy unless the mapper spreads the original shape.
+ * The produced shape's details are shallow-copied and non-finite-normalized.
+ */
 export function mapErr<T, C extends string, D extends string>(
   result: Result<T, C>,
   fn: (error: ErrorShape<C>) => ErrorShape<D>,
 ): Result<T, D> {
-  return result.ok ? result : { ok: false, error: fn(result.error) };
+  return result.ok ? result : { ok: false, error: materializeErrorShape(fn(result.error)) };
+}
+
+/**
+ * Default re-code path: leaves success untouched; on failure, produces a new
+ * error with `code`/`message` and preserves the entire original `ErrorShape` as
+ * `cause`. Details default to the original's (copied); caller-supplied details
+ * replace them without losing the original in `cause`.
+ */
+export function wrapErr<T, C extends string, D extends string>(
+  result: Result<T, C>,
+  code: D,
+  message: string,
+  options: WrapErrOptions = {},
+): Result<T, D> {
+  if (result.ok) return result;
+  const original = result.error;
+  const detailsSource = options.details !== undefined ? options.details : original.details;
+  return {
+    ok: false,
+    error: {
+      code,
+      message,
+      ...(detailsSource !== undefined ? { details: normalizeDetails(detailsSource) } : {}),
+      cause: original,
+    },
+  };
 }
 
 /** Returns the success value, or `fallback` if `result` is a failure. */
-export function unwrapOr<T, C extends string>(result: Result<T, C>, fallback: T): T {
+export function unwrapOr<T, U, C extends string>(result: Result<T, C>, fallback: U): T | U {
   return result.ok ? result.value : fallback;
 }
 
@@ -132,5 +201,5 @@ export function matchResult<T, C extends string, R>(result: Result<T, C>, matche
 export function toPublicJson<C extends string>(error: ErrorShape<C>): PublicErrorJson<C> {
   return error.details === undefined
     ? { code: error.code, message: error.message }
-    : { code: error.code, message: error.message, details: error.details };
+    : { code: error.code, message: error.message, details: normalizeDetails(error.details) };
 }

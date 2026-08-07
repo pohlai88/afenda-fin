@@ -22,15 +22,18 @@ packages/time     packages/money
 
 ### `packages/errors` — canonical typed failure/result vocabulary
 
-Public API (`src/index.ts`): `ok`, `err`, `isOk`, `isErr`, `mapOk`, `mapErr`, `unwrapOr`, `matchResult`, `toPublicJson`, and the types `Result<T, C>`, `Ok<T>`, `Err<C>`, `ErrorShape<C>`, `PublicErrorJson<C>`, `PublicErrorDetails`, `PublicErrorDetailValue`.
+Public API (`src/index.ts`): `ok`, `err`, `isOk`, `isErr`, `mapOk`, `mapErr`, `wrapErr`, `unwrapOr`, `matchResult`, `toPublicJson`, and the types `Result<T, C>`, `Ok<T>`, `Err<C>`, `ErrorShape<C>`, `PublicErrorJson<C>`, `PublicErrorDetails`, `PublicErrorDetailValue`, `ErrOptions`, `WrapErrOptions`, `ResultMatchers`. Semantic commitments (mapErr vs wrapErr, `-0` canonicalization, flat details) are also recorded in `packages/errors/README.md`.
 
 Invariants:
 - `Result<T, C>` is a discriminated union (`{ ok: true, value }` / `{ ok: false, error }`) — code-narrowable, immutable, exhaustively matchable via `matchResult`.
-- `PublicErrorDetailValue = string | number | boolean | null` — JSON-safe by construction. `toPublicJson` strips `cause` (diagnostic-only) from the public shape; a dedicated property test (`result.property.test.ts`) asserts this for every generated `Err`.
+- `PublicErrorDetailValue = string | number | boolean | null` — JSON-safe by construction (**flat scalars only**; nested objects are not representable without type forgery). `toPublicJson` strips `cause` (diagnostic-only) from the public shape; a dedicated property test (`result.property.test.ts`) asserts this for every generated `Err`.
+- Detail records are always shallow-copied at construction and at the public projection (`err` / `mapErr` / `wrapErr` / `toPublicJson`), so caller or public-side top-level mutation cannot alias into a stored `ErrorShape`. Shallow copy is sufficient because nesting is outside the type.
+- Non-finite `number` detail scalars are normalized to canonical strings at `err` / `mapErr` / `wrapErr` / `toPublicJson` so JSON round-trips are non-lossy. **Decided:** `NaN` → `'NaN'`, `±Infinity` → `'Infinity'`/`'-Infinity'`, and **`-0` → `'-0'`** (including at `toPublicJson`) — `JSON.stringify(-0)` would emit `0` and silently drop the sign; this is intentional determinism, not a quirk to reverse.
+- **`wrapErr` vs `mapErr`:** `wrapErr` is the default provenance-preserving re-code path (entire original `ErrorShape` retained as `cause`). `mapErr` replaces the failure shape and is lossy unless the mapper spreads the original. Prefer `wrapErr` wherever cause chains / audit trails matter (SC-05).
 - The public generic-`number` detail slot is explicitly documented as **not** an authoritative-money channel: `packages/money`'s `Money`/`MinorUnits` types cannot be assigned into it (they are branded, non-`number` types), and `scripts/check-money-safety.ts` independently forbids a numeric `minorUnits`/`amount` shape anywhere in `packages/money/src`.
 - No thrown exceptions for ordinary control flow; `err(...)` is the only failure path domain functions use.
 
-Tests: `tests/result.test.ts` (12 tests: ok/err narrowing, code preservation, public/diagnostic separation, JSON-safe structure, exhaustive matching), `tests/result.property.test.ts` (4 fast-check properties).
+Tests: `tests/result.test.ts` (unit coverage: ok/err narrowing, code preservation, wrapErr chaining, details isolation, non-finite normalization including decided `-0`, public/diagnostic separation, JSON-safe structure, exhaustive matching), `tests/result.property.test.ts` (fast-check: constructors, functor laws, elimination, non-lossiness / cause stripping / wrapErr chains / JSON round-trip after non-finite normalization).
 
 ### `packages/time` — explicit temporal primitives
 

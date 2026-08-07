@@ -11,7 +11,19 @@ export type {
   Err,
   Result,
   ErrOptions,
+  WrapErrOptions,
   ResultMatchers,
 } from './result.ts';
 
-export { ok, err, isOk, isErr, mapOk, mapErr, unwrapOr, matchResult, toPublicJson } from './result.ts';
+export {
+  ok,
+  err,
+  isOk,
+  isErr,
+  mapOk,
+  mapErr,
+  wrapErr,
+  unwrapOr,
+  matchResult,
+  toPublicJson,
+} from './result.ts';
