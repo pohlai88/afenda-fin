@@ -10,46 +10,32 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
+import type { AuthorityIndex } from './lib/authority-parser.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
-/**
- * @typedef {{
- *   id: string,
- *   canonical_path: string,
- *   document_role: string,
- *   precedence: number,
- *   adoption_status_verbatim: Record<string, unknown>
- * }} AuthorityDocSummary
- */
+export interface AgentLayoutEntry {
+  path: string;
+  role: string;
+}
 
-/**
- * @typedef {{
- *   schema_version: number,
- *   generated_by: string,
- *   generated_from: string[],
- *   precedence: string[],
- *   authority_model: string[],
- *   current_layout: { path: string, role: string }[],
- *   before_finishing: string,
- *   stack_adoption_status: string
- * }} AgentRulesData
- */
+export interface AgentRulesData {
+  schema_version: number;
+  generated_by: string;
+  generated_from: string[];
+  precedence: string[];
+  authority_model: string[];
+  current_layout: AgentLayoutEntry[];
+  before_finishing: string;
+  stack_adoption_status: string;
+}
 
-/**
- * @param {string} p
- * @returns {unknown}
- */
-function readJson(p) {
+function readJson(p: string): unknown {
   return JSON.parse(readFileSync(p, 'utf8'));
 }
 
-/**
- * @param {{ documents: AuthorityDocSummary[] }} authorityIndex
- * @returns {AgentRulesData}
- */
-export function buildAgentRulesData(authorityIndex) {
+export function buildAgentRulesData(authorityIndex: AuthorityIndex): AgentRulesData {
   const byId = new Map(authorityIndex.documents.map((d) => [d.id, d]));
   const doctrine = byId.get('doctrine');
   const stack = byId.get('stack');
@@ -60,7 +46,7 @@ export function buildAgentRulesData(authorityIndex) {
 
   return {
     schema_version: 1,
-    generated_by: 'scripts/generate-agent-docs.mjs',
+    generated_by: 'scripts/generate-agent-docs.ts',
     generated_from: ['governance/authority-index.json'],
     precedence: [doctrine.canonical_path, stack.canonical_path, position.canonical_path],
     authority_model: [
@@ -78,20 +64,16 @@ export function buildAgentRulesData(authorityIndex) {
       { path: 'stack/', role: 'Normative stack/implementation authority, subordinate to doctrine.' },
       { path: 'position/', role: 'Normative market-claim authority; not technical authority.' },
       { path: 'governance/', role: 'Generated JSON projections, integrity/control-plane reports, and archived history. Never hand-authored authority.' },
-      { path: 'scripts/', role: 'Deterministic build/check/gate tooling. scripts/lib/ holds shared parsing logic used by both build and check scripts.' },
-      { path: 'package.json, tsconfig*.json, pnpm-workspace.yaml, .node-version, turbo.json', role: 'Repository/tooling control-plane shell established in Phase 2. No apps/ or packages/ application code exists yet; see stack/STACK.md §8 for the target architecture at adoption.' },
+      { path: 'scripts/', role: 'Deterministic build/check/gate tooling, written in strict TypeScript and executed directly by Node (no build step). scripts/lib/ holds shared parsing logic used by both build and check scripts.' },
+      { path: 'package.json, tsconfig*.json, pnpm-workspace.yaml, .node-version, turbo.json', role: 'Repository/tooling control-plane shell established in Phase 2/2.1. No apps/ or packages/ application code exists yet; see stack/STACK.md §8 for the target architecture at adoption.' },
     ],
     before_finishing: 'Run `pnpm gate`. If it fails, fix the code — never the gate, the test, the seals, or the canonical authority documents. A failing or NOT-YET-BUILT gate is information; report it and stop.',
     stack_adoption_status: 'architecturally approved; not yet adopted (stack/STACK_ADOPTION.md is intentionally unchecked pending mechanical evidence)',
   };
 }
 
-/**
- * @param {AgentRulesData} data
- * @returns {string}
- */
-function renderMarkdownBody(data) {
-  const lines = [];
+function renderMarkdownBody(data: AgentRulesData): string {
+  const lines: string[] = [];
   lines.push('# AFENDA rules');
   lines.push('');
   lines.push(
@@ -123,11 +105,7 @@ function renderMarkdownBody(data) {
   return lines.join('\n');
 }
 
-/**
- * @param {AgentRulesData} data
- * @returns {string}
- */
-function renderCursorRule(data) {
+function renderCursorRule(data: AgentRulesData): string {
   const banner = [
     '<!-- GENERATED FILE - DO NOT EDIT -->',
     `<!-- Source: governance/rules.json | Regenerate: pnpm agent-docs -->`,
@@ -137,11 +115,7 @@ function renderCursorRule(data) {
   return banner + renderMarkdownBody(data);
 }
 
-/**
- * @param {AgentRulesData} data
- * @returns {string}
- */
-function renderAgentsMd(data) {
+function renderAgentsMd(data: AgentRulesData): string {
   const banner = [
     '<!-- GENERATED FILE - DO NOT EDIT -->',
     '<!-- Source: governance/rules.json | Regenerate: pnpm agent-docs -->',
@@ -151,20 +125,34 @@ function renderAgentsMd(data) {
   return banner + renderMarkdownBody(data);
 }
 
-export function generate() {
-  const authorityIndex = /** @type {{ documents: AuthorityDocSummary[] }} */ (
-    readJson(path.join(ROOT, 'governance', 'authority-index.json'))
-  );
+export interface GeneratedAgentDocs {
+  rulesJson: string;
+  cursorRule: string;
+  agentsMd: string;
+}
+
+/** Pure computation, no filesystem writes — used by the drift checker in scripts/gate.ts. */
+export function renderAgentDocs(authorityIndex: AuthorityIndex): GeneratedAgentDocs {
   const data = buildAgentRulesData(authorityIndex);
+  return {
+    rulesJson: `${JSON.stringify(data, null, 2)}\n`,
+    cursorRule: renderCursorRule(data),
+    agentsMd: renderAgentsMd(data),
+  };
+}
+
+export function generate(): { rulesJsonPath: string; cursorRulePath: string; agentsMdPath: string } {
+  const authorityIndex = readJson(path.join(ROOT, 'governance', 'authority-index.json')) as AuthorityIndex;
+  const docs = renderAgentDocs(authorityIndex);
 
   const rulesJsonPath = path.join(ROOT, 'governance', 'rules.json');
   const cursorRulePath = path.join(ROOT, '.cursor', 'rules', 'afenda.mdc');
   const agentsMdPath = path.join(ROOT, 'AGENTS.md');
 
-  writeFileSync(rulesJsonPath, JSON.stringify(data, null, 2) + '\n', 'utf8');
+  writeFileSync(rulesJsonPath, docs.rulesJson, 'utf8');
   mkdirSync(path.dirname(cursorRulePath), { recursive: true });
-  writeFileSync(cursorRulePath, renderCursorRule(data), 'utf8');
-  writeFileSync(agentsMdPath, renderAgentsMd(data), 'utf8');
+  writeFileSync(cursorRulePath, docs.cursorRule, 'utf8');
+  writeFileSync(agentsMdPath, docs.agentsMd, 'utf8');
 
   return { rulesJsonPath, cursorRulePath, agentsMdPath };
 }

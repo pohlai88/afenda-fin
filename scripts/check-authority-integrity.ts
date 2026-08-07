@@ -5,12 +5,20 @@
 // for conditions that must be visible but must NOT fail the gate (historical/
 // orphaned evidence, dangling old artifacts, missing historical files).
 //
-// Run negative-fixture self-tests with: node scripts/check-authority-integrity.mjs --self-test
+// Run negative-fixture self-tests with: node scripts/check-authority-integrity.ts --self-test
 
-import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { buildRegistries, sha256, parseDoctrine, parsePosition, toJsonBytes } from './lib/authority-parser.mjs';
+import {
+  buildRegistries,
+  sha256,
+  toJsonBytes,
+  type DoctrineRule,
+  type StackSelection,
+  type StackControl,
+  type PositionObligation,
+} from './lib/authority-parser.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -30,7 +38,7 @@ const PATHS = {
 
 const EXCLUDED_DIRS = new Set(['node_modules', '.git', 'governance', '.turbo']);
 
-function walk(dir, out = []) {
+function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS.has(entry.name)) continue;
@@ -46,19 +54,23 @@ function walk(dir, out = []) {
 // Result collector
 // ---------------------------------------------------------------------------
 
+interface ReportEntry {
+  check: string;
+  detail: string;
+}
+
 class Report {
-  constructor() {
-    this.failures = [];
-    this.reportsOnly = [];
-    this.passes = [];
-  }
-  fail(check, detail) {
+  failures: ReportEntry[] = [];
+  reportsOnly: ReportEntry[] = [];
+  passes: ReportEntry[] = [];
+
+  fail(check: string, detail: string): void {
     this.failures.push({ check, detail });
   }
-  ok(check, detail) {
+  ok(check: string, detail: string): void {
     this.passes.push({ check, detail });
   }
-  note(check, detail) {
+  note(check: string, detail: string): void {
     this.reportsOnly.push({ check, detail });
   }
 }
@@ -67,27 +79,28 @@ class Report {
 // Pure validators (used by both the live gate and the self-test fixtures)
 // ---------------------------------------------------------------------------
 
-function checkSeal(report, label, docText, sealRaw, expectedFilename) {
+function checkSeal(report: Report, label: string, docText: string, sealRaw: string, expectedFilename: string): boolean {
   const actual = sha256(docText);
   const m = sealRaw.trim().match(/^([0-9a-f]{64})\s{2}(.+)$/);
   if (!m) {
     report.fail(`seal-format:${label}`, `Seal file is not in "<sha256>  <filename>" format: ${JSON.stringify(sealRaw)}`);
     return false;
   }
-  const [, recordedHash, recordedName] = m;
+  const recordedHash = m[1];
+  const recordedName = m[2];
   if (recordedName !== expectedFilename) {
-    report.fail(`seal-filename:${label}`, `Seal names "${recordedName}", expected "${expectedFilename}"`);
+    report.fail(`seal-filename:${label}`, `Seal names "${recordedName ?? ''}", expected "${expectedFilename}"`);
     return false;
   }
   if (recordedHash !== actual) {
-    report.fail(`seal-hash:${label}`, `Seal records ${recordedHash}, actual content hash is ${actual}`);
+    report.fail(`seal-hash:${label}`, `Seal records ${recordedHash ?? ''}, actual content hash is ${actual}`);
     return false;
   }
   report.ok(`seal:${label}`, `${expectedFilename} sha256 matches seal (${actual})`);
   return true;
 }
 
-function checkOnlyOneDoctrineAuthority(report, filePaths) {
+function checkOnlyOneDoctrineAuthority(report: Report, filePaths: string[]): boolean {
   const candidates = filePaths.filter((f) => /(^|[\\/])DOCTRINE\.md$/i.test(f) || /AFENDA_EVIDENCE_BACKED_DOCTRINE\.md$/i.test(f));
   const canonical = candidates.filter((f) => f.replace(/\\/g, '/').endsWith('doctrine/DOCTRINE.md'));
   const rogue = candidates.filter((f) => !f.replace(/\\/g, '/').endsWith('doctrine/DOCTRINE.md'));
@@ -103,11 +116,11 @@ function checkOnlyOneDoctrineAuthority(report, filePaths) {
   return true;
 }
 
-function idSet(items, key = 'id') {
-  return items.map((i) => i[key]);
+function idSet(items: { id: string }[]): string[] {
+  return items.map((i) => i.id);
 }
 
-function checkNoOmissionOrDuplication(report, label, committedIds, freshIds) {
+function checkNoOmissionOrDuplication(report: Report, label: string, committedIds: string[], freshIds: string[]): boolean {
   const committedSet = new Set(committedIds);
   const freshSet = new Set(freshIds);
   let ok = true;
@@ -129,7 +142,7 @@ function checkNoOmissionOrDuplication(report, label, committedIds, freshIds) {
   return ok;
 }
 
-function checkExactIdRange(report, label, ids, prefix, count) {
+function checkExactIdRange(report: Report, label: string, ids: string[], prefix: string, count: number): boolean {
   const expected = new Set(Array.from({ length: count }, (_, i) => `${prefix}${String(i + 1).padStart(2, '0')}`));
   const actual = new Set(ids);
   const missing = [...expected].filter((id) => !actual.has(id));
@@ -142,7 +155,7 @@ function checkExactIdRange(report, label, ids, prefix, count) {
   return true;
 }
 
-function checkExactNumberRange(report, label, numbers, min, max) {
+function checkExactNumberRange(report: Report, label: string, numbers: number[], min: number, max: number): boolean {
   const expected = new Set(Array.from({ length: max - min + 1 }, (_, i) => min + i));
   const actual = new Set(numbers);
   const missing = [...expected].filter((n) => !actual.has(n));
@@ -155,7 +168,7 @@ function checkExactNumberRange(report, label, numbers, min, max) {
   return true;
 }
 
-function checkDanglingControlRefs(report, selections, controls) {
+function checkDanglingControlRefs(report: Report, selections: StackSelection[], controls: StackControl[]): boolean {
   const controlIds = new Set(controls.map((c) => c.id));
   const selIds = new Set(selections.map((s) => s.id));
   let ok = true;
@@ -180,11 +193,18 @@ function checkDanglingControlRefs(report, selections, controls) {
   return ok;
 }
 
-function checkRuleTextIntegrity(report, label, registryItems, sourceItems, verbatimKey) {
+function checkRuleTextIntegrity<K extends string, T extends { id: string; rule_text_sha256: string } & Record<K, string | null>>(
+  report: Report,
+  label: string,
+  registryItems: T[],
+  sourceItems: T[],
+  verbatimKey: K,
+): boolean {
   const bySourceId = new Map(sourceItems.map((r) => [r.id, r]));
   let ok = true;
   for (const item of registryItems) {
-    const expectedHash = sha256(item[verbatimKey] || '');
+    const verbatim = item[verbatimKey];
+    const expectedHash = sha256(typeof verbatim === 'string' ? verbatim : '');
     if (item.rule_text_sha256 !== expectedHash) {
       report.fail(`rule-text-self-consistency:${label}`, `${item.id}: rule_text_sha256 does not match sha256(${verbatimKey})`);
       ok = false;
@@ -201,10 +221,17 @@ function checkRuleTextIntegrity(report, label, registryItems, sourceItems, verba
   return ok;
 }
 
-function checkGistNeverExceedsSource(report, label, items, verbatimKey) {
+function checkGistNeverExceedsSource<K extends string, T extends { id: string; gist: string } & Record<K, string | null>>(
+  report: Report,
+  label: string,
+  items: T[],
+  verbatimKey: K,
+): boolean {
   let ok = true;
   for (const item of items) {
-    if ((item.gist || '').length > (item[verbatimKey] || '').length) {
+    const verbatim = item[verbatimKey];
+    const verbatimLen = typeof verbatim === 'string' ? verbatim.length : 0;
+    if ((item.gist || '').length > verbatimLen) {
       report.fail(`gist-not-authoritative:${label}`, `${item.id}: gist is longer than ${verbatimKey}; gist must never expand toward becoming normative text`);
       ok = false;
     }
@@ -213,7 +240,7 @@ function checkGistNeverExceedsSource(report, label, items, verbatimKey) {
   return ok;
 }
 
-function checkPrecedenceStatements(report, stackText, positionText) {
+function checkPrecedenceStatements(report: Report, stackText: string, positionText: string): boolean {
   let ok = true;
   const stackPlain = stackText.replace(/\*\*/g, '');
   const positionPlain = positionText.replace(/\*\*/g, '');
@@ -232,7 +259,7 @@ function checkPrecedenceStatements(report, stackText, positionText) {
   return ok;
 }
 
-function checkExtensionTaxonomyMatch(report, doctrineKinds, positionKinds) {
+function checkExtensionTaxonomyMatch(report: Report, doctrineKinds: string[], positionKinds: string[]): boolean {
   const a = [...doctrineKinds].sort();
   const b = [...positionKinds].sort();
   const same = a.length === b.length && a.every((v, i) => v === b[i]);
@@ -244,7 +271,7 @@ function checkExtensionTaxonomyMatch(report, doctrineKinds, positionKinds) {
   return true;
 }
 
-function checkRegistryMatchesFreshRegen(report, label, committedBytes, freshBytes) {
+function checkRegistryMatchesFreshRegen(report: Report, label: string, committedBytes: string, freshBytes: string): boolean {
   if (committedBytes !== freshBytes) {
     report.fail('registry-drift', `${label}: committed governance JSON differs from fresh deterministic regeneration`);
     return false;
@@ -257,7 +284,14 @@ function checkRegistryMatchesFreshRegen(report, label, committedBytes, freshByte
 // Live gate
 // ---------------------------------------------------------------------------
 
-function runLiveGate() {
+interface CommittedRegistries {
+  doctrine: { rules: DoctrineRule[]; verification_controls: { id: string }[]; forbidden: { number: number }[]; historical_orphan_findings: unknown[] };
+  stack: { selections: StackSelection[]; controls: StackControl[] };
+  position: { obligations: PositionObligation[] };
+  authorityIndex: unknown;
+}
+
+function runLiveGate(): Report {
   const report = new Report();
 
   const doctrineText = readFileSync(PATHS.doctrine, 'utf8');
@@ -275,10 +309,10 @@ function runLiveGate() {
   checkOnlyOneDoctrineAuthority(report, allFiles);
 
   const fresh = buildRegistries({ doctrineText, stackText, positionText });
-  const committed = {
-    doctrine: JSON.parse(readFileSync(PATHS.outDoctrine, 'utf8')),
-    stack: JSON.parse(readFileSync(PATHS.outStack, 'utf8')),
-    position: JSON.parse(readFileSync(PATHS.outPosition, 'utf8')),
+  const committed: CommittedRegistries = {
+    doctrine: JSON.parse(readFileSync(PATHS.outDoctrine, 'utf8')) as CommittedRegistries['doctrine'],
+    stack: JSON.parse(readFileSync(PATHS.outStack, 'utf8')) as CommittedRegistries['stack'],
+    position: JSON.parse(readFileSync(PATHS.outPosition, 'utf8')) as CommittedRegistries['position'],
     authorityIndex: JSON.parse(readFileSync(PATHS.outAuthorityIndex, 'utf8')),
   };
 
@@ -333,7 +367,7 @@ function runLiveGate() {
   return report;
 }
 
-function printReport(report, { title }) {
+function printReport(report: Report, { title }: { title: string }): void {
   console.log(`\n=== ${title} ===`);
   console.log(`PASS: ${report.passes.length}  FAIL: ${report.failures.length}  NOTES: ${report.reportsOnly.length}`);
   if (report.failures.length > 0) {
@@ -353,16 +387,24 @@ function printReport(report, { title }) {
 // never writes to or mutates any real file on disk.
 // ---------------------------------------------------------------------------
 
-function selfTest() {
+interface FixtureResult {
+  name: string;
+  expectFail: boolean;
+  failed: boolean;
+  pass: boolean;
+  error: string | undefined;
+}
+
+function selfTest(): boolean {
   const doctrineText = readFileSync(PATHS.doctrine, 'utf8');
   const stackText = readFileSync(PATHS.stack, 'utf8');
   const positionText = readFileSync(PATHS.position, 'utf8');
   const fresh = buildRegistries({ doctrineText, stackText, positionText });
 
-  const results = [];
-  function fixture(name, expectFail, fn) {
+  const results: FixtureResult[] = [];
+  function fixture(name: string, expectFail: boolean, fn: (r: Report) => void): void {
     const r = new Report();
-    let threw = null;
+    let threw: unknown = null;
     try {
       fn(r);
     } catch (e) {
@@ -370,13 +412,28 @@ function selfTest() {
     }
     const failed = r.failures.length > 0 || threw !== null;
     const pass = expectFail ? failed : !failed;
-    results.push({ name, expectFail, failed, pass, error: threw?.message });
+    const errorMessage = threw instanceof Error ? threw.message : undefined;
+    results.push({ name, expectFail, failed, pass, error: errorMessage });
   }
 
   // 1. alter doctrine byte -> fail
   fixture('alter doctrine byte -> seal check fails', true, (r) => {
     const mutated = `${doctrineText.slice(0, 100)}X${doctrineText.slice(101)}`;
     checkSeal(r, 'doctrine', mutated, readFileSync(PATHS.doctrineSeal, 'utf8'), 'DOCTRINE.md');
+  });
+
+  // 1b. alter stack byte -> seal check fails (STACK-named fixture, closes the
+  // coverage gap recorded in governance/control-implementation.json SCC-27)
+  fixture('alter stack byte -> seal check fails', true, (r) => {
+    const mutated = `${stackText.slice(0, 100)}X${stackText.slice(101)}`;
+    checkSeal(r, 'stack', mutated, readFileSync(PATHS.stackSeal, 'utf8'), 'STACK.md');
+  });
+
+  // 1c. alter position byte -> seal check fails (POSITION-named fixture, same
+  // coverage gap for position/POSITION.sha256)
+  fixture('alter position byte -> seal check fails', true, (r) => {
+    const mutated = `${positionText.slice(0, 100)}X${positionText.slice(101)}`;
+    checkSeal(r, 'position', mutated, readFileSync(PATHS.positionSeal, 'utf8'), 'POSITION.md');
   });
 
   // 2. omit LED-04 from registry -> fail

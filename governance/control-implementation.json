@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "as_of": "2026-08-08",
-  "generation_method": "Manually assessed against executable evidence gathered during AFENDA Phase 2 (control plane). Unlike doctrine-registry.json / stack-registry.json / position-registry.json / authority-index.json, this file is not a pure deterministic text-extraction projection: implementation state is a judgment call that requires running real checks, not parsing prose. Structural completeness (every SCC-01..27 and V01..18 present exactly once, states drawn from the fixed enum) is itself verified by scripts/gate.mjs's control-map-completeness step.",
+  "generation_method": "Manually assessed against executable evidence gathered during AFENDA Phase 2 (control plane) and Phase 2.1 (control plane hardening). Unlike doctrine-registry.json / stack-registry.json / position-registry.json / authority-index.json, this file is not a pure deterministic text-extraction projection: implementation state is a judgment call that requires running real checks, not parsing prose. Structural completeness (every SCC-01..27 and V01..18 present exactly once, states drawn from the fixed enum) is itself verified by scripts/gate.ts's control-map-completeness step.",
   "state_enum": ["implemented", "partial", "not-yet-built", "blocked", "not-applicable-current-tree"],
   "policy": [
     "A control is never 'implemented' merely because a document describes it; implementation requires an executable check.",
@@ -14,30 +14,40 @@
       "control_id": "SCC-01",
       "name": "TypeScript native/compat parity",
       "applies_to": ["SEL-01", "SEL-02"],
-      "state": "partial",
+      "state": "implemented",
       "gate": "pnpm run typecheck:native && pnpm run typecheck:compat && pnpm run lint",
       "evidence": [
-        "tsconfig.base.json (strict compiler options)",
-        "tsconfig.json (include scope)",
+        "tsconfig.base.json (strict compiler options, allowImportingTsExtensions for direct .ts execution)",
+        "tsconfig.json include = \"scripts/**/*.ts\" — every live governance source file, with zero exclusions",
         "package.json scripts typecheck:native / typecheck:native:single / typecheck:compat",
-        "eslint.config.mjs (type-aware lint via typescript-eslint)"
+        "eslint.config.mjs (type-aware lint via typescript-eslint), 0 errors",
+        "Phase 2.1: all 8 governance scripts (previously .mjs) rewritten as .ts with real types (no any, no unchecked casts, no @ts-ignore/@ts-nocheck) and confirmed to run directly under Node 24.18.0 with zero build step and zero emitted artifacts"
       ],
-      "red_fixtures": ["red:lint-ts-suppression (scripts/red.mjs)"],
-      "notes": "TypeScript 7 native (tsc, package @typescript/native@7.0.2) and TypeScript 6 compatibility (tsc6, package @typescript/typescript6@6.0.2) both install and run cleanly against the Phase 2 tooling surface (scripts/verify-toolchain-baseline.mjs, scripts/gate.mjs, scripts/red.mjs, scripts/generate-agent-docs.mjs). Phase 1 authority scripts (scripts/build-authority-registry.mjs, scripts/check-authority-integrity.mjs, scripts/lib/authority-parser.mjs) are deliberately excluded from tsconfig.json's include list: a real strict/checkJs run against them currently produces ~180 genuine implicit-any / unchecked-index errors (they predate this governance-language requirement and are load-bearing, already proven by their own self-tests). Retrofitting JSDoc types there is a real, separate task, not done in this phase to avoid destabilizing proven logic. Type-aware lint currently has no dedicated red fixture proving a real type error is caught (only a banned-comment fixture exists); typecheck itself has no injected-violation red fixture yet.",
-      "revisit_trigger": "When the Phase 1 scripts are retrofitted with JSDoc types (or rewritten as .ts) and added to tsconfig.json's include list, and a red fixture exists proving typecheck:native/typecheck:compat actually fail on an injected type error."
+      "red_fixtures": [
+        "red:lint-ts-suppression (scripts/red.ts)",
+        "red:typecheck-native-injected-type-error (scripts/red.ts) — writes a disposable .ts file with a genuine type defect into the real tsconfig.json include scope and invokes the actual `pnpm run typecheck:native` command, confirming it exits non-zero, then removes the fixture",
+        "red:typecheck-compat-injected-type-error (scripts/red.ts) — same defect, `pnpm run typecheck:compat`"
+      ],
+      "notes": "Phase 2.1 closed both gaps recorded at the end of Phase 2. (1) The Phase 1 authority scripts (build-authority-registry, check-authority-integrity, lib/authority-parser) were migrated from .mjs to .ts with full types and are now included in tsconfig.json's strict scope alongside the Phase 2 scripts — there is no more excluded governance source and no ~180-error debt; both typecheck:native and typecheck:compat report 0 errors across all 8 files. (2) Two new red fixtures inject a real type error into the live tsconfig scope and invoke the production typecheck:native/typecheck:compat commands directly (not a helper-function mock), proving both compiler lanes actually turn red on a genuine defect. Implemented for the full scope that currently exists (governance tooling); there is still no application code, so this control's application-layer proof remains deferred to when packages/apps exist (see SCC-24).",
+      "revisit_trigger": "When application packages exist, extend the same red-fixture pattern (real command, real injected defect) to the application typecheck scope."
     },
     {
       "control_id": "SCC-02",
       "name": "Strictness and no-any",
       "applies_to": ["SEL-01"],
-      "state": "partial",
+      "state": "implemented",
       "gate": "pnpm run typecheck:native && pnpm run lint",
       "evidence": [
         "tsconfig.base.json sets strict, noUncheckedIndexedAccess, exactOptionalPropertyTypes, useUnknownInCatchVariables, noImplicitReturns, noFallthroughCasesInSwitch, noPropertyAccessFromIndexSignature, verbatimModuleSyntax, isolatedModules, noEmit exactly as SEL-01 binding constraints require",
-        "eslint.config.mjs @typescript-eslint/no-explicit-any and ban-ts-comment rules"
+        "eslint.config.mjs @typescript-eslint/no-explicit-any and ban-ts-comment rules",
+        "Grep-verified: zero `any` type annotations and zero @ts-ignore/@ts-nocheck/@ts-expect-error directives in any scripts/**/*.ts file (the one string literal containing the text \"@ts-ignore\" is red-fixture test data in scripts/red.ts, not a live suppression)",
+        "Phase 2.1 typing work exercised noPropertyAccessFromIndexSignature and exactOptionalPropertyTypes for real (not just declared): both surfaced genuine compile errors during migration that were fixed with proper generics/bracket-access rather than casts or suppressions"
       ],
-      "red_fixtures": ["red:lint-ts-suppression (scripts/red.mjs)"],
-      "notes": "Compiler strictness is genuinely enabled and enforced for the Phase 2 tooling surface. There is no application code yet for 'application any is rejected' to be exercised against at scale; only the lint-suppression red fixture currently proves rejection behavior.",
+      "red_fixtures": [
+        "red:lint-ts-suppression (scripts/red.ts)",
+        "red:typecheck-native-injected-type-error / red:typecheck-compat-injected-type-error (scripts/red.ts) — also exercise strictness generally, since the injected fixture only fails because strict mode is on"
+      ],
+      "notes": "Compiler strictness is genuinely enabled and enforced across the full, now-unified governance tooling surface. There is no application code yet for 'application any is rejected' to be exercised against at scale; that remains deferred (see SCC-24), but the governance-layer proof is now complete rather than partial.",
       "revisit_trigger": "Once application packages exist, add a red fixture that injects a literal any/unchecked cast into application code and confirms lint/typecheck rejects it."
     },
     {
@@ -55,20 +65,20 @@
       "control_id": "SCC-04",
       "name": "Exact toolchain pins",
       "applies_to": ["SEL-02", "SEL-03", "SEL-04"],
-      "state": "implemented",
+      "state": "partial",
       "gate": "pnpm run verify:toolchain",
       "evidence": [
         ".node-version = 24.18.0",
         "package.json engines.node = 24.18.0, packageManager = pnpm@11.20.0",
         "package.json devDependencies: @typescript/native -> npm:typescript@7.0.2 (exact), typescript -> npm:@typescript/typescript6@6.0.2 (exact)",
         "pnpm-lock.yaml committed (frozen lockfile)",
-        "scripts/verify-toolchain-baseline.mjs (executable comparison against stack/VERSION_BASELINE.json)",
-        "scripts/lib/control-map.mjs checkDependencyPinsAreExact (rejects ^ / ~ / \"latest\" specs in package.json dependencies and devDependencies)",
+        "scripts/verify-toolchain-baseline.ts (executable comparison against stack/VERSION_BASELINE.json)",
+        "scripts/lib/control-map.ts checkDependencyPinsAreExact (rejects ^ / ~ / \"latest\" specs in package.json dependencies and devDependencies)",
         ".github/workflows/gate.yml runs pnpm install --frozen-lockfile && pnpm gate (workflow file present; not observed executing on a live GitHub runner from this environment)"
       ],
-      "red_fixtures": ["red:toolchain-mismatch (scripts/red.mjs)", "red:dependency-range-injected (scripts/red.mjs)"],
-      "notes": "stack/VERSION_BASELINE.json does not pin an exact pnpm or Turborepo version; this is a documented, explicit gap-fill (not a silent resolution) recorded in governance/CONTROL_PLANE_REPORT.md and in scripts/verify-toolchain-baseline.mjs output: pnpm is pinned to the version present in the qualification environment (11.20.0), Turborepo to its current npm-registry release (2.10.8) at Phase 2 time. Also recorded: @typescript/typescript6@6.0.2's tsc6 binary self-reports 'Version 6.0.3' even though the npm package version pin is exactly 6.0.2 as required; this is an upstream wrapper/compiler discrepancy, surfaced not hidden. Also recorded: turbo.json is schema-valid (confirmed via `turbo run gate:authority --dry`) but currently orchestrates 0 tasks because pnpm-workspace.yaml matches 0 packages; `pnpm gate` therefore invokes the underlying scripts directly rather than through `turbo run`, so this control's PASS state does not depend on Turborepo actually providing orchestration value yet.",
-      "revisit_trigger": "If VERSION_BASELINE.json is amended to pin pnpm/Turborepo explicitly, or if the tsc6 self-reported version discrepancy is investigated upstream."
+      "red_fixtures": ["red:toolchain-mismatch (scripts/red.ts)", "red:dependency-range-injected (scripts/red.ts)"],
+      "notes": "Downgraded from implemented to partial in Phase 2.1 for two concrete, locally-proven reasons that jointly mean 'CI-verified' and 'exact ... compilers' are not both fully established: (1) SCC-04's required outcome explicitly says '...and lockfile are exact and CI-verified'; .github/workflows/gate.yml exists and its commands are identical to what runs locally, but no execution on a live GitHub Actions runner has been observed from this environment — 'CI-verified' is asserted by file presence only, not by an observed run. (2) Direct inspection of node_modules/.pnpm and pnpm-lock.yaml (not just the installed package.json version) shows @typescript/typescript6@6.0.2's OWN package.json declares \"@typescript/old\": \"npm:typescript@^6\" — a semver RANGE, not an exact pin, for its actual compiler engine. The frozen lockfile resolved that range to real package typescript@6.0.3 (confirmed: pnpm-lock.yaml line ~982 records '@typescript/old: typescript@6.0.3'; node_modules/.pnpm contains a typescript@6.0.3 directory; tsc6's lib/tsc.js literally does `require(\"@typescript/old/lib/tsc.js\")`). This is why tsc6 --version reports 6.0.3 while VERSION_BASELINE.json's typescript_compat.reference_patch says 6.0.2 — it is a genuine resolved-engine-vs-declared-baseline gap, not a cosmetic version string mismatch, even though our own package.json pin (the wrapper's version) is exact and scripts/verify-toolchain-baseline.ts's package-level check correctly passes because it can only see package.json version fields, not transitive lockfile resolutions. Separately and still true: stack/VERSION_BASELINE.json does not pin an exact pnpm or Turborepo version; this remains a documented, explicit gap-fill (not a silent resolution), recorded in governance/CONTROL_PLANE_REPORT.md and scripts/verify-toolchain-baseline.ts output — pnpm is pinned to the version present in the qualification environment (11.20.0), Turborepo to its current npm-registry release (2.10.8) at Phase 2 time. Also still true: turbo.json is schema-valid but currently orchestrates 0 tasks because pnpm-workspace.yaml matches 0 packages; `pnpm gate` invokes the underlying scripts directly rather than through `turbo run`.",
+      "revisit_trigger": "When .github/workflows/gate.yml is observed executing successfully on a live GitHub Actions runner, AND either (a) the TypeScript-6 compatibility engine resolution is pinned exactly (e.g. a pnpm override/resolution forcing @typescript/old to the declared reference_patch) or (b) VERSION_BASELINE.json's typescript_compat.reference_patch is explicitly revised to match the intentionally-resolved engine version, whichever reflects the real governance decision."
     },
     {
       "control_id": "SCC-05",
@@ -277,16 +287,18 @@
       "state": "implemented",
       "gate": "pnpm run gate:authority",
       "evidence": [
-        "scripts/check-authority-integrity.mjs seal:stack check (STACK.md sha256 matches STACK.sha256)",
-        "scripts/check-authority-integrity.mjs exact-range:selections and exact-range:controls checks (all SEL-01..27 and SCC-01..27 present exactly once)",
-        "scripts/check-authority-integrity.mjs control-reference-graph check (no dangling SEL<->SCC references)"
+        "scripts/check-authority-integrity.ts seal:stack check (STACK.md sha256 matches STACK.sha256)",
+        "scripts/check-authority-integrity.ts exact-range:selections and exact-range:controls checks (all SEL-01..27 and SCC-01..27 present exactly once)",
+        "scripts/check-authority-integrity.ts control-reference-graph check (no dangling SEL<->SCC references)"
       ],
       "red_fixtures": [
-        "check-authority-integrity.mjs --self-test: 'alter doctrine byte' (exercises the shared checkSeal function also used for stack/position)",
-        "check-authority-integrity.mjs --self-test: 'map SEL-01 to nonexistent SCC-99' (dangling SEL<->SCC reference)"
+        "check-authority-integrity.ts --self-test: 'alter doctrine byte' (exercises the shared checkSeal function also used for stack/position)",
+        "check-authority-integrity.ts --self-test: 'alter stack byte -> seal check fails' (added Phase 2.1, closes the coverage gap below)",
+        "check-authority-integrity.ts --self-test: 'alter position byte -> seal check fails' (added Phase 2.1, closes the coverage gap below)",
+        "check-authority-integrity.ts --self-test: 'map SEL-01 to nonexistent SCC-99' (dangling SEL<->SCC reference)"
       ],
-      "notes": "The self-test suite explicitly names doctrine for the seal-mutation fixture; the identical checkSeal code path also seals stack/position, but no fixture is named specifically for a corrupted STACK.sha256 or POSITION.sha256. Recorded as a coverage nuance, not hidden.",
-      "revisit_trigger": "Add a self-test fixture that corrupts STACK.sha256 specifically, distinct from the existing doctrine-named one."
+      "notes": "Phase 2 recorded a coverage gap: the self-test suite only named doctrine for the seal-mutation fixture, even though the identical checkSeal code path also seals stack/position. Phase 2.1 closed this by adding two more fixtures ('alter stack byte', 'alter position byte') that call the same real checkSeal function used by the live gate with a corrupted STACK.md/POSITION.md byte and the real STACK.sha256/POSITION.sha256, confirming each fails specifically. All three documents now have a named, direct fixture.",
+      "revisit_trigger": null
     }
   ],
   "doctrine_verification_controls": [
@@ -360,16 +372,17 @@
       "related_scc": ["SCC-04", "SCC-27"], "state": "partial",
       "gate": "pnpm run gate:authority && pnpm run build:authority-registry (byte-identity) && pnpm run verify:toolchain",
       "evidence": [
-        "scripts/build-authority-registry.mjs regenerates governance/*.json byte-identically from doctrine/DOCTRINE.md, stack/STACK.md, position/POSITION.md (DET-01/DET-02 satisfied for the governance-registry layer: deterministic compilation from committed definitions, not an AI authoring claim)",
-        "scripts/check-authority-integrity.mjs registry-drift checks are the executable red condition for 'hidden change without regeneration'",
-        "pnpm-lock.yaml + .node-version + package.json engines/packageManager give a real dependency/toolchain lock (contributes to GOV-05's 'complete verification bundle' requirement, which did not exist before Phase 2)"
+        "scripts/build-authority-registry.ts regenerates governance/*.json byte-identically from doctrine/DOCTRINE.md, stack/STACK.md, position/POSITION.md (DET-01/DET-02 satisfied for the governance-registry layer: deterministic compilation from committed definitions, not an AI authoring claim). Phase 2.1 note: the only byte-level change from the .mjs->.ts migration in any of the 4 generated registries is the disclosed \"generated_by\" provenance string (now points at the .ts filename); every extracted object, hash, and count is unchanged — verified with `git diff` immediately after migration.",
+        "scripts/check-authority-integrity.ts registry-drift checks are the executable red condition for 'hidden change without regeneration'",
+        "pnpm-lock.yaml + .node-version + package.json engines/packageManager give a real dependency/toolchain lock (contributes to GOV-05's 'complete verification bundle' requirement, which did not exist before Phase 2)",
+        "Phase 2.1: the toolchain-lock layer's own exactness was investigated more deeply (see SCC-04) and found to have a real gap (TypeScript-6 compatibility engine resolves via a transitive semver range to a patch different from the declared baseline) — this is additional, more precise evidence about the boundary of what is and is not yet provenance-proven, not a new capability"
       ],
       "red_fixtures": [
-        "check-authority-integrity.mjs --self-test registry-drift-sensitive fixtures (alter rule_verbatim, omit V08, etc. all cause byte-identity/completeness to fail)",
-        "red:toolchain-mismatch (scripts/red.mjs) for 'hidden toolchain change'"
+        "check-authority-integrity.ts --self-test registry-drift-sensitive fixtures (alter rule_verbatim, omit V08, etc., plus Phase 2.1's new stack-seal/position-seal fixtures, all cause byte-identity/completeness to fail)",
+        "red:toolchain-mismatch (scripts/red.ts) for 'hidden toolchain change'"
       ],
-      "notes": "Proven only for the governance-registry generation layer (doctrine/stack/position -> governance/*.json) and the toolchain pin layer. NOT proven for the application/financial system: there is no migration, ledger, or generator determinism to test yet, and GOV-05's 'complete verification bundle' is not yet fully assembled (no CI execution observed from this environment, no application dependency graph). Marking this V-control implemented for the whole doctrine would overstate reality; 'partial' is the honest state.",
-      "revisit_trigger": "When application-layer generators (codegen, migrations) exist and can be shown to regenerate byte-identically with a red fixture for hidden toolchain change at that layer too."
+      "notes": "Proven only for the governance-registry generation layer (doctrine/stack/position -> governance/*.json) and the toolchain pin layer. NOT proven for the application/financial system: there is no migration, ledger, or generator determinism to test yet, and GOV-05's 'complete verification bundle' is not yet fully assembled (no CI execution observed from this environment, no application dependency graph, and the toolchain lock itself has the SCC-04 compat-engine gap). Marking this V-control implemented for the whole doctrine would overstate reality; 'partial' remains the honest state, and Phase 2.1's findings make the boundary of what is proven more precise rather than wider.",
+      "revisit_trigger": "When application-layer generators (codegen, migrations) exist and can be shown to regenerate byte-identically with a red fixture for hidden toolchain change at that layer too, and when the SCC-04 compat-engine gap is closed."
     },
     {
       "control_id": "V15", "title": "Concurrency", "primary_rules": ["LED-10", "OPS-02", "OPS-03"],

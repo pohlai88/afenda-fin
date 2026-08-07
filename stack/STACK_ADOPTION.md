@@ -118,7 +118,7 @@ Complete each item before marking the stack `ADOPTED`.
 
 ### Verification
 
-- [x] Add SCC-01 through SCC-27 to CI or a machine-readable governance dispatcher.
+- [ ] Add SCC-01 through SCC-27 to CI or a machine-readable governance dispatcher. (Unchecked in Phase 2.1 — see `governance/CONTROL_PLANE_REPORT.md` §11 and §7 below: registration/reporting of all 27 states is real, but whether that satisfies this item's wording versus requiring all 27 to be executably dispatched is genuinely ambiguous, and 22 of 27 have no executable check at all.)
 - [ ] Add PGlite fast tests but prohibit concurrency qualification there.
 - [ ] Add Testcontainers PostgreSQL 18/17 lanes with real roles and multiple connections.
 - [ ] Add critical domain mutants and enforce zero survival.
@@ -201,3 +201,9 @@ This file is a **reorganization of existing adoption evidence**, not a new adopt
 ## 6. Phase 2 control-plane update (2026-08-08)
 
 The nine `- [x]` items ticked in §3 above were completed and mechanically evidenced during AFENDA Phase 2 (repository control plane), commit `build(governance): establish AFENDA control plane`, and are individually cross-referenced with executable evidence in `governance/CONTROL_PLANE_REPORT.md`. Every other checklist item in §3 remains `- [ ]` unchecked because the corresponding repository state (database, API, frontend, identity, jobs, outbox, PGlite/Testcontainers, mutants, Playwright, containers, BI) does not exist yet. **Ticking these nine items is not a stack adoption event.** The stack still does not become repository authority: §3's remaining items, the ratifier signature block, and CI enforcement of `stack/STACK.sha256` on a live runner are all still outstanding.
+
+---
+
+## 7. Phase 2.1 control-plane hardening update (2026-08-08)
+
+One item ticked in §6 above was re-examined and reverted to unchecked: **"Add SCC-01 through SCC-27 to CI or a machine-readable governance dispatcher."** Phase 2 ticked this on the basis that all 27 states are registered in `governance/control-implementation.json` and reported by `scripts/gate.ts`. On closer reading, the checklist wording is genuinely ambiguous between "registered/reported" and "executably dispatched," and 22 of 27 controls have no executable check at all (`not-yet-built`) — so under the stricter, more defensible reading this item is not satisfied. Per the governance policy of preferring an honest unchecked item over a stretched checkbox, it has been reverted. Full reasoning: `governance/CONTROL_PLANE_REPORT.md` §11. **This correction is evidence correction, not regression**, and is not itself a stack-adoption event either way.

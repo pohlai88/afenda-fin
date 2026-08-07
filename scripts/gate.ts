@@ -2,7 +2,8 @@
 // Deterministic governance dispatcher: `pnpm gate`.
 // Runs, in order: (1) authority build+integrity, (2) registry drift (delegated to
 // step 1's own check), (3) toolchain baseline, (4) implemented static governance
-// controls, (5) control-map completeness, (6) red-fixture registration.
+// controls, (5) control-map completeness, (6) dependency pin policy, (7) generated
+// agent-doc drift, (8) red-fixture registration.
 //
 // Distinguishes PASS / FAIL / NOT-YET-BUILT / NOT-APPLICABLE. A NOT-YET-BUILT or
 // NOT-APPLICABLE control never counts as PASS and never fails the overall gate by
@@ -13,22 +14,21 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { checkControlMapCompleteness, checkDependencyPinsAreExact } from './lib/control-map.mjs';
+import { checkControlMapCompleteness, checkDependencyPinsAreExact } from './lib/control-map.ts';
+import { renderAgentDocs } from './generate-agent-docs.ts';
+import type { AuthorityIndex } from './lib/authority-parser.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
-/**
- * @typedef {'PASS' | 'FAIL' | 'NOT-YET-BUILT' | 'NOT-APPLICABLE'} StepStatus
- * @typedef {{ step: string, status: StepStatus, detail: string }} StepResult
- */
+type StepStatus = 'PASS' | 'FAIL' | 'NOT-YET-BUILT' | 'NOT-APPLICABLE';
+interface StepResult {
+  step: string;
+  status: StepStatus;
+  detail: string;
+}
 
-/**
- * @param {string} scriptRelPath
- * @param {string[]} args
- * @returns {{ ok: boolean, output: string }}
- */
-function runNodeScript(scriptRelPath, args = []) {
+function runNodeScript(scriptRelPath: string, args: string[] = []): { ok: boolean; output: string } {
   try {
     const output = execFileSync('node', [path.join(ROOT, scriptRelPath), ...args], {
       encoding: 'utf8',
@@ -36,16 +36,12 @@ function runNodeScript(scriptRelPath, args = []) {
     });
     return { ok: true, output };
   } catch (err) {
-    const e = /** @type {{ stdout?: string, stderr?: string, message: string }} */ (err);
+    const e = err as { stdout?: string; stderr?: string; message: string };
     return { ok: false, output: e.stdout ?? e.stderr ?? e.message };
   }
 }
 
-/**
- * @param {string} scriptName
- * @returns {{ ok: boolean, output: string }}
- */
-function runPnpmScript(scriptName) {
+function runPnpmScript(scriptName: string): { ok: boolean; output: string } {
   try {
     const output = execFileSync('pnpm', ['run', scriptName], {
       encoding: 'utf8',
@@ -54,33 +50,47 @@ function runPnpmScript(scriptName) {
     });
     return { ok: true, output };
   } catch (err) {
-    const e = /** @type {{ stdout?: string, stderr?: string, message: string }} */ (err);
+    const e = err as { stdout?: string; stderr?: string; message: string };
     return { ok: false, output: e.stdout ?? e.stderr ?? e.message };
   }
 }
 
-/**
- * @returns {StepResult[]}
- */
-function main() {
-  /** @type {StepResult[]} */
-  const steps = [];
+function checkAgentDocsDrift(): { ok: boolean; detail: string } {
+  const authorityIndex = JSON.parse(readFileSync(path.join(ROOT, 'governance', 'authority-index.json'), 'utf8')) as AuthorityIndex;
+  const fresh = renderAgentDocs(authorityIndex);
+  const committed = {
+    rulesJson: readFileSync(path.join(ROOT, 'governance', 'rules.json'), 'utf8'),
+    cursorRule: readFileSync(path.join(ROOT, '.cursor', 'rules', 'afenda.mdc'), 'utf8'),
+    agentsMd: readFileSync(path.join(ROOT, 'AGENTS.md'), 'utf8'),
+  };
+  const diffs: string[] = [];
+  if (committed.rulesJson !== fresh.rulesJson) diffs.push('governance/rules.json');
+  if (committed.cursorRule !== fresh.cursorRule) diffs.push('.cursor/rules/afenda.mdc');
+  if (committed.agentsMd !== fresh.agentsMd) diffs.push('AGENTS.md');
+  if (diffs.length > 0) {
+    return { ok: false, detail: `committed file(s) differ from fresh \`pnpm agent-docs\` regeneration: ${diffs.join(', ')}` };
+  }
+  return { ok: true, detail: 'byte-identical to fresh regeneration' };
+}
 
-  const build = runNodeScript('scripts/build-authority-registry.mjs');
+function main(): StepResult[] {
+  const steps: StepResult[] = [];
+
+  const build = runNodeScript('scripts/build-authority-registry.ts');
   steps.push({
     step: '1. authority-build (regenerate governance/*.json)',
     status: build.ok ? 'PASS' : 'FAIL',
     detail: build.ok ? 'regenerated' : build.output,
   });
 
-  const integrity = runNodeScript('scripts/check-authority-integrity.mjs');
+  const integrity = runNodeScript('scripts/check-authority-integrity.ts');
   steps.push({
     step: '2. authority-integrity + generated-registry drift',
     status: integrity.ok ? 'PASS' : 'FAIL',
     detail: lastLine(integrity.output),
   });
 
-  const toolchain = runNodeScript('scripts/verify-toolchain-baseline.mjs');
+  const toolchain = runNodeScript('scripts/verify-toolchain-baseline.ts');
   steps.push({
     step: '3. version/toolchain baseline',
     status: toolchain.ok ? 'PASS' : 'FAIL',
@@ -89,28 +99,26 @@ function main() {
 
   const typecheckNative = runPnpmScript('typecheck:native');
   steps.push({
-    step: '4a. static governance control: typecheck:native (SCC-01/02, partial scope)',
+    step: '4a. static governance control: typecheck:native (SCC-01/02, full governance scope)',
     status: typecheckNative.ok ? 'PASS' : 'FAIL',
     detail: typecheckNative.ok ? 'clean' : typecheckNative.output,
   });
 
   const typecheckCompat = runPnpmScript('typecheck:compat');
   steps.push({
-    step: '4b. static governance control: typecheck:compat (SCC-01, partial scope)',
+    step: '4b. static governance control: typecheck:compat (SCC-01, full governance scope)',
     status: typecheckCompat.ok ? 'PASS' : 'FAIL',
     detail: typecheckCompat.ok ? 'clean' : typecheckCompat.output,
   });
 
   const lint = runPnpmScript('lint');
   steps.push({
-    step: '4c. static governance control: lint (SCC-01/02, partial scope)',
+    step: '4c. static governance control: lint (SCC-01/02, full governance scope)',
     status: lint.ok ? 'PASS' : 'FAIL',
     detail: lint.ok ? 'clean' : lint.output,
   });
 
-  const controlMap = /** @type {unknown} */ (
-    JSON.parse(readFileSync(path.join(ROOT, 'governance', 'control-implementation.json'), 'utf8'))
-  );
+  const controlMap = JSON.parse(readFileSync(path.join(ROOT, 'governance', 'control-implementation.json'), 'utf8')) as unknown;
   const completeness = checkControlMapCompleteness(controlMap);
   steps.push({
     step: '5. control-map completeness (SCC-01..27 + V01..18 present exactly once, valid states)',
@@ -118,9 +126,7 @@ function main() {
     detail: completeness.ok ? 'complete' : completeness.failures.join('; '),
   });
 
-  const packageJson = /** @type {Record<string, unknown>} */ (
-    JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
-  );
+  const packageJson = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8')) as Record<string, unknown>;
   const pinCheck = checkDependencyPinsAreExact(packageJson);
   steps.push({
     step: '5b. dependency pin policy (no ^/~/latest ranges in package.json)',
@@ -128,9 +134,21 @@ function main() {
     detail: pinCheck.ok ? 'all exact' : pinCheck.failures.join('; '),
   });
 
-  const selfTest = runNodeScript('scripts/check-authority-integrity.mjs', ['--self-test']);
+  let agentDocsDrift: { ok: boolean; detail: string };
+  try {
+    agentDocsDrift = checkAgentDocsDrift();
+  } catch (err) {
+    agentDocsDrift = { ok: false, detail: err instanceof Error ? err.message : String(err) };
+  }
   steps.push({
-    step: '6. red-fixture registration (authority self-test; full harness via `pnpm red`)',
+    step: '6. generated agent-doc drift (governance/rules.json, .cursor/rules/afenda.mdc, AGENTS.md vs fresh regeneration)',
+    status: agentDocsDrift.ok ? 'PASS' : 'FAIL',
+    detail: agentDocsDrift.detail,
+  });
+
+  const selfTest = runNodeScript('scripts/check-authority-integrity.ts', ['--self-test']);
+  steps.push({
+    step: '7. red-fixture registration (authority self-test; full harness via `pnpm red`)',
     status: selfTest.ok ? 'PASS' : 'FAIL',
     detail: lastLine(selfTest.output),
   });
@@ -138,24 +156,24 @@ function main() {
   return steps;
 }
 
-/**
- * @param {string} output
- * @returns {string}
- */
-function lastLine(output) {
+function lastLine(output: string): string {
   const lines = output.trim().split('\n');
   return lines[lines.length - 1] ?? '';
 }
 
-/**
- * @param {unknown} controlMap
- * @returns {{ implemented: number, partial: number, notYetBuilt: number, blocked: number, notApplicable: number }}
- */
-function summarizeControlStates(controlMap) {
-  const obj = /** @type {Record<string, unknown>} */ (controlMap);
+interface ControlStateSummary {
+  implemented: number;
+  partial: number;
+  notYetBuilt: number;
+  blocked: number;
+  notApplicable: number;
+}
+
+function summarizeControlStates(controlMap: unknown): ControlStateSummary {
+  const obj = controlMap as Record<string, unknown>;
   const all = [
-    .../** @type {Array<Record<string, unknown>>} */ (obj['stack_controls'] ?? []),
-    .../** @type {Array<Record<string, unknown>>} */ (obj['doctrine_verification_controls'] ?? []),
+    ...((obj['stack_controls'] ?? []) as Record<string, unknown>[]),
+    ...((obj['doctrine_verification_controls'] ?? []) as Record<string, unknown>[]),
   ];
   let implemented = 0;
   let partial = 0;
@@ -182,9 +200,7 @@ for (const s of steps) {
   if (s.status === 'FAIL') console.log(`        ${s.detail.split('\n').slice(0, 3).join('\n        ')}`);
 }
 
-const controlMapRaw = /** @type {unknown} */ (
-  JSON.parse(readFileSync(path.join(ROOT, 'governance', 'control-implementation.json'), 'utf8'))
-);
+const controlMapRaw = JSON.parse(readFileSync(path.join(ROOT, 'governance', 'control-implementation.json'), 'utf8')) as unknown;
 const summary = summarizeControlStates(controlMapRaw);
 console.log('\n--- SCC-01..27 + V01..18 state summary (informational; does not gate this repository phase) ---');
 console.log(`  implemented: ${summary.implemented}`);

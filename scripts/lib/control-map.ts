@@ -4,46 +4,31 @@
 // assigned state is semantically honest — that judgment is recorded by a human/agent
 // in governance/CONTROL_PLANE_REPORT.md, not derived mechanically.
 
-/** @type {readonly string[]} */
-export const VALID_STATES = ['implemented', 'partial', 'not-yet-built', 'blocked', 'not-applicable-current-tree'];
+export const VALID_STATES = ['implemented', 'partial', 'not-yet-built', 'blocked', 'not-applicable-current-tree'] as const;
+export type ControlState = (typeof VALID_STATES)[number];
 
-/**
- * @typedef {{ ok: boolean, failures: string[] }} ControlMapReport
- */
+export interface ControlMapReport {
+  ok: boolean;
+  failures: string[];
+}
 
-/**
- * @param {number} count
- * @param {string} prefix
- * @param {string} separator
- * @returns {string[]}
- */
-function expectedIds(count, prefix, separator) {
-  /** @type {string[]} */
-  const ids = [];
+function expectedIds(count: number, prefix: string, separator: string): string[] {
+  const ids: string[] = [];
   for (let i = 1; i <= count; i += 1) {
     ids.push(`${prefix}${separator}${String(i).padStart(2, '0')}`);
   }
   return ids;
 }
 
-/**
- * @param {unknown} v
- * @returns {string}
- */
-function asString(v) {
+function asString(v: unknown): string {
   return typeof v === 'string' ? v : '';
 }
 
-/**
- * @param {unknown} data
- * @returns {ControlMapReport}
- */
-export function checkControlMapCompleteness(data) {
-  /** @type {string[]} */
-  const failures = [];
-  const obj = /** @type {Record<string, unknown>} */ (data ?? {});
-  const stackControls = /** @type {Array<Record<string, unknown>>} */ (obj['stack_controls'] ?? []);
-  const vControls = /** @type {Array<Record<string, unknown>>} */ (obj['doctrine_verification_controls'] ?? []);
+export function checkControlMapCompleteness(data: unknown): ControlMapReport {
+  const failures: string[] = [];
+  const obj = (data ?? {}) as Record<string, unknown>;
+  const stackControls = (obj['stack_controls'] ?? []) as Record<string, unknown>[];
+  const vControls = (obj['doctrine_verification_controls'] ?? []) as Record<string, unknown>[];
 
   checkIdSet(stackControls, expectedIds(27, 'SCC', '-'), 'control_id', 'stack_controls', failures);
   checkIdSet(vControls, expectedIds(18, 'V', ''), 'control_id', 'doctrine_verification_controls', failures);
@@ -53,14 +38,13 @@ export function checkControlMapCompleteness(data) {
   return { ok: failures.length === 0, failures };
 }
 
-/**
- * @param {Array<Record<string, unknown>>} items
- * @param {string[]} expected
- * @param {string} idKey
- * @param {string} label
- * @param {string[]} failures
- */
-function checkIdSet(items, expected, idKey, label, failures) {
+function checkIdSet(
+  items: Record<string, unknown>[],
+  expected: string[],
+  idKey: string,
+  label: string,
+  failures: string[],
+): void {
   const seen = items.map((it) => asString(it[idKey]));
   const seenSet = new Set(seen);
   if (seenSet.size !== seen.length) {
@@ -76,14 +60,11 @@ function checkIdSet(items, expected, idKey, label, failures) {
  * Rejects unapproved dependency ranges (^ or ~) in package.json. The npm alias
  * syntax "npm:pkg@1.2.3" is exact and explicitly allowed; a leading ^ or ~ inside
  * the version portion is not.
- * @param {Record<string, unknown>} packageJson
- * @returns {ControlMapReport}
  */
-export function checkDependencyPinsAreExact(packageJson) {
-  /** @type {string[]} */
-  const failures = [];
+export function checkDependencyPinsAreExact(packageJson: Record<string, unknown>): ControlMapReport {
+  const failures: string[] = [];
   for (const field of ['dependencies', 'devDependencies']) {
-    const deps = /** @type {Record<string, unknown> | undefined} */ (packageJson[field]);
+    const deps = packageJson[field] as Record<string, unknown> | undefined;
     if (deps === undefined) continue;
     for (const [name, rawSpec] of Object.entries(deps)) {
       const spec = typeof rawSpec === 'string' ? rawSpec : '';
@@ -96,15 +77,10 @@ export function checkDependencyPinsAreExact(packageJson) {
   return { ok: failures.length === 0, failures };
 }
 
-/**
- * @param {Array<Record<string, unknown>>} items
- * @param {string} label
- * @param {string[]} failures
- */
-function checkStates(items, label, failures) {
+function checkStates(items: Record<string, unknown>[], label: string, failures: string[]): void {
   for (const item of items) {
     const state = asString(item['state']);
-    if (!VALID_STATES.includes(state)) {
+    if (!(VALID_STATES as readonly string[]).includes(state)) {
       const id = asString(item['control_id']) || '?';
       failures.push(`${label}: ${id} has invalid state "${state}"`);
     }

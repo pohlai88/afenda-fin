@@ -2,12 +2,12 @@
 // GENERATED-FILE WRITER — this script is source; its JSON *outputs* under
 // governance/ are generated projections. Re-running against unchanged
 // doctrine/DOCTRINE.md, stack/STACK.md and position/POSITION.md must produce
-// byte-identical output (verified by scripts/check-authority-integrity.mjs).
+// byte-identical output (verified by scripts/check-authority-integrity.ts).
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { buildRegistries, toJsonBytes } from './lib/authority-parser.mjs';
+import { buildRegistries, toJsonBytes } from './lib/authority-parser.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -22,7 +22,7 @@ const PATHS = {
   outPosition: path.join(ROOT, 'governance', 'position-registry.json'),
 };
 
-function main() {
+function main(): void {
   const doctrineText = readFileSync(PATHS.doctrine, 'utf8');
   const stackText = readFileSync(PATHS.stack, 'utf8');
   const positionText = readFileSync(PATHS.position, 'utf8');

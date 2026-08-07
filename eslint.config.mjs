@@ -1,7 +1,8 @@
 // @ts-check
-// Type-aware lint for the Phase 2 governance tooling surface (SCC-01, SCC-02).
-// Scope intentionally excludes the pre-existing Phase 1 authority scripts;
-// see tsconfig.json and governance/CONTROL_PLANE_REPORT.md for why.
+// Type-aware lint for the AFENDA governance tooling surface (SCC-01, SCC-02).
+// Scope is every scripts/**/*.ts file (see tsconfig.json). Plain-JS config
+// files (this file, .dependency-cruiser.cjs) are not part of the TypeScript
+// program and are excluded from type-aware parsing.
 
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
@@ -9,14 +10,7 @@ import globals from 'globals';
 
 export default tseslint.config(
   {
-    ignores: [
-      'node_modules/**',
-      'governance/history/**',
-      'scripts/build-authority-registry.mjs',
-      'scripts/check-authority-integrity.mjs',
-      'scripts/lib/authority-parser.mjs',
-      '.dependency-cruiser.cjs',
-    ],
+    ignores: ['node_modules/**', 'governance/history/**', 'eslint.config.mjs', '.dependency-cruiser.cjs'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,

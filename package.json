@@ -9,17 +9,17 @@
   },
   "packageManager": "pnpm@11.20.0",
   "scripts": {
-    "build:authority-registry": "node scripts/build-authority-registry.mjs",
-    "gate:authority": "node scripts/check-authority-integrity.mjs",
-    "gate:authority:self-test": "node scripts/check-authority-integrity.mjs --self-test",
-    "verify:toolchain": "node scripts/verify-toolchain-baseline.mjs",
+    "build:authority-registry": "node scripts/build-authority-registry.ts",
+    "gate:authority": "node scripts/check-authority-integrity.ts",
+    "gate:authority:self-test": "node scripts/check-authority-integrity.ts --self-test",
+    "verify:toolchain": "node scripts/verify-toolchain-baseline.ts",
     "typecheck:native": "tsc --noEmit -p tsconfig.json",
     "typecheck:native:single": "tsc --noEmit -p tsconfig.json --singleThreaded",
     "typecheck:compat": "tsc6 --noEmit -p tsconfig.json",
     "lint": "eslint .",
-    "agent-docs": "node scripts/generate-agent-docs.mjs",
-    "gate": "node scripts/gate.mjs",
-    "red": "node scripts/red.mjs"
+    "agent-docs": "node scripts/generate-agent-docs.ts",
+    "gate": "node scripts/gate.ts",
+    "red": "node scripts/red.ts"
   },
   "devDependencies": {
     "@typescript/native": "npm:typescript@7.0.2",

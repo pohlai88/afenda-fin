@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_by": "scripts/build-authority-registry.mjs",
+  "generated_by": "scripts/build-authority-registry.ts",
   "generated_from": {
     "path": "stack/STACK.md",
     "sha256": "0db072117f1eac486e4cc56b1472b8b192c290ac42c7653a00349ebe93c10b65"

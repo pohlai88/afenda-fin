@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_by": "scripts/build-authority-registry.mjs",
+  "generated_by": "scripts/build-authority-registry.ts",
   "documents": [
     {
       "id": "doctrine",
