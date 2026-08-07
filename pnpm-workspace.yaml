@@ -1,0 +1,7 @@
+# SEL-04 (stack/STACK.md): pnpm workspaces as package authority.
+# Forward-declared per stack/STACK.md §8's required repository architecture.
+# No packages exist yet in this tree (Phase 2 is governance/tooling only);
+# these globs currently match zero packages, which is valid for pnpm.
+packages:
+  - "apps/*"
+  - "packages/*"

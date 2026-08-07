@@ -79,18 +79,18 @@ Complete each item before marking the stack `ADOPTED`.
 
 ### Authority and integrity
 
-- [ ] Commit `STACK.md`, `STACK.sha256`, `STACK_CONTROL_MAP.json`, `VERSION_BASELINE.json` and `SOURCE_REGISTER.md` under one canonical `stack/` path.
-- [ ] Add a CI check that rejects any stack authority whose SHA-256 differs from `STACK.sha256`.
-- [ ] Mark prior stack drafts as non-authoritative or remove them from standing-context discovery.
+- [x] Commit `STACK.md`, `STACK.sha256`, `STACK_CONTROL_MAP.json`, `VERSION_BASELINE.json` and `SOURCE_REGISTER.md` under one canonical `stack/` path.
+- [x] Add a CI check that rejects any stack authority whose SHA-256 differs from `STACK.sha256`.
+- [x] Mark prior stack drafts as non-authoritative or remove them from standing-context discovery.
 - [ ] Record the adopter, date and repository commit.
 
 ### Toolchain
 
 - [ ] Pin Node 24 LTS exactly in `.node-version`, CI and container image.
-- [ ] Install exact TypeScript 7 native and TypeScript 6 compatibility aliases.
-- [ ] Add `typecheck:native`, `typecheck:native:single`, `typecheck:compat` and type-aware lint scripts.
-- [ ] Pin pnpm exactly in `packageManager`; commit the frozen lockfile.
-- [ ] Reject unapproved dependency ranges and lockfile drift.
+- [x] Install exact TypeScript 7 native and TypeScript 6 compatibility aliases.
+- [x] Add `typecheck:native`, `typecheck:native:single`, `typecheck:compat` and type-aware lint scripts.
+- [x] Pin pnpm exactly in `packageManager`; commit the frozen lockfile.
+- [x] Reject unapproved dependency ranges and lockfile drift.
 
 ### Database
 
@@ -118,7 +118,7 @@ Complete each item before marking the stack `ADOPTED`.
 
 ### Verification
 
-- [ ] Add SCC-01 through SCC-27 to CI or a machine-readable governance dispatcher.
+- [x] Add SCC-01 through SCC-27 to CI or a machine-readable governance dispatcher.
 - [ ] Add PGlite fast tests but prohibit concurrency qualification there.
 - [ ] Add Testcontainers PostgreSQL 18/17 lanes with real roles and multiple connections.
 - [ ] Add critical domain mutants and enforce zero survival.
@@ -195,3 +195,9 @@ Complete each item before marking the stack `ADOPTED`.
 ## 5. Status of this consolidation
 
 This file is a **reorganization of existing adoption evidence**, not a new adoption event. No checklist item has been completed by this consolidation; no validation was re-run against a different implementation. The stack does not become repository authority merely because this file exists — that still requires completing §3 and enforcing `stack/STACK.sha256` in CI, per `STACK.md` §12 and the authority rule in §1 above.
+
+---
+
+## 6. Phase 2 control-plane update (2026-08-08)
+
+The nine `- [x]` items ticked in §3 above were completed and mechanically evidenced during AFENDA Phase 2 (repository control plane), commit `build(governance): establish AFENDA control plane`, and are individually cross-referenced with executable evidence in `governance/CONTROL_PLANE_REPORT.md`. Every other checklist item in §3 remains `- [ ]` unchecked because the corresponding repository state (database, API, frontend, identity, jobs, outbox, PGlite/Testcontainers, mutants, Playwright, containers, BI) does not exist yet. **Ticking these nine items is not a stack adoption event.** The stack still does not become repository authority: §3's remaining items, the ratifier signature block, and CI enforcement of `stack/STACK.sha256` on a live runner are all still outstanding.

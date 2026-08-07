@@ -1,0 +1,29 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build:authority-registry": {
+      "cache": false,
+      "outputs": ["governance/*.json"]
+    },
+    "gate:authority": {
+      "dependsOn": ["build:authority-registry"],
+      "cache": false
+    },
+    "typecheck:native": {
+      "cache": false
+    },
+    "typecheck:compat": {
+      "cache": false
+    },
+    "lint": {
+      "cache": false
+    },
+    "verify:toolchain": {
+      "cache": false
+    },
+    "gate": {
+      "dependsOn": ["gate:authority", "typecheck:native", "typecheck:compat", "lint", "verify:toolchain"],
+      "cache": false
+    }
+  }
+}

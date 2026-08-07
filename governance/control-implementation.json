@@ -1,0 +1,395 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-08-08",
+  "generation_method": "Manually assessed against executable evidence gathered during AFENDA Phase 2 (control plane). Unlike doctrine-registry.json / stack-registry.json / position-registry.json / authority-index.json, this file is not a pure deterministic text-extraction projection: implementation state is a judgment call that requires running real checks, not parsing prose. Structural completeness (every SCC-01..27 and V01..18 present exactly once, states drawn from the fixed enum) is itself verified by scripts/gate.mjs's control-map-completeness step.",
+  "state_enum": ["implemented", "partial", "not-yet-built", "blocked", "not-applicable-current-tree"],
+  "policy": [
+    "A control is never 'implemented' merely because a document describes it; implementation requires an executable check.",
+    "A critical executable control requires at least one red fixture proving the gate actually fails on a real injected violation.",
+    "Absence of application/database/frontend code is represented honestly as not-yet-built, not as a passing or skipped control.",
+    "'partial' means a real, currently-passing executable check exists but does not yet cover the full required scope; the gap is named in notes."
+  ],
+  "stack_controls": [
+    {
+      "control_id": "SCC-01",
+      "name": "TypeScript native/compat parity",
+      "applies_to": ["SEL-01", "SEL-02"],
+      "state": "partial",
+      "gate": "pnpm run typecheck:native && pnpm run typecheck:compat && pnpm run lint",
+      "evidence": [
+        "tsconfig.base.json (strict compiler options)",
+        "tsconfig.json (include scope)",
+        "package.json scripts typecheck:native / typecheck:native:single / typecheck:compat",
+        "eslint.config.mjs (type-aware lint via typescript-eslint)"
+      ],
+      "red_fixtures": ["red:lint-ts-suppression (scripts/red.mjs)"],
+      "notes": "TypeScript 7 native (tsc, package @typescript/native@7.0.2) and TypeScript 6 compatibility (tsc6, package @typescript/typescript6@6.0.2) both install and run cleanly against the Phase 2 tooling surface (scripts/verify-toolchain-baseline.mjs, scripts/gate.mjs, scripts/red.mjs, scripts/generate-agent-docs.mjs). Phase 1 authority scripts (scripts/build-authority-registry.mjs, scripts/check-authority-integrity.mjs, scripts/lib/authority-parser.mjs) are deliberately excluded from tsconfig.json's include list: a real strict/checkJs run against them currently produces ~180 genuine implicit-any / unchecked-index errors (they predate this governance-language requirement and are load-bearing, already proven by their own self-tests). Retrofitting JSDoc types there is a real, separate task, not done in this phase to avoid destabilizing proven logic. Type-aware lint currently has no dedicated red fixture proving a real type error is caught (only a banned-comment fixture exists); typecheck itself has no injected-violation red fixture yet.",
+      "revisit_trigger": "When the Phase 1 scripts are retrofitted with JSDoc types (or rewritten as .ts) and added to tsconfig.json's include list, and a red fixture exists proving typecheck:native/typecheck:compat actually fail on an injected type error."
+    },
+    {
+      "control_id": "SCC-02",
+      "name": "Strictness and no-any",
+      "applies_to": ["SEL-01"],
+      "state": "partial",
+      "gate": "pnpm run typecheck:native && pnpm run lint",
+      "evidence": [
+        "tsconfig.base.json sets strict, noUncheckedIndexedAccess, exactOptionalPropertyTypes, useUnknownInCatchVariables, noImplicitReturns, noFallthroughCasesInSwitch, noPropertyAccessFromIndexSignature, verbatimModuleSyntax, isolatedModules, noEmit exactly as SEL-01 binding constraints require",
+        "eslint.config.mjs @typescript-eslint/no-explicit-any and ban-ts-comment rules"
+      ],
+      "red_fixtures": ["red:lint-ts-suppression (scripts/red.mjs)"],
+      "notes": "Compiler strictness is genuinely enabled and enforced for the Phase 2 tooling surface. There is no application code yet for 'application any is rejected' to be exercised against at scale; only the lint-suppression red fixture currently proves rejection behavior.",
+      "revisit_trigger": "Once application packages exist, add a red fixture that injects a literal any/unchecked cast into application code and confirms lint/typecheck rejects it."
+    },
+    {
+      "control_id": "SCC-03",
+      "name": "Authoritative money type safety",
+      "applies_to": ["SEL-01", "SEL-10"],
+      "state": "not-yet-built",
+      "gate": null,
+      "evidence": [],
+      "red_fixtures": [],
+      "notes": "No money contracts, domain types, or Zod transport schemas exist yet.",
+      "revisit_trigger": "When packages/money and packages/contracts exist with authoritative money fields."
+    },
+    {
+      "control_id": "SCC-04",
+      "name": "Exact toolchain pins",
+      "applies_to": ["SEL-02", "SEL-03", "SEL-04"],
+      "state": "implemented",
+      "gate": "pnpm run verify:toolchain",
+      "evidence": [
+        ".node-version = 24.18.0",
+        "package.json engines.node = 24.18.0, packageManager = pnpm@11.20.0",
+        "package.json devDependencies: @typescript/native -> npm:typescript@7.0.2 (exact), typescript -> npm:@typescript/typescript6@6.0.2 (exact)",
+        "pnpm-lock.yaml committed (frozen lockfile)",
+        "scripts/verify-toolchain-baseline.mjs (executable comparison against stack/VERSION_BASELINE.json)",
+        "scripts/lib/control-map.mjs checkDependencyPinsAreExact (rejects ^ / ~ / \"latest\" specs in package.json dependencies and devDependencies)",
+        ".github/workflows/gate.yml runs pnpm install --frozen-lockfile && pnpm gate (workflow file present; not observed executing on a live GitHub runner from this environment)"
+      ],
+      "red_fixtures": ["red:toolchain-mismatch (scripts/red.mjs)", "red:dependency-range-injected (scripts/red.mjs)"],
+      "notes": "stack/VERSION_BASELINE.json does not pin an exact pnpm or Turborepo version; this is a documented, explicit gap-fill (not a silent resolution) recorded in governance/CONTROL_PLANE_REPORT.md and in scripts/verify-toolchain-baseline.mjs output: pnpm is pinned to the version present in the qualification environment (11.20.0), Turborepo to its current npm-registry release (2.10.8) at Phase 2 time. Also recorded: @typescript/typescript6@6.0.2's tsc6 binary self-reports 'Version 6.0.3' even though the npm package version pin is exactly 6.0.2 as required; this is an upstream wrapper/compiler discrepancy, surfaced not hidden. Also recorded: turbo.json is schema-valid (confirmed via `turbo run gate:authority --dry`) but currently orchestrates 0 tasks because pnpm-workspace.yaml matches 0 packages; `pnpm gate` therefore invokes the underlying scripts directly rather than through `turbo run`, so this control's PASS state does not depend on Turborepo actually providing orchestration value yet.",
+      "revisit_trigger": "If VERSION_BASELINE.json is amended to pin pnpm/Turborepo explicitly, or if the tsc6 self-reported version discrepancy is investigated upstream."
+    },
+    {
+      "control_id": "SCC-05",
+      "name": "Module boundaries",
+      "applies_to": ["SEL-24", "SEL-25"],
+      "state": "not-yet-built",
+      "gate": null,
+      "evidence": [".dependency-cruiser.cjs (rule scaffold only, declares the domain->adapter forbidden pattern from stack/STACK.md §6-7)"],
+      "red_fixtures": [],
+      "notes": "A dependency-cruiser config is scaffolded, but there are zero packages/apps for it to graph. A depcruise run over an empty tree trivially reports no violations; that is not counted as implemented evidence per the no-fake-green rule.",
+      "revisit_trigger": "When packages/domain and at least one adapter package exist so a real forbidden-import violation can be injected and caught."
+    },
+    {
+      "control_id": "SCC-06",
+      "name": "Provider-neutral financial core",
+      "applies_to": ["SEL-05"],
+      "state": "not-yet-built",
+      "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "No database/ledger kernel code exists.",
+      "revisit_trigger": "When db/migrations and the ledger kernel exist."
+    },
+    {
+      "control_id": "SCC-07",
+      "name": "Dual PostgreSQL major qualification",
+      "applies_to": ["SEL-05", "SEL-08", "SEL-20"],
+      "state": "not-yet-built",
+      "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "No PostgreSQL instances, migrations, or dual-major test lanes exist.",
+      "revisit_trigger": "When migrations exist and are qualified on both PostgreSQL 18 and 17."
+    },
+    {
+      "control_id": "SCC-08",
+      "name": "Single-client transaction rule",
+      "applies_to": ["SEL-06"],
+      "state": "not-yet-built",
+      "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "No node-postgres usage exists.",
+      "revisit_trigger": "When packages/db exists with transaction-taking code."
+    },
+    {
+      "control_id": "SCC-09",
+      "name": "Exact database type parsing",
+      "applies_to": ["SEL-06"],
+      "state": "not-yet-built",
+      "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "No database driver configuration exists.",
+      "revisit_trigger": "When packages/db exists with owned bigint/numeric/date-time parsers."
+    },
+    {
+      "control_id": "SCC-10",
+      "name": "Schema-derived Kysely types",
+      "applies_to": ["SEL-07"],
+      "state": "not-yet-built",
+      "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "No Kysely usage or generated types exist.",
+      "revisit_trigger": "When a migrated PostgreSQL schema and Kysely codegen exist."
+    },
+    {
+      "control_id": "SCC-11",
+      "name": "Migration integrity",
+      "applies_to": ["SEL-08"],
+      "state": "not-yet-built",
+      "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "No db/migrations directory or migration runner exists.",
+      "revisit_trigger": "When forward-only SQL migrations with checksums exist."
+    },
+    {
+      "control_id": "SCC-12",
+      "name": "Hono runtime and contract path",
+      "applies_to": ["SEL-09", "SEL-10"],
+      "state": "not-yet-built",
+      "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "No apps/api exists.",
+      "revisit_trigger": "When apps/api exists using @hono/node-server and @hono/zod-openapi."
+    },
+    {
+      "control_id": "SCC-13",
+      "name": "One frontend routing mode",
+      "applies_to": ["SEL-12"],
+      "state": "not-yet-built",
+      "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "No apps/web exists.",
+      "revisit_trigger": "When apps/web exists using TanStack Router file-based routing."
+    },
+    {
+      "control_id": "SCC-14",
+      "name": "No React Server Components",
+      "applies_to": ["SEL-11"],
+      "state": "not-yet-built",
+      "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "No React/Vite frontend exists. package.json currently has zero react-server-dom-* dependencies, but that absence is trivial (nothing exists yet) and is not counted as implemented evidence.",
+      "revisit_trigger": "When apps/web exists; add a red fixture that injects a react-server-dom-* dependency and confirms a gate rejects it."
+    },
+    {
+      "control_id": "SCC-15",
+      "name": "OIDC boundary",
+      "applies_to": ["SEL-14"],
+      "state": "not-yet-built",
+      "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "No identity integration exists.",
+      "revisit_trigger": "When OIDC/Keycloak integration exists."
+    },
+    {
+      "control_id": "SCC-16",
+      "name": "Queue adapter boundary",
+      "applies_to": ["SEL-15"],
+      "state": "not-yet-built",
+      "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "No apps/worker or JobQueue adapter exists.",
+      "revisit_trigger": "When apps/worker exists using Graphile Worker behind an owned adapter."
+    },
+    {
+      "control_id": "SCC-17",
+      "name": "Financial outbox required",
+      "applies_to": ["SEL-16"],
+      "state": "not-yet-built",
+      "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "No outbox implementation exists.",
+      "revisit_trigger": "When the owned transactional outbox exists."
+    },
+    {
+      "control_id": "SCC-18",
+      "name": "Critical mutation survival zero",
+      "applies_to": ["SEL-19"],
+      "state": "not-yet-built",
+      "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "No Vitest/StrykerJS/domain mutant suite exists.",
+      "revisit_trigger": "When domain packages and mutation testing exist."
+    },
+    {
+      "control_id": "SCC-19",
+      "name": "Concurrency lane enforcement",
+      "applies_to": ["SEL-20"],
+      "state": "not-yet-built",
+      "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "No PGlite/Testcontainers test lanes exist.",
+      "revisit_trigger": "When concurrency-tagged tests and both test lanes exist."
+    },
+    {
+      "control_id": "SCC-20",
+      "name": "Browser workflow gate",
+      "applies_to": ["SEL-21"],
+      "state": "not-yet-built",
+      "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "No Playwright suite exists.",
+      "revisit_trigger": "When apps/web exists with a critical-path Playwright suite."
+    },
+    {
+      "control_id": "SCC-21",
+      "name": "Read-only BI boundary",
+      "applies_to": ["SEL-22"],
+      "state": "not-yet-built",
+      "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "No reporting/analytics schemas or BI role exist.",
+      "revisit_trigger": "When reporting schemas and a BI role exist."
+    },
+    {
+      "control_id": "SCC-22",
+      "name": "CDC slot safety",
+      "applies_to": ["SEL-22"],
+      "state": "not-applicable-current-tree",
+      "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "No logical replication is configured anywhere; there is no PostgreSQL instance in this tree at all, so there is no slot to be unsafe. Distinguished from not-yet-built because there is currently no plan to create a slot in this phase.",
+      "revisit_trigger": "When CDC/logical replication is introduced."
+    },
+    {
+      "control_id": "SCC-23",
+      "name": "Reproducible self-host profile",
+      "applies_to": ["SEL-23"],
+      "state": "not-yet-built",
+      "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "No containers, Docker Compose files, or digest-pinned images exist.",
+      "revisit_trigger": "When deployment manifests exist."
+    },
+    {
+      "control_id": "SCC-24",
+      "name": "Explicit application architecture",
+      "applies_to": ["SEL-24", "SEL-25"],
+      "state": "not-yet-built",
+      "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "No application code exists to check for decorator DI, service locators, class-based domain inheritance, or hidden module discovery. This governance/tooling layer itself uses plain functions and explicit imports only, but that is scripts/, not the application architecture the control targets.",
+      "revisit_trigger": "When application packages exist."
+    },
+    {
+      "control_id": "SCC-25",
+      "name": "AI cannot post",
+      "applies_to": ["SEL-26"],
+      "state": "not-yet-built",
+      "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "No ledger, operations layer, or AI identity model exists.",
+      "revisit_trigger": "When the operations/ledger layer and AI proposal-capability model exist."
+    },
+    {
+      "control_id": "SCC-26",
+      "name": "Extension isolation",
+      "applies_to": ["SEL-27"],
+      "state": "not-yet-built",
+      "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "No extension system exists.",
+      "revisit_trigger": "When declarative/trusted extension loading exists."
+    },
+    {
+      "control_id": "SCC-27",
+      "name": "Stack authority integrity",
+      "applies_to": ["All"],
+      "state": "implemented",
+      "gate": "pnpm run gate:authority",
+      "evidence": [
+        "scripts/check-authority-integrity.mjs seal:stack check (STACK.md sha256 matches STACK.sha256)",
+        "scripts/check-authority-integrity.mjs exact-range:selections and exact-range:controls checks (all SEL-01..27 and SCC-01..27 present exactly once)",
+        "scripts/check-authority-integrity.mjs control-reference-graph check (no dangling SEL<->SCC references)"
+      ],
+      "red_fixtures": [
+        "check-authority-integrity.mjs --self-test: 'alter doctrine byte' (exercises the shared checkSeal function also used for stack/position)",
+        "check-authority-integrity.mjs --self-test: 'map SEL-01 to nonexistent SCC-99' (dangling SEL<->SCC reference)"
+      ],
+      "notes": "The self-test suite explicitly names doctrine for the seal-mutation fixture; the identical checkSeal code path also seals stack/position, but no fixture is named specifically for a corrupted STACK.sha256 or POSITION.sha256. Recorded as a coverage nuance, not hidden.",
+      "revisit_trigger": "Add a self-test fixture that corrupts STACK.sha256 specifically, distinct from the existing doctrine-named one."
+    }
+  ],
+  "doctrine_verification_controls": [
+    {
+      "control_id": "V01", "title": "Privilege topology", "primary_rules": ["LED-01", "LED-02", "SEC-01", "SEC-04"],
+      "related_scc": [], "state": "not-yet-built", "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "Requires database roles/grants that do not exist yet.", "revisit_trigger": "When db/migrations establishes role/grant topology."
+    },
+    {
+      "control_id": "V02", "title": "Atomic batch balance", "primary_rules": ["LED-03"],
+      "related_scc": ["SCC-06"], "state": "not-yet-built", "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "Requires the ledger kernel.", "revisit_trigger": "When ledger batch-posting exists."
+    },
+    {
+      "control_id": "V03", "title": "Source balance before rounding", "primary_rules": ["LED-04"],
+      "related_scc": [], "state": "not-yet-built", "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "Requires the ledger kernel.", "revisit_trigger": "When ledger posting exists."
+    },
+    {
+      "control_id": "V04", "title": "Rounding boundary", "primary_rules": ["LED-05", "MON-04"],
+      "related_scc": ["SCC-03"], "state": "not-yet-built", "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "Requires packages/money.", "revisit_trigger": "When packages/money exists."
+    },
+    {
+      "control_id": "V05", "title": "Scope integrity", "primary_rules": ["LED-08", "SEC-03"],
+      "related_scc": ["SCC-15"], "state": "not-yet-built", "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "Requires entity-scope authorization, not built.", "revisit_trigger": "When packages/authz exists."
+    },
+    {
+      "control_id": "V06", "title": "Idempotency fingerprint", "primary_rules": ["LED-07", "OPS-01"],
+      "related_scc": ["SCC-17"], "state": "not-yet-built", "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "Requires the outbox/operations layer.", "revisit_trigger": "When packages/operations exists."
+    },
+    {
+      "control_id": "V07", "title": "Exact reversal", "primary_rules": ["LED-06", "TIM-05"],
+      "related_scc": [], "state": "not-yet-built", "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "Requires the ledger kernel.", "revisit_trigger": "When ledger reversal exists."
+    },
+    {
+      "control_id": "V08", "title": "Exact money transport", "primary_rules": ["MON-01", "MON-06"],
+      "related_scc": ["SCC-03"], "state": "not-yet-built", "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "Requires packages/contracts and packages/money.", "revisit_trigger": "When Zod money transport schemas exist."
+    },
+    {
+      "control_id": "V09", "title": "Typed evidence", "primary_rules": ["LED-09"],
+      "related_scc": [], "state": "not-yet-built", "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "Requires the ledger kernel.", "revisit_trigger": "When ledger evidence typing exists."
+    },
+    {
+      "control_id": "V10", "title": "Temporal governance", "primary_rules": ["TIM-01\u2013TIM-04"],
+      "related_scc": [], "state": "not-yet-built", "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "Requires packages/time.", "revisit_trigger": "When packages/time exists."
+    },
+    {
+      "control_id": "V11", "title": "Cross-scope authorization", "primary_rules": ["SEC-02", "SEC-03"],
+      "related_scc": ["SCC-15"], "state": "not-yet-built", "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "Requires packages/authz.", "revisit_trigger": "When packages/authz exists."
+    },
+    {
+      "control_id": "V12", "title": "Mutation sensitivity", "primary_rules": ["GOV-03", "OPS-08"],
+      "related_scc": ["SCC-18"], "state": "not-yet-built", "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "Requires domain packages and a mutation testing corpus.", "revisit_trigger": "When domain packages and StrykerJS exist."
+    },
+    {
+      "control_id": "V13", "title": "Oracle diversity", "primary_rules": ["GOV-04", "MON-05", "OPS-06", "OPS-07"],
+      "related_scc": ["SCC-18"], "state": "not-yet-built", "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "Requires property-based/oracle test suites over real domain logic.", "revisit_trigger": "When domain packages and fast-check property tests exist."
+    },
+    {
+      "control_id": "V14", "title": "Provenance and reproducibility", "primary_rules": ["GOV-05", "DET-01\u2013DET-06"],
+      "related_scc": ["SCC-04", "SCC-27"], "state": "partial",
+      "gate": "pnpm run gate:authority && pnpm run build:authority-registry (byte-identity) && pnpm run verify:toolchain",
+      "evidence": [
+        "scripts/build-authority-registry.mjs regenerates governance/*.json byte-identically from doctrine/DOCTRINE.md, stack/STACK.md, position/POSITION.md (DET-01/DET-02 satisfied for the governance-registry layer: deterministic compilation from committed definitions, not an AI authoring claim)",
+        "scripts/check-authority-integrity.mjs registry-drift checks are the executable red condition for 'hidden change without regeneration'",
+        "pnpm-lock.yaml + .node-version + package.json engines/packageManager give a real dependency/toolchain lock (contributes to GOV-05's 'complete verification bundle' requirement, which did not exist before Phase 2)"
+      ],
+      "red_fixtures": [
+        "check-authority-integrity.mjs --self-test registry-drift-sensitive fixtures (alter rule_verbatim, omit V08, etc. all cause byte-identity/completeness to fail)",
+        "red:toolchain-mismatch (scripts/red.mjs) for 'hidden toolchain change'"
+      ],
+      "notes": "Proven only for the governance-registry generation layer (doctrine/stack/position -> governance/*.json) and the toolchain pin layer. NOT proven for the application/financial system: there is no migration, ledger, or generator determinism to test yet, and GOV-05's 'complete verification bundle' is not yet fully assembled (no CI execution observed from this environment, no application dependency graph). Marking this V-control implemented for the whole doctrine would overstate reality; 'partial' is the honest state.",
+      "revisit_trigger": "When application-layer generators (codegen, migrations) exist and can be shown to regenerate byte-identically with a red fixture for hidden toolchain change at that layer too."
+    },
+    {
+      "control_id": "V15", "title": "Concurrency", "primary_rules": ["LED-10", "OPS-02", "OPS-03"],
+      "related_scc": ["SCC-19"], "state": "not-yet-built", "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "Requires multi-session PostgreSQL test lanes.", "revisit_trigger": "When Testcontainers concurrency tests exist."
+    },
+    {
+      "control_id": "V16", "title": "Projection and reconciliation", "primary_rules": ["OPS-06", "OPS-07"],
+      "related_scc": ["SCC-21"], "state": "not-yet-built", "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "Requires reporting projections.", "revisit_trigger": "When reporting/analytics schemas exist."
+    },
+    {
+      "control_id": "V17", "title": "Restore", "primary_rules": ["OPS-05", "SEC-10"],
+      "related_scc": [], "state": "not-yet-built", "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "Requires a backup/restore lane.", "revisit_trigger": "When a database and backup/restore procedure exist."
+    },
+    {
+      "control_id": "V18", "title": "Jurisdiction launch", "primary_rules": ["JUR-01\u2013JUR-04"],
+      "related_scc": [], "state": "not-yet-built", "gate": null, "evidence": [], "red_fixtures": [],
+      "notes": "Requires a jurisdiction-specific launch package.", "revisit_trigger": "When a first jurisdiction pack is built."
+    }
+  ]
+}

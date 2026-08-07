@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./tsconfig.base.json",
+  "include": [
+    "scripts/verify-toolchain-baseline.mjs",
+    "scripts/gate.mjs",
+    "scripts/red.mjs",
+    "scripts/generate-agent-docs.mjs",
+    "scripts/lib/control-map.mjs",
+    "eslint.config.mjs"
+  ],
+  "exclude": ["node_modules", "governance/history"],
+  "// note": "scripts/build-authority-registry.mjs, scripts/check-authority-integrity.mjs and scripts/lib/authority-parser.mjs are pre-existing Phase 1 authority deliverables, already proven correct by their own self-tests and byte-identity gates. Strict-TypeScript/checkJs retrofitting of that surface is intentionally deferred (see governance/CONTROL_PLANE_REPORT.md) rather than risking behavioral drift in load-bearing logic mid-phase. New Phase 2 tooling below is written to pass this config from the start."
+}

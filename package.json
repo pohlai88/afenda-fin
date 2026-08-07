@@ -1,0 +1,35 @@
+{
+  "name": "afenda-fin",
+  "version": "0.0.0",
+  "private": true,
+  "description": "AFENDA authority layer and governance control plane. See README.md.",
+  "type": "module",
+  "engines": {
+    "node": "24.18.0"
+  },
+  "packageManager": "pnpm@11.20.0",
+  "scripts": {
+    "build:authority-registry": "node scripts/build-authority-registry.mjs",
+    "gate:authority": "node scripts/check-authority-integrity.mjs",
+    "gate:authority:self-test": "node scripts/check-authority-integrity.mjs --self-test",
+    "verify:toolchain": "node scripts/verify-toolchain-baseline.mjs",
+    "typecheck:native": "tsc --noEmit -p tsconfig.json",
+    "typecheck:native:single": "tsc --noEmit -p tsconfig.json --singleThreaded",
+    "typecheck:compat": "tsc6 --noEmit -p tsconfig.json",
+    "lint": "eslint .",
+    "agent-docs": "node scripts/generate-agent-docs.mjs",
+    "gate": "node scripts/gate.mjs",
+    "red": "node scripts/red.mjs"
+  },
+  "devDependencies": {
+    "@typescript/native": "npm:typescript@7.0.2",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "turbo": "2.10.8",
+    "eslint": "10.8.0",
+    "@eslint/js": "10.0.1",
+    "typescript-eslint": "8.66.0",
+    "dependency-cruiser": "18.1.1",
+    "@types/node": "24.9.2",
+    "globals": "17.9.0"
+  }
+}
