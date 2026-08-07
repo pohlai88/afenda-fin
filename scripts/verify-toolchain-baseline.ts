@@ -1,6 +1,23 @@
 #!/usr/bin/env node
 // Read-only. Compares the installed/declared toolchain against stack/VERSION_BASELINE.json.
 // Never repairs or upgrades anything. A mismatch is reported and fails the check.
+//
+// Phase 2.2: each component reports five distinct fields instead of one collapsed
+// PASS boolean, because "exact and CI-verified" (SCC-04) is actually five different
+// claims that must not be conflated:
+//   DECLARED    - stack/VERSION_BASELINE.json's reference value
+//   PINNED      - what package.json/.node-version actually pins
+//   RESOLVED    - what the package manager/lockfile actually resolved (may differ
+//                 from PINNED for a wrapper package whose own dependency is a range)
+//   EXECUTED    - what the real installed binary reports at runtime
+//   CI-OBSERVED - whether a live CI run's result for this component has actually
+//                 been inspected from this environment (never asserted from workflow
+//                 file syntax alone)
+// A component whose PINNED/RESOLVED/EXECUTED all agree with DECLARED is 'ok'. A
+// component where the top-level package pin is exact but a deeper, fully-disclosed
+// resolution fact diverges (the TypeScript-6 compatibility engine) is
+// 'discrepancy-recorded', not 'fail': the pin itself was not violated. Only a real
+// pin/version mismatch is 'fail'.
 
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -11,12 +28,17 @@ import path from 'node:path';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
-export interface ToolchainCheckResult {
-  ok: boolean;
+export type ComponentStatus = 'ok' | 'discrepancy-recorded' | 'fail';
+
+export interface ToolchainComponentResult {
   id: string;
   label: string;
-  expected: string;
-  actual: string;
+  declared: string;
+  pinned: string;
+  resolved: string;
+  executed: string;
+  ciObserved: string;
+  status: ComponentStatus;
   note: string | null;
 }
 
@@ -42,45 +64,48 @@ function getObject(obj: Record<string, unknown>, key: string): Record<string, un
   return (v ?? {}) as Record<string, unknown>;
 }
 
-function result(ok: boolean, id: string, label: string, expected: string, actual: string, note: string | null): ToolchainCheckResult {
-  return { ok, id, label, expected, actual, note };
-}
-
 export interface InstalledToolchainState {
   nodeVersion: string;
   pnpmVersion: string;
+  turboVersion: string | undefined;
   packageJson: Record<string, unknown>;
   nativeTscPackageVersion: string;
   compatTscPackageVersion: string;
   compatEnginePackageVersion: string | undefined;
 }
 
-export function evaluateToolchain(baseline: Record<string, unknown>, installed: InstalledToolchainState): ToolchainCheckResult[] {
-  const results: ToolchainCheckResult[] = [];
+function component(
+  id: string,
+  label: string,
+  declared: string,
+  pinned: string,
+  resolved: string,
+  executed: string,
+  ciObserved: string,
+  note: string | null,
+): ToolchainComponentResult {
+  const allAgreeWithDeclared = [pinned, resolved, executed].every((v) => v === '' || v === declared);
+  const status: ComponentStatus = allAgreeWithDeclared ? 'ok' : 'fail';
+  return { id, label, declared, pinned, resolved, executed, ciObserved, status, note };
+}
+
+export function evaluateToolchain(baseline: Record<string, unknown>, installed: InstalledToolchainState, ciObserved: string): ToolchainComponentResult[] {
+  const results: ToolchainComponentResult[] = [];
 
   const runtime = getObject(baseline, 'runtime');
   const node = getObject(runtime, 'node');
   const expectedNode = asString(get(node, 'reference_patch'));
-  results.push(
-    result(
-      installed.nodeVersion === expectedNode,
-      'node-runtime',
-      'Node.js runtime patch',
-      expectedNode,
-      installed.nodeVersion,
-      null,
-    ),
-  );
-
   const engines = getObject(installed.packageJson, 'engines');
   const enginesNode = asString(get(engines, 'node'));
   results.push(
-    result(
-      enginesNode === expectedNode,
-      'node-engines-field',
-      'package.json engines.node pin',
+    component(
+      'node-runtime',
+      'Node.js runtime',
       expectedNode,
       enginesNode,
+      enginesNode,
+      installed.nodeVersion,
+      ciObserved,
       null,
     ),
   );
@@ -91,49 +116,92 @@ export function evaluateToolchain(baseline: Record<string, unknown>, installed: 
 
   const expectedNative = asString(get(native, 'reference_patch'));
   results.push(
-    result(
-      installed.nativeTscPackageVersion === expectedNative,
+    component(
       'typescript-native-package',
-      'TypeScript native package version (@typescript/native)',
+      'TypeScript native package (@typescript/native)',
+      expectedNative,
       expectedNative,
       installed.nativeTscPackageVersion,
+      installed.nativeTscPackageVersion,
+      ciObserved,
       null,
     ),
   );
 
   const expectedCompat = asString(get(compat, 'reference_patch'));
-  const compatOk = installed.compatTscPackageVersion === expectedCompat;
   const engineVersion = installed.compatEnginePackageVersion;
+  const packagePinOk = installed.compatTscPackageVersion === expectedCompat;
   const engineMismatch = engineVersion !== undefined && engineVersion !== expectedCompat;
+  const compatStatus: ComponentStatus = !packagePinOk ? 'fail' : engineMismatch ? 'discrepancy-recorded' : 'ok';
+  results.push({
+    id: 'typescript-compat-package',
+    label: 'TypeScript compatibility package (@typescript/typescript6, aliased as "typescript")',
+    declared: expectedCompat,
+    pinned: expectedCompat,
+    resolved: installed.compatTscPackageVersion,
+    executed: `package ${installed.compatTscPackageVersion}; compiler engine ${engineVersion ?? 'unknown'}`,
+    ciObserved,
+    status: compatStatus,
+    note:
+      compatStatus === 'discrepancy-recorded'
+        ? `Package pin is exact (${installed.compatTscPackageVersion}) and this check reports [OK]/no-fail for it. However the wrapper's own dependency "@typescript/old" is declared as a semver RANGE ("npm:typescript@^6" inside @typescript/typescript6's own package.json), which the frozen lockfile resolved to real package "typescript@${engineVersion ?? ''}" — a genuinely different compiler engine than the pinned reference_patch, not merely a cosmetic version-string mismatch. This is why tsc6 --version self-reports "${engineVersion ?? ''}". Confirmed by inspecting node_modules/.pnpm and pnpm-lock.yaml directly, and independently reproduced from a clean disposable install of only this package specifier. Full fact record: stack/VERSION_BASELINE.json compiler.typescript_compat.compiler_engine. Not a violation of the package-level pin; it IS a real gap between that pin and the transitively-resolved compiler engine. Recorded as a discrepancy, not a failure, per governance/CONTROL_PLANE_REPORT.md Phase 2.2; SCC-04 reflects this gap as partial, not implemented.`
+        : packagePinOk
+          ? 'Package pin is exact and the resolved engine version matches.'
+          : null,
+  });
+
+  const packages = getObject(baseline, 'packages');
+  const pnpmBaseline = getObject(packages, 'pnpm');
+  const expectedPnpm = asString(get(pnpmBaseline, 'reference_patch'));
+  const packageManager = asString(get(installed.packageJson, 'packageManager'));
+  const pinnedPnpm = packageManager.startsWith('pnpm@') ? packageManager.slice('pnpm@'.length) : packageManager;
   results.push(
-    result(
-      compatOk,
-      'typescript-compat-package',
-      'TypeScript compatibility package version (@typescript/typescript6, aliased as "typescript")',
-      expectedCompat,
-      installed.compatTscPackageVersion,
-      compatOk
-        ? engineMismatch
-          ? `Package pin is exact (${installed.compatTscPackageVersion}). However the wrapper's own dependency "@typescript/old" is declared as a semver RANGE ("npm:typescript@^6" inside @typescript/typescript6's own package.json), which the frozen lockfile resolved to real package "typescript@${engineVersion ?? ''}" — a genuinely different compiler engine than the pinned reference_patch, not merely a cosmetic version-string mismatch. This is why tsc6 --version self-reports "${engineVersion ?? ''}". Confirmed by inspecting node_modules/.pnpm and pnpm-lock.yaml directly. Not a violation of this package-level pin (which matches exactly); it IS a real gap between VERSION_BASELINE.json's declared reference_patch and the transitively-resolved compiler engine that this check cannot see because it only reads package.json version fields, not transitive lockfile resolutions. Recorded as an authority gap in governance/CONTROL_PLANE_REPORT.md; SCC-04 reflects this as partial, not implemented.`
-          : 'Package pin is exact and the resolved engine version matches.'
+    component(
+      'pnpm-package-manager',
+      'pnpm package manager',
+      expectedPnpm,
+      pinnedPnpm,
+      pinnedPnpm,
+      installed.pnpmVersion,
+      ciObserved,
+      expectedPnpm === ''
+        ? 'stack/VERSION_BASELINE.json packages.pnpm.reference_patch is absent (pre-Phase-2.2 baseline). No declared value to check against.'
         : null,
     ),
   );
 
-  const packageManager = asString(get(installed.packageJson, 'packageManager'));
-  const expectedPnpmField = `pnpm@${installed.pnpmVersion}`;
+  const turboBaseline = getObject(packages, 'turborepo');
+  const expectedTurbo = asString(get(turboBaseline, 'reference_patch'));
+  const devDeps = getObject(installed.packageJson, 'devDependencies');
+  const pinnedTurbo = asString(get(devDeps, 'turbo'));
   results.push(
-    result(
-      packageManager === expectedPnpmField && packageManager.startsWith('pnpm@'),
-      'pnpm-package-manager-field',
-      'package.json packageManager field matches installed pnpm exactly',
-      expectedPnpmField,
-      packageManager,
-      'stack/VERSION_BASELINE.json does not pin an exact pnpm version. This is a documented, explicit gap-fill (not a silent resolution): the packageManager field is pinned to the pnpm version present in the qualification environment at Phase 2 time.',
+    component(
+      'turborepo-package',
+      'Turborepo (turbo)',
+      expectedTurbo,
+      pinnedTurbo,
+      installed.turboVersion ?? '',
+      installed.turboVersion ?? '',
+      ciObserved,
+      expectedTurbo === ''
+        ? 'stack/VERSION_BASELINE.json packages.turborepo.reference_patch is absent (pre-Phase-2.2 baseline). No declared value to check against.'
+        : null,
     ),
   );
 
   return results;
+}
+
+function detectCiObservedStatus(): string {
+  try {
+    const remotes = execFileSync('git', ['remote', '-v'], { encoding: 'utf8', cwd: ROOT, shell: true }).trim();
+    if (remotes === '') {
+      return 'not observed (no git remote configured in this environment; see governance/CONTROL_PLANE_REPORT.md Phase 2.2 CI-evidence section)';
+    }
+    return 'not observed (git remote present but no live CI run was fetched/inspected in this environment; do not assert CI verification from workflow file syntax alone)';
+  } catch {
+    return 'not observed (unable to query git remotes in this environment)';
+  }
 }
 
 function collectInstalledState(): InstalledToolchainState {
@@ -142,6 +210,15 @@ function collectInstalledState(): InstalledToolchainState {
   const packageJson = readJson(path.join(ROOT, 'package.json')) as Record<string, unknown>;
   const nativePkg = readJson(path.join(ROOT, 'node_modules', '@typescript', 'native', 'package.json')) as Record<string, unknown>;
   const compatPkg = readJson(path.join(ROOT, 'node_modules', 'typescript', 'package.json')) as Record<string, unknown>;
+
+  let turboVersion: string | undefined;
+  try {
+    const turboPkgPath = createRequire(import.meta.url).resolve('turbo/package.json');
+    const turboPkg = readJson(turboPkgPath) as Record<string, unknown>;
+    turboVersion = asString(get(turboPkg, 'version'));
+  } catch {
+    turboVersion = undefined;
+  }
 
   // "typescript" (our devDependency alias) is @typescript/typescript6, a thin
   // wrapper whose lib/typescript.js does `require("@typescript/old")`. That
@@ -162,6 +239,7 @@ function collectInstalledState(): InstalledToolchainState {
   return {
     nodeVersion,
     pnpmVersion,
+    turboVersion,
     packageJson,
     nativeTscPackageVersion: asString(get(nativePkg, 'version')),
     compatTscPackageVersion: asString(get(compatPkg, 'version')),
@@ -172,17 +250,31 @@ function collectInstalledState(): InstalledToolchainState {
 function main(): void {
   const baseline = readJson(path.join(ROOT, 'stack', 'VERSION_BASELINE.json')) as Record<string, unknown>;
   const installed = collectInstalledState();
-  const results = evaluateToolchain(baseline, installed);
+  const ciObserved = detectCiObservedStatus();
+  const results = evaluateToolchain(baseline, installed, ciObserved);
 
   console.log('\n=== AFENDA toolchain baseline verification (read-only) ===\n');
   let failCount = 0;
+  let discrepancyCount = 0;
   for (const r of results) {
-    const mark = r.ok ? '[OK]  ' : '[FAIL]';
-    if (!r.ok) failCount += 1;
-    console.log(`${mark} ${r.label}: expected "${r.expected}", got "${r.actual}"`);
-    if (r.note !== null) console.log(`        note: ${r.note}`);
+    if (r.status === 'fail') failCount += 1;
+    if (r.status === 'discrepancy-recorded') discrepancyCount += 1;
+    const mark = r.status === 'ok' ? '[OK]              ' : r.status === 'discrepancy-recorded' ? '[DISCREPANCY-NOTED]' : '[FAIL]             ';
+    console.log(`${mark} ${r.label}`);
+    console.log(`                     declared:    ${r.declared || '(none declared)'}`);
+    console.log(`                     pinned:      ${r.pinned || '(n/a)'}`);
+    console.log(`                     resolved:    ${r.resolved || '(n/a)'}`);
+    console.log(`                     executed:    ${r.executed || '(n/a)'}`);
+    console.log(`                     ci-observed: ${r.ciObserved}`);
+    if (r.note !== null) console.log(`                     note:        ${r.note}`);
+    console.log('');
   }
-  console.log(`\n${failCount === 0 ? 'PASS' : 'FAIL'}: ${results.length - failCount} OK / ${failCount} FAIL\n`);
+  console.log(
+    `${failCount === 0 ? 'PASS' : 'FAIL'}: ${results.length - failCount - discrepancyCount} ok / ${discrepancyCount} discrepancy-recorded (non-failing) / ${failCount} FAIL\n`,
+  );
+  console.log(
+    'Policy: a discrepancy-recorded status never fails this check by itself (the repository-level pin was not violated) and never by itself upgrades any SCC-04 control-state claim; control-state is decided separately in governance/control-implementation.json.\n',
+  );
   process.exitCode = failCount === 0 ? 0 : 1;
 }
 

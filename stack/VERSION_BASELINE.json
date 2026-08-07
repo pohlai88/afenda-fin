@@ -1,7 +1,11 @@
 {
-  "schema_version": 1,
-  "as_of": "2026-08-07",
-  "policy": "Exact patches and container digests are frozen in machine files at adoption; this baseline selects release lines and verified reference patches.",
+  "schema_version": 2,
+  "as_of": "2026-08-08",
+  "policy": "Exact patches and container digests are frozen in machine files at adoption; this baseline selects release lines and verified reference patches. Phase 2.2 note: this file is an unsealed machine-authority convenience registry (no stack/*.sha256 seal covers it) subordinate to stack/STACK.md; extending it with previously-omitted exact-pin entries that already match already-enforced package.json/lockfile state is evidence completion, not a normative stack amendment. See governance/CONTROL_PLANE_REPORT.md Phase 2.2 for the classification reasoning.",
+  "schema_version_history": {
+    "1": "2026-08-07 — initial baseline (runtime.node, compiler.*, database.*, frontend.*, identity.*, libraries.*, container_policy). Package manager (pnpm) and task orchestrator (Turborepo) versions were not represented anywhere in this file, even though SEL-04/SCC-04 name both by exact-pin requirement; package.json's packageManager field and exact turbo devDependency were the only pins.",
+    "2": "2026-08-08 (Phase 2.2) — added packages.pnpm and packages.turborepo reference patches (evidence completion: these were already exactly pinned and CI/frozen-lockfile-enforced in package.json/pnpm-lock.yaml; this file simply now names the reference value they must equal). Added compiler.typescript_compat.compiler_engine to record, as a distinct fact from the package-level pin, that the wrapper package's own dependency on its real compiler engine (\"@typescript/old\") is declared as an upstream semver range (\"npm:typescript@^6\"), independently reproduced to resolve to typescript@6.0.3 from a clean install of the exact declared package_alias, and frozen at that value by pnpm-lock.yaml for this repository. No numeric value in schema_version 1 was changed; only omissions were filled in and one previously-implicit fact was made explicit."
+  },
   "runtime": {
     "node": {
       "line": "24 LTS",
@@ -13,6 +17,28 @@
       ]
     }
   },
+  "packages": {
+    "pnpm": {
+      "line": "11",
+      "reference_patch": "11.20.0",
+      "pin_files": [
+        "package.json packageManager",
+        "Corepack assertion in CI (corepack enable)",
+        "frozen pnpm-lock.yaml"
+      ],
+      "note": "Added in Phase 2.2 as evidence completion. SEL-04's binding constraint is 'exact packageManager field, frozen lockfile' — both were already true and CI/machine-enforced before this entry existed; this entry gives scripts/verify-toolchain-baseline.ts an explicit declared reference_patch to check the installed pnpm binary against, instead of deriving 'expected' from whatever is currently installed."
+    },
+    "turborepo": {
+      "line": "2",
+      "reference_patch": "2.10.8",
+      "package_alias": "turbo -> exact devDependency \"2.10.8\" (no range, no wrapper indirection)",
+      "pin_files": [
+        "package.json devDependencies.turbo (exact)",
+        "frozen pnpm-lock.yaml"
+      ],
+      "note": "Added in Phase 2.2 as evidence completion. Unlike the TypeScript compatibility package, turbo has no transitive engine-resolution indirection: `turbo --version`, the package.json devDependency, and the pnpm-lock.yaml resolution are all exactly 2.10.8 with no semver range anywhere in the chain."
+    }
+  },
   "compiler": {
     "typescript_native": {
       "line": "7.0",
@@ -22,7 +48,15 @@
     "typescript_compat": {
       "line": "6.0",
       "reference_patch": "6.0.2",
-      "package_alias": "typescript -> npm:@typescript/typescript6@6.0.2"
+      "package_alias": "typescript -> npm:@typescript/typescript6@6.0.2",
+      "compiler_engine": {
+        "fact": "The @typescript/typescript6@6.0.2 wrapper package's own package.json declares \"dependencies\": { \"@typescript/old\": \"npm:typescript@^6\" } — a semver RANGE for its real compiler engine, not an exact pin, and not something this repository's package.json/devDependencies controls.",
+        "observed_patch": "6.0.3",
+        "resolution_evidence": "pnpm-lock.yaml snapshot: \"'@typescript/typescript6@6.0.2': dependencies: '@typescript/old': typescript@6.0.3\"; confirmed at runtime via node_modules/.pnpm/@typescript+typescript6@6.0.2/node_modules/@typescript/old/package.json (version 6.0.3) and `tsc6 --version` -> \"Version 6.0.3\".",
+        "independently_reproduced": "Yes — a from-scratch `pnpm install` of only \"typescript\": \"npm:@typescript/typescript6@6.0.2\" in a disposable directory outside this repository, with no other dependencies present, resolved @typescript/old to typescript@6.0.3 as well. This rules out local lockfile drift/contamination: the range resolution is an intrinsic, reproducible property of the published @typescript/typescript6@6.0.2 package, not an artifact of this repository's dependency graph.",
+        "classification": "Upstream package design combined with a latent schema gap in this file: reference_patch above pins the wrapper PACKAGE version exactly (and that pin holds), but this file previously had no field capturing that the wrapper's real compiler ENGINE version is a separate fact the wrapper does not exactly pin itself. Not local lockfile drift; not a pnpm resolution violation; the frozen pnpm-lock.yaml makes the engine version deterministic and reproducible for this repository's tree, but that value (6.0.3) diverges from this file's package-level reference_patch (6.0.2) when the two are compared as if they were one fact.",
+        "scc04_effect": "This is why SCC-04 in governance/control-implementation.json is 'partial', not 'implemented': the package-level pin is exact and verified (scripts/verify-toolchain-baseline.ts reports [OK] for it), but 'compilers ... are exact' at the engine-execution level is only true through the frozen lockfile's determinism, not through this baseline's own reference_patch field, which does not describe the engine. No STACK.md amendment is required for this — see governance/CONTROL_PLANE_REPORT.md Phase 2.2 for why this is implementation/evidence remediation, not a normative contradiction."
+      }
     }
   },
   "database": {

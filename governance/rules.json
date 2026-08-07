@@ -42,7 +42,7 @@
     },
     {
       "path": "package.json, tsconfig*.json, pnpm-workspace.yaml, .node-version, turbo.json",
-      "role": "Repository/tooling control-plane shell established in Phase 2/2.1. No apps/ or packages/ application code exists yet; see stack/STACK.md §8 for the target architecture at adoption."
+      "role": "Repository/tooling control-plane shell established in Phase 2/2.1/2.2. No apps/ or packages/ application code exists yet; see stack/STACK.md §8 for the target architecture at adoption."
     }
   ],
   "before_finishing": "Run `pnpm gate`. If it fails, fix the code — never the gate, the test, the seals, or the canonical authority documents. A failing or NOT-YET-BUILT gate is information; report it and stop.",

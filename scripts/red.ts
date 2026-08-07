@@ -12,7 +12,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { writeFileSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { ESLint } from 'eslint';
 import { evaluateToolchain } from './verify-toolchain-baseline.ts';
@@ -45,8 +45,101 @@ function runAuthoritySelfTest(): RedFixtureResult {
   }
 }
 
+/**
+ * A "clean" baseline/installed pair that matches in every field, used as the base
+ * for each isolated single-field-mismatch fixture below. Each fixture mutates
+ * exactly one field so a failure can be attributed to exactly one component,
+ * proving the real production `evaluateToolchain` checker (not a mock) catches
+ * that specific class of drift.
+ */
+function cleanFixturePair(): { baseline: Record<string, unknown>; installed: Parameters<typeof evaluateToolchain>[1] } {
+  return {
+    baseline: {
+      runtime: { node: { reference_patch: '24.18.0' } },
+      compiler: {
+        typescript_native: { reference_patch: '7.0.2' },
+        typescript_compat: { reference_patch: '6.0.2' },
+      },
+      packages: {
+        pnpm: { reference_patch: '11.20.0' },
+        turborepo: { reference_patch: '2.10.8' },
+      },
+    },
+    installed: {
+      nodeVersion: '24.18.0',
+      pnpmVersion: '11.20.0',
+      turboVersion: '2.10.8',
+      packageJson: {
+        engines: { node: '24.18.0' },
+        packageManager: 'pnpm@11.20.0',
+        devDependencies: { turbo: '2.10.8' },
+      },
+      nativeTscPackageVersion: '7.0.2',
+      compatTscPackageVersion: '6.0.2',
+      compatEnginePackageVersion: '6.0.2',
+    },
+  };
+}
+
+function statusOf(results: ReturnType<typeof evaluateToolchain>, id: string): string | undefined {
+  return results.find((r) => r.id === id)?.status;
+}
+
+function runNodePinMismatchFixture(): RedFixtureResult {
+  const { baseline, installed } = cleanFixturePair();
+  installed.packageJson['engines'] = { node: '20.0.0' };
+  const results = evaluateToolchain(baseline, installed, 'test');
+  return { name: 'toolchain: Node pin mismatch (package.json engines.node drifted)', expectFail: true, failed: statusOf(results, 'node-runtime') === 'fail' };
+}
+
+function runPnpmPackageManagerMismatchFixture(): RedFixtureResult {
+  const { baseline, installed } = cleanFixturePair();
+  installed.packageJson['packageManager'] = 'pnpm@9.0.0';
+  const results = evaluateToolchain(baseline, installed, 'test');
+  return { name: 'toolchain: pnpm packageManager field mismatch', expectFail: true, failed: statusOf(results, 'pnpm-package-manager') === 'fail' };
+}
+
+function runNativeTsPackageMismatchFixture(): RedFixtureResult {
+  const { baseline, installed } = cleanFixturePair();
+  installed.nativeTscPackageVersion = '8.0.0';
+  const results = evaluateToolchain(baseline, installed, 'test');
+  return { name: 'toolchain: native TypeScript package mismatch', expectFail: true, failed: statusOf(results, 'typescript-native-package') === 'fail' };
+}
+
+function runCompatTsPackageMismatchFixture(): RedFixtureResult {
+  const { baseline, installed } = cleanFixturePair();
+  installed.compatTscPackageVersion = '5.0.0';
+  const results = evaluateToolchain(baseline, installed, 'test');
+  return { name: 'toolchain: compatibility TypeScript package mismatch', expectFail: true, failed: statusOf(results, 'typescript-compat-package') === 'fail' };
+}
+
+function runTurboPackageMismatchFixture(): RedFixtureResult {
+  const { baseline, installed } = cleanFixturePair();
+  installed.turboVersion = '1.0.0';
+  const results = evaluateToolchain(baseline, installed, 'test');
+  return { name: 'toolchain: Turborepo package mismatch', expectFail: true, failed: statusOf(results, 'turborepo-package') === 'fail' };
+}
+
+/**
+ * Confirms the real compat-engine discrepancy (@typescript/typescript6@6.0.2's
+ * own dependency range resolving to a different compiler engine patch) is
+ * reported as 'discrepancy-recorded', never silently upgraded to 'ok' nor
+ * mis-reported as a hard 'fail' that would block an otherwise-correct pin.
+ */
+function runCompatEngineDiscrepancyIsRecordedNotHiddenFixture(): RedFixtureResult {
+  const { baseline, installed } = cleanFixturePair();
+  installed.compatEnginePackageVersion = '6.0.3'; // matches this repo's actual real-world resolution
+  const results = evaluateToolchain(baseline, installed, 'test');
+  const status = statusOf(results, 'typescript-compat-package');
+  // "failed" here means the fixture behaved WRONG: either silently 'ok' (hidden) or 'fail' (over-blocked).
+  const behavedWrong = status !== 'discrepancy-recorded';
+  return { name: 'toolchain: compat-engine discrepancy is recorded, not hidden and not over-blocked', expectFail: false, failed: behavedWrong };
+}
+
 function runToolchainMismatchFixture(): RedFixtureResult {
+  const { baseline } = cleanFixturePair();
   const fakeBaseline = {
+    ...baseline,
     runtime: { node: { reference_patch: '99.99.99' } },
     compiler: {
       typescript_native: { reference_patch: '99.0.0' },
@@ -56,14 +149,39 @@ function runToolchainMismatchFixture(): RedFixtureResult {
   const fakeInstalled = {
     nodeVersion: '24.18.0',
     pnpmVersion: '11.20.0',
-    packageJson: { engines: { node: '24.18.0' }, packageManager: 'pnpm@11.20.0' },
+    turboVersion: '2.10.8',
+    packageJson: { engines: { node: '24.18.0' }, packageManager: 'pnpm@11.20.0', devDependencies: { turbo: '2.10.8' } },
     nativeTscPackageVersion: '7.0.2',
     compatTscPackageVersion: '6.0.2',
     compatEnginePackageVersion: undefined,
   };
-  const results = evaluateToolchain(fakeBaseline, fakeInstalled);
-  const anyFail = results.some((r) => !r.ok);
-  return { name: 'toolchain-mismatch (injected wrong reference_patch values)', expectFail: true, failed: anyFail };
+  const results = evaluateToolchain(fakeBaseline, fakeInstalled, 'test');
+  const anyFail = results.some((r) => r.status === 'fail');
+  return { name: 'toolchain-mismatch (injected wrong reference_patch values, combined)', expectFail: true, failed: anyFail };
+}
+
+/**
+ * Mutates the real package.json in place, expects the real production
+ * `pnpm install --frozen-lockfile` command to reject the disagreement, then
+ * restores the original file byte-for-byte in a `finally` block regardless of
+ * outcome. Proves the actual frozen-lockfile discipline the gate/CI rely on,
+ * not a helper-function reimplementation of it.
+ */
+function runLockfileDisagreementFixture(): RedFixtureResult {
+  const packageJsonPath = path.join(ROOT, 'package.json');
+  const original = readFileSync(packageJsonPath, 'utf8');
+  try {
+    const mutated = JSON.parse(original) as Record<string, unknown>;
+    const devDeps = mutated['devDependencies'] as Record<string, unknown>;
+    devDeps['turbo'] = '2.10.9'; // exact-looking, but disagrees with the frozen lockfile's resolved 2.10.8
+    writeFileSync(packageJsonPath, `${JSON.stringify(mutated, null, 2)}\n`, 'utf8');
+    execFileSync('pnpm', ['install', '--frozen-lockfile'], { encoding: 'utf8', cwd: ROOT, shell: true });
+    return { name: 'lockfile-package-disagreement (package.json devDependency vs frozen pnpm-lock.yaml)', expectFail: true, failed: false };
+  } catch {
+    return { name: 'lockfile-package-disagreement (package.json devDependency vs frozen pnpm-lock.yaml)', expectFail: true, failed: true };
+  } finally {
+    writeFileSync(packageJsonPath, original, 'utf8');
+  }
 }
 
 function runControlMapIncompleteFixture(): RedFixtureResult {
@@ -139,8 +257,15 @@ async function main(): Promise<void> {
   const results: RedFixtureResult[] = [];
   results.push(runAuthoritySelfTest());
   results.push(runToolchainMismatchFixture());
+  results.push(runNodePinMismatchFixture());
+  results.push(runPnpmPackageManagerMismatchFixture());
+  results.push(runNativeTsPackageMismatchFixture());
+  results.push(runCompatTsPackageMismatchFixture());
+  results.push(runTurboPackageMismatchFixture());
+  results.push(runCompatEngineDiscrepancyIsRecordedNotHiddenFixture());
   results.push(runControlMapIncompleteFixture());
   results.push(runDependencyRangeFixture());
+  results.push(runLockfileDisagreementFixture());
   results.push(await runLintTsSuppressionFixture());
   results.push(runTypecheckFixture('typecheck:native', 'typecheck-native-injected-type-error (genuine string-as-number defect)'));
   results.push(runTypecheckFixture('typecheck:compat', 'typecheck-compat-injected-type-error (same genuine defect, compatibility lane)'));
