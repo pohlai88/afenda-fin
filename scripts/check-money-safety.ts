@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-// SCC-03 authoritative-money type-safety gate — scoped to packages/money/src
-// (the only authoritative money surface that exists in this phase; no
-// contracts/API package exists yet, so this cannot be full SCC-03 coverage —
-// see governance/control-implementation.json for the honest PARTIAL state).
+// SCC-03 authoritative-money type-safety gate — scoped to
+// packages/money/src and packages/contracts/src (Phase 3B: the two
+// authoritative-money surfaces that exist in this phase; no API/database
+// exists yet, so this still cannot be full SCC-03 coverage — see
+// governance/control-implementation.json for the honest state).
 //
 // Uses the real TypeScript compiler API (ts.createSourceFile + AST
 // traversal) rather than a grep/regex heuristic, so doc-comments that merely
@@ -10,10 +11,13 @@
 // documentation) are never mistaken for real offending code — only genuine
 // AST node shapes are flagged.
 //
-// Detected, at minimum (phase brief §12):
-//   1. Bare `Number(...)` / `parseFloat(...)` / `parseInt(...)` calls
-//      anywhere in packages/money/src (an authoritative-money package has no
-//      legitimate reason to convert anything through a lossy float parser;
+// Detected, at minimum (phase brief §12; Phase 3B §11 extends this scope to
+// packages/contracts/src and adds the numeric-Zod-schema/unary-coercion
+// detectors below):
+//   1. Bare `Number(...)` / `parseFloat(...)` / `parseInt(...)` calls, or a
+//      unary `+value` numeric coercion, anywhere in the scanned surfaces (an
+//      authoritative-money surface has no legitimate reason to convert
+//      anything through a lossy float parser or unary coercion;
 //      `Number.isSafeInteger(...)`-style static member calls are NOT
 //      flagged — those are integer *checks*, not float conversions).
 //   2. An object-literal property literally named `minorUnits` or `amount`
@@ -23,6 +27,12 @@
 //   3. A type annotation of plain `number` on any parameter, variable, or
 //      property whose name matches /amount|money|minorUnits/i — a
 //      name-scoped (not global) check for "number-valued Money amount".
+//   4. A Zod schema property literally named `minorUnits` or `amount` whose
+//      value is (or is built from, e.g. `z.number().int()`) a `z.number()`
+//      call — the authoritative-money analogue of (2) at the schema-authoring
+//      level, scoped to the same money-named keys, never to `z.number()` in
+//      general (ordinary non-authoritative numeric transport fields remain
+//      unaffected).
 
 import ts from 'typescript';
 import { readFileSync } from 'node:fs';
@@ -33,7 +43,11 @@ import path from 'node:path';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
-export type MoneySafetyViolationKind = 'lossy-number-conversion' | 'unsafe-money-json-shape' | 'number-typed-money-field';
+export type MoneySafetyViolationKind =
+  | 'lossy-number-conversion'
+  | 'unsafe-money-json-shape'
+  | 'number-typed-money-field'
+  | 'numeric-zod-money-schema';
 
 export interface MoneySafetyViolation {
   kind: MoneySafetyViolationKind;
@@ -54,9 +68,40 @@ function isBareLossyConversionCall(node: ts.Node): node is ts.CallExpression {
   return ts.isCallExpression(node) && ts.isIdentifier(node.expression) && LOSSY_CONVERSION_NAMES.has(node.expression.text);
 }
 
+/** `+value` — unary numeric coercion. Structurally distinct from `Number(value)` but an equally lossy path to a float. */
+function isUnaryPlusCoercion(node: ts.Node): node is ts.PrefixUnaryExpression {
+  return ts.isPrefixUnaryExpression(node) && node.operator === ts.SyntaxKind.PlusToken;
+}
+
 function propertyKeyName(name: ts.PropertyName): string | undefined {
   if (ts.isIdentifier(name) || ts.isStringLiteral(name)) return name.text;
   return undefined;
+}
+
+/**
+ * Walks a call/member-access chain (e.g. `z.number().int().positive()`) down
+ * to its root, looking for a `z.number` property access anywhere in the
+ * chain. Only the shape of the expression is inspected — no type checker is
+ * involved — so this is a structural, not semantic, detector; it is scoped to
+ * money-named keys (see caller) specifically so it cannot misfire on an
+ * ordinary `z.number()` used for a non-money field elsewhere.
+ */
+function isZodNumberSchemaExpression(node: ts.Node): boolean {
+  let current: ts.Node = node;
+  for (;;) {
+    if (ts.isCallExpression(current)) {
+      current = current.expression;
+      continue;
+    }
+    if (ts.isPropertyAccessExpression(current)) {
+      if (ts.isIdentifier(current.expression) && current.expression.text === 'z' && current.name.text === 'number') {
+        return true;
+      }
+      current = current.expression;
+      continue;
+    }
+    return false;
+  }
 }
 
 export function scanSourceForMoneySafetyViolations(sourceText: string, filePath: string): MoneySafetyViolation[] {
@@ -64,7 +109,7 @@ export function scanSourceForMoneySafetyViolations(sourceText: string, filePath:
   const violations: MoneySafetyViolation[] = [];
 
   function visit(node: ts.Node): void {
-    if (isBareLossyConversionCall(node)) {
+    if (isBareLossyConversionCall(node) || isUnaryPlusCoercion(node)) {
       violations.push({
         kind: 'lossy-number-conversion',
         filePath,
@@ -78,6 +123,14 @@ export function scanSourceForMoneySafetyViolations(sourceText: string, filePath:
       if (keyName !== undefined && MONEY_JSON_KEY_PATTERN.test(keyName) && ts.isNumericLiteral(node.initializer)) {
         violations.push({
           kind: 'unsafe-money-json-shape',
+          filePath,
+          line: lineOf(sourceFile, node),
+          snippet: node.getText(sourceFile).slice(0, 80),
+        });
+      }
+      if (keyName !== undefined && MONEY_JSON_KEY_PATTERN.test(keyName) && isZodNumberSchemaExpression(node.initializer)) {
+        violations.push({
+          kind: 'numeric-zod-money-schema',
           filePath,
           line: lineOf(sourceFile, node),
           snippet: node.getText(sourceFile).slice(0, 80),
@@ -104,8 +157,10 @@ export function scanSourceForMoneySafetyViolations(sourceText: string, filePath:
   return violations;
 }
 
-export function checkMoneySafety(globPattern = 'packages/money/src/**/*.ts'): { ok: boolean; violations: MoneySafetyViolation[]; filesScanned: number } {
-  const files = globSync(globPattern, { cwd: ROOT }).sort();
+const DEFAULT_GLOB_PATTERNS = ['packages/money/src/**/*.ts', 'packages/contracts/src/**/*.ts'];
+
+export function checkMoneySafety(globPatterns: string[] = DEFAULT_GLOB_PATTERNS): { ok: boolean; violations: MoneySafetyViolation[]; filesScanned: number } {
+  const files = globPatterns.flatMap((pattern) => globSync(pattern, { cwd: ROOT })).sort();
   const violations: MoneySafetyViolation[] = [];
   for (const relFile of files) {
     const text = readFileSync(path.join(ROOT, relFile), 'utf8');
@@ -117,8 +172,8 @@ export function checkMoneySafety(globPattern = 'packages/money/src/**/*.ts'): { 
 const invokedDirectly = process.argv[1] !== undefined && import.meta.url === new URL(`file://${process.argv[1].replace(/\\/g, '/')}`).href;
 if (invokedDirectly || process.argv[1]?.endsWith('check-money-safety.ts')) {
   const report = checkMoneySafety();
-  console.log('\n=== AFENDA SCC-03 authoritative-money safety gate (PARTIAL: scoped to packages/money/src; no contracts/API exist yet) ===\n');
-  console.log(`Files scanned: ${String(report.filesScanned)} (packages/money/src/**/*.ts)`);
+  console.log('\n=== AFENDA SCC-03 authoritative-money safety gate (PARTIAL: scoped to packages/money/src and packages/contracts/src; no API/database exist yet) ===\n');
+  console.log(`Files scanned: ${String(report.filesScanned)} (${DEFAULT_GLOB_PATTERNS.join(', ')})`);
   if (report.ok) {
     console.log('No violations found.');
   } else {

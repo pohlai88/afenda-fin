@@ -207,3 +207,15 @@ The nine `- [x]` items ticked in §3 above were completed and mechanically evide
 ## 7. Phase 2.1 control-plane hardening update (2026-08-08)
 
 One item ticked in §6 above was re-examined and reverted to unchecked: **"Add SCC-01 through SCC-27 to CI or a machine-readable governance dispatcher."** Phase 2 ticked this on the basis that all 27 states are registered in `governance/control-implementation.json` and reported by `scripts/gate.ts`. On closer reading, the checklist wording is genuinely ambiguous between "registered/reported" and "executably dispatched," and 22 of 27 controls have no executable check at all (`not-yet-built`) — so under the stricter, more defensible reading this item is not satisfied. Per the governance policy of preferring an honest unchecked item over a stretched checkbox, it has been reverted. Full reasoning: `governance/CONTROL_PLANE_REPORT.md` §11. **This correction is evidence correction, not regression**, and is not itself a stack-adoption event either way.
+
+---
+
+## 8. Phase 3B contracts-boundary review (2026-08-08)
+
+Phase 3B (`packages/contracts`, the first external/JSON transport boundary — see `governance/PHASE_3B_CONTRACTS_REPORT.md`) was reviewed against every unchecked item in §3. **No item is ticked as a result of this phase.** The nearest candidates and why each remains honestly unchecked:
+
+- *"Add critical domain mutants and enforce zero survival"* — Phase 3B adds three more hand-authored mutation-kill fixtures (five total across Phase 3A+3B; see `governance/control-implementation.json` SCC-18/V12), which is real evidence toward this item, but it is not StrykerJS, not a domain-wide mutation run, and does not cover packages/errors at all — "enforce zero survival" as a repository-wide guarantee is not yet true.
+- *"Reject unapproved dependency ranges and lockfile drift"* — already ticked in §3 (Phase 2); Phase 3B's new `zod@4.4.3` dependency was confirmed to comply with the existing exact-pin gate (`scripts/lib/control-map.ts checkDependencyPinsAreExact`, wired into `pnpm gate` step 5b) rather than requiring a new checklist item.
+- Every API/frontend/identity/jobs/database item in §3 remains unchecked because Phase 3B explicitly did not build apps/api, apps/web, a database, identity, or jobs — `packages/contracts` is a pure Zod transport-schema package with zero Hono/OpenAPI/HTTP dependency, deliberately, per the phase brief.
+
+The stack remains **architecturally approved, not adopted**. No ratifier signature, no CI-enforced `stack/STACK.sha256` on a live runner, and no completed §3 checklist exist as of this phase.

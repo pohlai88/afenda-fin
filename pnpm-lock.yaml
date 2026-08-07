@@ -8,6 +8,12 @@ importers:
 
   .:
     devDependencies:
+      '@afenda/contracts':
+        specifier: workspace:*
+        version: link:packages/contracts
+      '@afenda/errors':
+        specifier: workspace:*
+        version: link:packages/errors
       '@afenda/money':
         specifier: workspace:*
         version: link:packages/money
@@ -41,6 +47,34 @@ importers:
       typescript-eslint:
         specifier: 8.66.0
         version: 8.66.0(@typescript/typescript6@6.0.2)(eslint@10.8.0(supports-color@7.2.0))(supports-color@7.2.0)
+
+  packages/contracts:
+    dependencies:
+      '@afenda/errors':
+        specifier: workspace:*
+        version: link:../errors
+      '@afenda/money':
+        specifier: workspace:*
+        version: link:../money
+      '@afenda/time':
+        specifier: workspace:*
+        version: link:../time
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@typescript/native':
+        specifier: npm:typescript@7.0.2
+        version: typescript@7.0.2
+      fast-check:
+        specifier: 4.9.0
+        version: 4.9.0
+      typescript:
+        specifier: npm:@typescript/typescript6@6.0.2
+        version: '@typescript/typescript6@6.0.2'
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@types/node@24.9.2)(vite@8.2.1(@types/node@24.9.2))
 
   packages/errors:
     devDependencies:
@@ -1193,6 +1227,9 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
+  zod@4.4.3:
+    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
+
 snapshots:
 
   '@eslint-community/eslint-utils@4.10.1(eslint@10.8.0(supports-color@7.2.0))':
@@ -2114,3 +2151,5 @@ snapshots:
   word-wrap@1.2.5: {}
 
   yocto-queue@0.1.0: {}
+
+  zod@4.4.3: {}

@@ -1,0 +1,33 @@
+{
+  "name": "@afenda/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "AFENDA canonical external transport boundary: Zod 4 wire schemas and exact serialization/parsing contracts for Money, Instant, CivilDate, AsOf and public-safe Result/Failure shapes. Owns transport/domain separation — never exports a domain type directly as a JSON contract.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "typecheck:native": "tsc --noEmit -p tsconfig.json",
+    "typecheck:compat": "tsc6 --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@afenda/errors": "workspace:*",
+    "@afenda/time": "workspace:*",
+    "@afenda/money": "workspace:*",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@typescript/native": "npm:typescript@7.0.2",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "vitest": "4.1.10",
+    "fast-check": "4.9.0"
+  }
+}

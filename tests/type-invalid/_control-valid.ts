@@ -6,6 +6,7 @@
 
 import type { AsOf, Instant } from '@afenda/time';
 import type { Money, MinorUnits } from '@afenda/money';
+import type { MoneyWire, AsOfWire } from '@afenda/contracts';
 
 declare const minorUnits: MinorUnits;
 declare const currency: Money['currency'];
@@ -15,4 +16,7 @@ declare const businessAsOf: Instant;
 declare const knowledgeAsOf: Instant;
 const goodAsOf: AsOf = { businessAsOf, knowledgeAsOf };
 
-export { goodMoney, goodAsOf };
+const goodMoneyWire: MoneyWire = { currency: 'MYR', minorUnits: '12345' };
+const goodAsOfWire: AsOfWire = { businessAsOf: '2025-01-01T00:00:00.000Z', knowledgeAsOf: '2025-04-01T00:00:00.000Z' };
+
+export { goodMoney, goodAsOf, goodMoneyWire, goodAsOfWire };

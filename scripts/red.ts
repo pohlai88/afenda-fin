@@ -313,6 +313,54 @@ function runDepCruiseCycleFixture(): RedFixtureResult {
   return { name: 'SCC-05: dependency cycle (two files in packages/money/src importing each other)', expectFail: true, failed: caughtByDepCruise };
 }
 
+/**
+ * Phase 3B: injects a cross-package internal-subpath import from the NEW
+ * packages/contracts package (contracts reaching into money/src/*.ts directly
+ * instead of money's package.json exports root) and invokes the REAL
+ * dependency-cruiser CLI (SCC-05, `no-cross-package-internal-import`), proving
+ * the existing generic rule also covers the newly-added 4th package.
+ */
+function runDepCruiseContractsInternalImportFixture(): RedFixtureResult {
+  const caughtByDepCruise = withDisposableFixtureFiles(
+    {
+      'packages/contracts/src/__red_fixture_internal_import__.ts': "import { addMoney } from '../../money/src/money.ts';\nexport { addMoney };\n",
+    },
+    () => {
+      try {
+        execFileSync('pnpm', ['run', 'boundary:check'], { encoding: 'utf8', cwd: ROOT, shell: true });
+        return false;
+      } catch {
+        return true;
+      }
+    },
+  );
+  return { name: 'SCC-05: cross-package internal-subpath import (contracts -> money/src/money.ts)', expectFail: true, failed: caughtByDepCruise };
+}
+
+/**
+ * Phase 3B: injects the reverse dependency the whole contracts boundary
+ * exists to forbid — packages/money importing packages/contracts — and
+ * invokes the REAL dependency-cruiser CLI (SCC-05, the new
+ * `no-kernel-depends-on-contracts` rule). contracts is allowed to depend on
+ * money/time/errors; the reverse must never be permitted to compile clean.
+ */
+function runDepCruiseReverseDependencyFixture(): RedFixtureResult {
+  const caughtByDepCruise = withDisposableFixtureFiles(
+    {
+      'packages/money/src/__red_fixture_reverse_dependency__.ts': "import { encodeMoneyTransport } from '../../contracts/src/index.ts';\nexport { encodeMoneyTransport };\n",
+    },
+    () => {
+      try {
+        execFileSync('pnpm', ['run', 'boundary:check'], { encoding: 'utf8', cwd: ROOT, shell: true });
+        return false;
+      } catch {
+        return true;
+      }
+    },
+  );
+  return { name: 'SCC-05: reverse dependency (money -> contracts, no-kernel-depends-on-contracts rule)', expectFail: true, failed: caughtByDepCruise };
+}
+
 /** Injects a real decorator, class-based inheritance, runtime-module-discovery and ambient-clock violation and invokes the REAL SCC-24 AST control, once each. */
 function runArchitectureFixtures(): RedFixtureResult[] {
   const results: RedFixtureResult[] = [];
@@ -359,6 +407,29 @@ function runMoneySafetyFixtures(): RedFixtureResult[] {
     () => !checkMoneySafety().ok,
   );
   results.push({ name: 'SCC-03: lossy number conversion (bare Number(...) call in packages/money/src)', expectFail: true, failed: lossyConversionCaught });
+
+  // Phase 3B: same three detector classes, now proven against the NEW
+  // packages/contracts surface the AST control was extended to cover.
+  const contractsJsonShapeCaught = withDisposableFixtureFiles(
+    { 'packages/contracts/src/__red_fixture_unsafe_json_shape__.ts': 'export const shape = { currency: "MYR", minorUnits: 12345 };\n' },
+    () => !checkMoneySafety().ok,
+  );
+  results.push({ name: 'SCC-03: unsafe Money JSON shape in packages/contracts (minorUnits as a JSON number literal)', expectFail: true, failed: contractsJsonShapeCaught });
+
+  const contractsNumericZodSchemaCaught = withDisposableFixtureFiles(
+    {
+      'packages/contracts/src/__red_fixture_numeric_zod_schema__.ts':
+        "import { z } from 'zod';\nexport const BadMoneyWireSchema = z.object({ currency: z.string(), minorUnits: z.number() });\n",
+    },
+    () => !checkMoneySafety().ok,
+  );
+  results.push({ name: 'SCC-03: numeric Zod schema for an authoritative money field (z.number() for minorUnits)', expectFail: true, failed: contractsNumericZodSchemaCaught });
+
+  const contractsUnaryPlusCaught = withDisposableFixtureFiles(
+    { 'packages/contracts/src/__red_fixture_unary_plus__.ts': 'declare const minorUnits: string;\nexport const amount = +minorUnits;\n' },
+    () => !checkMoneySafety().ok,
+  );
+  results.push({ name: 'SCC-03: unary numeric coercion (+minorUnits) in packages/contracts', expectFail: true, failed: contractsUnaryPlusCaught });
 
   return results;
 }
@@ -429,6 +500,95 @@ function runMoneyRangeGuardMutationFixture(): RedFixtureResult {
   }
 }
 
+/**
+ * Phase 3B: widens the real canonical-integer-string pattern in
+ * packages/money/src/minor-units.ts (the domain parser packages/contracts
+ * delegates to) so decimal-notation strings like "1.0" pass the format
+ * check, runs the REAL production `pnpm --filter @afenda/contracts test`
+ * command, and confirms the transport-boundary malformed-input test turns
+ * red — then restores the file byte-for-byte in a `finally` block
+ * regardless of outcome.
+ */
+function runMoneyTransportDecimalGuardMutationFixture(): RedFixtureResult {
+  const filePath = path.join(ROOT, 'packages', 'money', 'src', 'minor-units.ts');
+  const original = readFileSync(filePath, 'utf8');
+  const guard = 'const CANONICAL_INTEGER_STRING_PATTERN = /^-?[0-9]+$/;';
+  if (!original.includes(guard)) {
+    return { name: 'mutation-kill: canonical-integer-string pattern widened to accept decimals', expectFail: true, failed: true, error: 'guard snippet not found verbatim in minor-units.ts; fixture is stale' };
+  }
+  try {
+    const mutated = original.replace(guard, 'const CANONICAL_INTEGER_STRING_PATTERN = /^-?[0-9]+(\\.[0-9]+)?$/;');
+    writeFileSync(filePath, mutated, 'utf8');
+    execFileSync('pnpm', ['--filter', '@afenda/contracts', 'run', 'test'], { encoding: 'utf8', cwd: ROOT, shell: true });
+    return { name: 'mutation-kill: canonical-integer-string pattern widened to accept decimals', expectFail: true, failed: false };
+  } catch {
+    return { name: 'mutation-kill: canonical-integer-string pattern widened to accept decimals', expectFail: true, failed: true };
+  } finally {
+    writeFileSync(filePath, original, 'utf8');
+  }
+}
+
+/**
+ * Phase 3B: mutates the real `encodeMoneyTransport` in
+ * packages/contracts/src/money-transport.ts to round the bigint minorUnits
+ * through a JavaScript `number` (an exact, real precision-loss defect at the
+ * 2^53 boundary) instead of delegating to the domain's exact
+ * `serializeMoney`, runs the REAL production `pnpm --filter @afenda/contracts
+ * test` command, and confirms the exact-round-trip/property tests turn red —
+ * then restores the file byte-for-byte in a `finally` block regardless of
+ * outcome.
+ */
+function runMoneyTransportPrecisionLossMutationFixture(): RedFixtureResult {
+  const filePath = path.join(ROOT, 'packages', 'contracts', 'src', 'money-transport.ts');
+  const original = readFileSync(filePath, 'utf8');
+  const guard = 'export function encodeMoneyTransport(money: Money): MoneyWire {\n  return serializeMoney(money);\n}';
+  if (!original.includes(guard)) {
+    return { name: 'mutation-kill: encodeMoneyTransport routed through lossy Number(bigint)', expectFail: true, failed: true, error: 'guard snippet not found verbatim in money-transport.ts; fixture is stale' };
+  }
+  try {
+    const mutated = original.replace(
+      guard,
+      'export function encodeMoneyTransport(money: Money): MoneyWire {\n  return { currency: money.currency, minorUnits: Number(money.minorUnits).toString() };\n}',
+    );
+    writeFileSync(filePath, mutated, 'utf8');
+    execFileSync('pnpm', ['--filter', '@afenda/contracts', 'run', 'test'], { encoding: 'utf8', cwd: ROOT, shell: true });
+    return { name: 'mutation-kill: encodeMoneyTransport routed through lossy Number(bigint)', expectFail: true, failed: false };
+  } catch {
+    return { name: 'mutation-kill: encodeMoneyTransport routed through lossy Number(bigint)', expectFail: true, failed: true };
+  } finally {
+    writeFileSync(filePath, original, 'utf8');
+  }
+}
+
+/**
+ * Phase 3B: disables the real calendar-round-trip guard in
+ * packages/time/src/instant.ts (the domain parser packages/contracts
+ * delegates to) so a numerically-out-of-range but structurally-shaped
+ * calendar instant (e.g. "2026-02-30T00:00:00.000Z") would be silently
+ * normalized and accepted, runs the REAL production `pnpm --filter
+ * @afenda/contracts test` command, and confirms the malformed-Instant
+ * negative test turns red — then restores the file byte-for-byte in a
+ * `finally` block regardless of outcome.
+ */
+function runInstantTransportCalendarGuardMutationFixture(): RedFixtureResult {
+  const filePath = path.join(ROOT, 'packages', 'time', 'src', 'instant.ts');
+  const original = readFileSync(filePath, 'utf8');
+  const guard = 'if (instantToCanonicalString(candidate) !== canonical) {';
+  if (!original.includes(guard)) {
+    return { name: 'mutation-kill: Instant calendar round-trip guard disabled', expectFail: true, failed: true, error: 'guard snippet not found verbatim in instant.ts; fixture is stale' };
+  }
+  try {
+    const mutated = original.replace(guard, 'if (false) {');
+    writeFileSync(filePath, mutated, 'utf8');
+    execFileSync('pnpm', ['--filter', '@afenda/contracts', 'run', 'test'], { encoding: 'utf8', cwd: ROOT, shell: true });
+    return { name: 'mutation-kill: Instant calendar round-trip guard disabled', expectFail: true, failed: false };
+  } catch {
+    return { name: 'mutation-kill: Instant calendar round-trip guard disabled', expectFail: true, failed: true };
+  } finally {
+    writeFileSync(filePath, original, 'utf8');
+  }
+}
+
 async function main(): Promise<void> {
   const results: RedFixtureResult[] = [];
   results.push(runAuthoritySelfTest());
@@ -448,10 +608,15 @@ async function main(): Promise<void> {
   results.push(runTypeInvalidDelegatedFixture());
   results.push(runDepCruiseInternalImportFixture());
   results.push(runDepCruiseCycleFixture());
+  results.push(runDepCruiseContractsInternalImportFixture());
+  results.push(runDepCruiseReverseDependencyFixture());
   results.push(...runArchitectureFixtures());
   results.push(...runMoneySafetyFixtures());
   results.push(runMoneyCurrencyGuardMutationFixture());
   results.push(runMoneyRangeGuardMutationFixture());
+  results.push(runMoneyTransportDecimalGuardMutationFixture());
+  results.push(runMoneyTransportPrecisionLossMutationFixture());
+  results.push(runInstantTransportCalendarGuardMutationFixture());
 
   console.log('\n=== AFENDA red harness (gate exists -> injected violation -> real gate fails) ===\n');
   let allOk = true;

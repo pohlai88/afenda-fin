@@ -3,8 +3,8 @@
 // Runs, in order: (1) authority build+integrity, (2) registry drift (delegated to
 // step 1's own check), (3) toolchain baseline, (4) implemented static governance
 // controls — root scripts/** typecheck+lint (4a-4c), Turbo-orchestrated
-// packages/{errors,time,money} typecheck+test (4d), module-boundary/SCC-05
-// (4e), authoritative-money safety/SCC-03 (4f), application-architecture
+// packages/{errors,time,money,contracts} typecheck+test (4d), module-boundary/SCC-05
+// (4e), authoritative-money safety/SCC-03 (4f, packages/{money,contracts}), application-architecture
 // subset/SCC-24 (4g), compile-time negative fixtures (4h) — (5) control-map
 // completeness, (6) dependency pin policy, (7) generated agent-doc drift,
 // (8) red-fixture registration.
@@ -138,7 +138,7 @@ function main(): StepResult[] {
 
   const turboPackages = runTurbo(['typecheck:native', 'typecheck:compat', 'test']);
   steps.push({
-    step: '4d. Turbo-orchestrated package typecheck+test (packages/errors, packages/time, packages/money)',
+    step: '4d. Turbo-orchestrated package typecheck+test (packages/errors, packages/time, packages/money, packages/contracts)',
     status: turboPackages.ok ? 'PASS' : 'FAIL',
     detail: turboPackages.ok ? 'all package tasks passed' : turboPackages.output,
   });
@@ -152,7 +152,7 @@ function main(): StepResult[] {
 
   const moneySafety = runNodeScript('scripts/check-money-safety.ts');
   steps.push({
-    step: '4f. static governance control: authoritative-money type safety (SCC-03, packages/money surface)',
+    step: '4f. static governance control: authoritative-money type safety (SCC-03, packages/money + packages/contracts surfaces)',
     status: moneySafety.ok ? 'PASS' : 'FAIL',
     detail: moneySafety.ok ? 'clean' : moneySafety.output,
   });
@@ -166,7 +166,7 @@ function main(): StepResult[] {
 
   const typeInvalid = runNodeScript('scripts/check-type-invalid.ts');
   steps.push({
-    step: '4h. compile-time negative fixtures (tests/type-invalid; Money/MinorUnits/AsOf)',
+    step: '4h. compile-time negative fixtures (tests/type-invalid; Money/MinorUnits/AsOf + contracts transport)',
     status: typeInvalid.ok ? 'PASS' : 'FAIL',
     detail: typeInvalid.ok ? 'all fixtures failed for their declared reason' : typeInvalid.output,
   });
@@ -268,7 +268,7 @@ console.log(`  not-yet-built: ${summary.notYetBuilt}`);
 console.log(`  blocked: ${summary.blocked}`);
 console.log(`  not-applicable-current-tree: ${summary.notApplicable}`);
 console.log(
-  '\nPolicy: not-yet-built/blocked/not-applicable controls are visible above and never counted as PASS. Phase 3A establishes foundational kernel packages (errors/time/money) only; this does not claim API, database, frontend, or business-module readiness.',
+  '\nPolicy: not-yet-built/blocked/not-applicable controls are visible above and never counted as PASS. Phase 3A established the foundational kernel packages (errors/time/money); Phase 3B added the canonical transport-contract boundary (contracts) only; this does not claim API, database, frontend, or business-module readiness.',
 );
 
 console.log(`\nOverall gate: ${anyFail ? 'FAIL' : 'PASS'}\n`);

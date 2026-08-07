@@ -1,10 +1,13 @@
 // SCC-05 module-boundary control (stack/STACK.md §6-7).
 //
-// Phase 3A (AFENDA kernel) gives this config a real, non-empty package graph:
-// packages/errors, packages/time, packages/money. Every rule below is
-// justified by that actual graph — see governance/PHASE_3A_KERNEL_REPORT.md.
-// Do not add rules describing packages/modules that do not exist yet; a rule
-// matching zero current modules is not evidence.
+// Phase 3A (AFENDA kernel) gave this config a real, non-empty package graph:
+// packages/errors, packages/time, packages/money. Phase 3B adds
+// packages/contracts as a fourth package that sits ABOVE the other three
+// (errors/time/money must never depend on it) — see
+// governance/PHASE_3B_CONTRACTS_REPORT.md. Every rule below is justified by
+// that actual 4-package graph. Do not add rules describing packages/modules
+// that do not exist yet; a rule matching zero current modules is not
+// evidence.
 //
 // `no-domain-to-adapter` remains forward-declared per stack/STACK.md §8 (no
 // packages/domain, apps/*, or packages/db exist yet) and is NOT counted as
@@ -53,6 +56,14 @@ module.exports = {
       severity: 'error',
       from: { path: '^packages/errors/' },
       to: { path: '^packages/(time|money)/' },
+    },
+    {
+      name: 'no-kernel-depends-on-contracts',
+      comment:
+        'Phase 3B: packages/contracts sits above errors/time/money (it depends on all three for its transport schemas); the dependency must never run in reverse — errors, time and money must never depend on packages/contracts.',
+      severity: 'error',
+      from: { path: '^packages/(errors|time|money)/' },
+      to: { path: '^packages/contracts/' },
     },
     {
       name: 'no-circular',
