@@ -44,7 +44,7 @@ HTTP request
 
 Transaction ownership: `withTransaction` / `queryOnClient` in `@afenda/db` only. apps/api does not BEGIN/COMMIT/ROLLBACK or call `pool.query` for transactional work.
 
-Migration: `db/migrations/0002_verify_exact_probe.sql` — verification-scoped table `afenda_verify_exact_probe` (not ledger/ERP). Post-0001 migrations apply via `MigrateOptions.migratorPool` as `afenda_migrator`.
+Migrations (verification-only, not ledger/ERP): `0002_verify_exact_probe.sql` creates `afenda_verify_exact_probe`; `0003_verify_force_probe_failure.sql` owns `afenda_force_probe_failure()` for deliberate ROLLBACK evidence. Post-0001 migrations apply via `MigrateOptions.migratorPool` as `afenda_migrator`.
 
 ---
 
@@ -74,7 +74,7 @@ Migration: `db/migrations/0002_verify_exact_probe.sql` — verification-scoped t
 | Case | Result |
 | --- | --- |
 | Same-client BEGIN/insert/query/COMMIT/release | via `withTransaction` |
-| Deliberate DB failure | ROLLBACK; probe row count unchanged |
+| Deliberate DB failure | Owned `afenda_force_probe_failure()` (migration 0003) RAISE; ROLLBACK; probe row count unchanged |
 | Public HTTP mapping | 500 `PERSISTENCE_PROBE_FAILED`; no SQL/stack/host/`cause` |
 
 ### Test counts

@@ -44,7 +44,7 @@ export function registerCivilDateVerifyRoute(app: OpenAPIHono): void {
       civilDate: encodeCivilDateTransport(value),
     }));
     if (mapped.status === 200) {
-      return c.json(mapped.body as { civilDate: string }, 200);
+      return c.json(mapped.body, 200);
     }
     if (mapped.status === 422) {
       return c.json(mapped.body, 422);

@@ -44,7 +44,7 @@ export function registerInstantVerifyRoute(app: OpenAPIHono): void {
       instant: encodeInstantTransport(value),
     }));
     if (mapped.status === 200) {
-      return c.json(mapped.body as { instant: string }, 200);
+      return c.json(mapped.body, 200);
     }
     if (mapped.status === 422) {
       return c.json(mapped.body, 422);

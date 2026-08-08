@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { countExactProbeRows, type Pool } from '@afenda/db';
+import { countExactProbeRows, hasForceProbeFailureFunction, type Pool } from '@afenda/db';
 import { createApi } from '../../src/create-api.ts';
 import { createCompositionApi } from '../../src/composition/create-composition-api.ts';
 import { startMigratedAppPool, stopCompositionPools, type PostgresMajor } from './helpers.ts';
@@ -108,11 +108,13 @@ function describeCompositionMajor(major: PostgresMajor): void {
     });
 
     it('DB failure maps to public-safe 500 and rolls back partial insert', async () => {
+      expect(await hasForceProbeFailureFunction(appPool)).toBe(true);
       const before = await countExactProbeRows(appPool, 'money');
       const res = await composition.request('/_afenda/composition/fail', { method: 'POST' });
       expect(res.status).toBe(500);
       const json = (await res.json()) as Record<string, unknown>;
       expect(json['code']).toBe('PERSISTENCE_PROBE_FAILED');
+      expect(json['message']).toBe('exact persistence probe failed');
       expect(json).not.toHaveProperty('cause');
       const bodyText = JSON.stringify(json);
       for (const pattern of LEAK_PATTERNS) {

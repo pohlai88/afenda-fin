@@ -29,6 +29,7 @@ export {
   roundTripCivilDateExact,
   failExactPersistenceProbe,
   countExactProbeRows,
+  hasForceProbeFailureFunction,
   type MoneyProbeWire,
   type ExactPersistenceProbeErrorCode,
 } from './exact-persistence-probe.ts';

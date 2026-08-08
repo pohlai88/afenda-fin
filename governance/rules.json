@@ -76,7 +76,7 @@
       "paths": [
         "apps/api"
       ],
-      "role": "Phase 3D thin Hono HTTP adapter (`@hono/node-server` + `@hono/zod-openapi`) over `@afenda/contracts`. Production `GET /health` plus labeled `/_afenda/verify/*` reference routes for Money/time HTTP evidence. No frontend, identity, worker, ledger, or packages/db coupling. See governance/PHASE_3D_API_REPORT.md."
+      "role": "Phase 3D–3E thin Hono HTTP adapter (`@hono/node-server` + `@hono/zod-openapi`) over `@afenda/contracts`. Production `GET /health` plus labeled `/_afenda/verify/*` reference routes. Verification-only `createCompositionApi` may use `@afenda/db` public API (not registered on the production router). No frontend, identity, worker, or ledger. See governance/PHASE_3D_API_REPORT.md and governance/PHASE_3E_HTTP_DB_REPORT.md."
     },
     {
       "paths": [

@@ -115,12 +115,14 @@ describe('loadMigrationFiles', () => {
     const loaded = loadMigrationFiles(MIGRATIONS_DIR);
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
-    expect(loaded.value).toHaveLength(2);
+    expect(loaded.value).toHaveLength(3);
     const first = loaded.value[0];
     const second = loaded.value[1];
+    const third = loaded.value[2];
     expect(first).toBeDefined();
     expect(second).toBeDefined();
-    if (first === undefined || second === undefined) return;
+    expect(third).toBeDefined();
+    if (first === undefined || second === undefined || third === undefined) return;
     expect(first.filename).toBe('0001_bootstrap.sql');
     expect(first.version).toBe(1);
     expect(first.transactional).toBe(true);
@@ -129,6 +131,9 @@ describe('loadMigrationFiles', () => {
     expect(second.filename).toBe('0002_verify_exact_probe.sql');
     expect(second.version).toBe(2);
     expect(second.checksum).toBe(checksumMigrationSource(second.sql));
+    expect(third.filename).toBe('0003_verify_force_probe_failure.sql');
+    expect(third.version).toBe(3);
+    expect(third.checksum).toBe(checksumMigrationSource(third.sql));
   });
 });
 

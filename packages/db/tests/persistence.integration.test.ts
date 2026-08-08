@@ -75,7 +75,11 @@ describe('AFENDA persistence foundations (PostgreSQL 18 / Testcontainers)', () =
     });
     expect(migrated.ok).toBe(true);
     if (!migrated.ok) throw new Error(migrated.error.message);
-    expect(migrated.value.applied).toEqual(['0001_bootstrap.sql', '0002_verify_exact_probe.sql']);
+    expect(migrated.value.applied).toEqual([
+      '0001_bootstrap.sql',
+      '0002_verify_exact_probe.sql',
+      '0003_verify_force_probe_failure.sql',
+    ]);
     await migratorPool.end();
 
     appPool = createAppPool({
@@ -112,11 +116,13 @@ describe('AFENDA persistence foundations (PostgreSQL 18 / Testcontainers)', () =
     const history = await bootstrapPool.query<{ version: number; name: string; applied_by: string }>(
       'SELECT version, name, applied_by FROM afenda_migration_history ORDER BY version',
     );
-    expect(history.rows).toHaveLength(2);
+    expect(history.rows).toHaveLength(3);
     expect(history.rows[0]?.name).toBe('bootstrap');
     expect(history.rows[0]?.applied_by).toBe(BOOTSTRAP_USER);
     expect(history.rows[1]?.name).toBe('verify_exact_probe');
     expect(history.rows[1]?.applied_by).toBe(MIGRATOR_USER);
+    expect(history.rows[2]?.name).toBe('verify_force_probe_failure');
+    expect(history.rows[2]?.applied_by).toBe(MIGRATOR_USER);
 
     const roles = await bootstrapPool.query<{ rolname: string }>(
       `SELECT rolname FROM pg_roles WHERE rolname IN ('afenda_migrator', 'afenda_app') ORDER BY rolname`,
@@ -149,7 +155,11 @@ describe('AFENDA persistence foundations (PostgreSQL 18 / Testcontainers)', () =
       expect(again.ok).toBe(true);
       if (!again.ok) return;
       expect(again.value.applied).toEqual([]);
-      expect(again.value.alreadyApplied).toEqual(['0001_bootstrap.sql', '0002_verify_exact_probe.sql']);
+      expect(again.value.alreadyApplied).toEqual([
+        '0001_bootstrap.sql',
+        '0002_verify_exact_probe.sql',
+        '0003_verify_force_probe_failure.sql',
+      ]);
     } finally {
       await migratorPool.end();
     }

@@ -209,7 +209,7 @@ export function buildAgentRulesData(authorityIndex: ParsedAuthorityIndex): Agent
       },
       {
         paths: ['apps/api'],
-        role: 'Phase 3D thin Hono HTTP adapter (`@hono/node-server` + `@hono/zod-openapi`) over `@afenda/contracts`. Production `GET /health` plus labeled `/_afenda/verify/*` reference routes for Money/time HTTP evidence. No frontend, identity, worker, ledger, or packages/db coupling. See governance/PHASE_3D_API_REPORT.md.',
+        role: 'Phase 3D–3E thin Hono HTTP adapter (`@hono/node-server` + `@hono/zod-openapi`) over `@afenda/contracts`. Production `GET /health` plus labeled `/_afenda/verify/*` reference routes. Verification-only `createCompositionApi` may use `@afenda/db` public API (not registered on the production router). No frontend, identity, worker, or ledger. See governance/PHASE_3D_API_REPORT.md and governance/PHASE_3E_HTTP_DB_REPORT.md.',
       },
       {
         paths: [
@@ -236,7 +236,7 @@ function renderMarkdownBody(data: AgentRulesData): string {
   lines.push('# AFENDA rules');
   lines.push('');
   lines.push(
-    'AFENDA is a vibe-code-first ERP under construction. This repository currently holds the sealed authority layer, its governance/tooling control plane, a first application kernel (packages/errors, packages/time, packages/money), a first external transport boundary (packages/contracts), a first persistence boundary (packages/db + db/migrations), and a thin Hono HTTP adapter (apps/api) over contracts; no frontend, jobs, identity, ledger, or other business-module code exists yet.',
+    'AFENDA is a vibe-code-first ERP under construction. This repository currently holds the sealed authority layer, its governance/tooling control plane, a first application kernel (packages/errors, packages/time, packages/money), a first external transport boundary (packages/contracts), a first persistence boundary (packages/db + db/migrations), and a thin Hono HTTP adapter (apps/api) over contracts with verification-only HTTP→DB composition; no frontend, jobs, identity, ledger, or other business-module code exists yet.',
   );
   lines.push('');
   lines.push('## Precedence');

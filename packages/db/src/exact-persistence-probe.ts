@@ -114,10 +114,10 @@ export async function roundTripCivilDateExact(
       if (row === undefined) {
         throw new Error('civil_date probe returned no row');
       }
-      const asText =
-        typeof row.civil_date === 'string'
-          ? row.civil_date.slice(0, 10)
-          : String(row.civil_date).slice(0, 10);
+      if (typeof row.civil_date !== 'string') {
+        throw new Error('civil_date probe lost date string exactness');
+      }
+      const asText = row.civil_date.slice(0, 10);
       await queryOnClient(client, `DELETE FROM afenda_verify_exact_probe WHERE id = $1`, [row.id]);
       return { civilDate: asText };
     });
@@ -128,8 +128,9 @@ export async function roundTripCivilDateExact(
 }
 
 /**
- * Inserts a money marker row then fails inside the same transaction so callers
- * can prove ROLLBACK + client release + public-safe Result mapping.
+ * Inserts a money marker row then raises via owned `afenda_force_probe_failure()`
+ * (migration 0003) so callers can prove ROLLBACK + client release + public-safe Result.
+ * Must not rely on undefined_function.
  */
 export async function failExactPersistenceProbe(
   pool: Pool,
@@ -142,11 +143,28 @@ export async function failExactPersistenceProbe(
          VALUES ('money', 'ZZZ', 1)`,
       );
       await queryOnClient(client, `SELECT afenda_force_probe_failure()`);
+      // RAISE must abort before here; if it does not, fail closed without claiming success.
+      throw new Error('afenda_force_probe_failure returned without raising');
     });
     return err('PERSISTENCE_PROBE_FAILED', 'exact persistence probe failed');
   } catch (error: unknown) {
     return mapProbeFailure(error);
   }
+}
+
+/** True when migration 0003's owned deliberate-failure function is present. */
+export async function hasForceProbeFailureFunction(pool: Pool): Promise<boolean> {
+  return withTransaction(pool, async (client) => {
+    const result = await queryOnClient<{ exists: boolean }>(
+      client,
+      `SELECT EXISTS (
+         SELECT 1 FROM pg_proc p
+         JOIN pg_namespace n ON n.oid = p.pronamespace
+         WHERE n.nspname = 'public' AND p.proname = 'afenda_force_probe_failure'
+       ) AS exists`,
+    );
+    return result.rows[0]?.exists === true;
+  });
 }
 
 /** Counts probe rows — used to assert rollback left no partial money row. */

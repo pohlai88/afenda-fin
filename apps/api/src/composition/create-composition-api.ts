@@ -32,12 +32,6 @@ export interface CompositionApiDependencies {
   readonly instantSessionTimeZone?: string;
 }
 
-type PublicFailureBody = { code: string; message: string; details?: Record<string, string | number | boolean | null> };
-
-function asPublicFailure(body: unknown): PublicFailureBody {
-  return body as PublicFailureBody;
-}
-
 const InstantBodySchema = z
   .object({ instant: InstantWireOpenApiSchema })
   .strict()
@@ -161,78 +155,106 @@ export function createCompositionApi(deps: CompositionApiDependencies): OpenAPIH
     const decoded = decodeMoneyTransport(json);
     if (!decoded.ok) {
       const mapped = mapResultToHttp(decoded, encodeMoneyTransport);
-      if (mapped.status === 200) return c.json(mapped.body as never, 200);
-      if (mapped.status === 422) return c.json(asPublicFailure(mapped.body), 422);
-      if (mapped.status === 500) return c.json(asPublicFailure(mapped.body), 500);
-      return c.json(asPublicFailure(mapped.body), 400);
+      // Exclude 200 first so failure body narrows (OpenAPI typed responses).
+      if (mapped.status === 200) {
+        return c.json(mapped.body as { currency: string; minorUnits: string }, 200);
+      }
+      if (mapped.status === 422) return c.json(mapped.body, 422);
+      if (mapped.status === 500) return c.json(mapped.body, 500);
+      return c.json(mapped.body, 400);
     }
-    const wire = encodeMoneyTransport(decoded.value);
-    const persisted = await roundTripMoneyExact(deps.pool, wire);
+    const persisted = await roundTripMoneyExact(deps.pool, encodeMoneyTransport(decoded.value));
     if (!persisted.ok) {
       const mapped = mapResultToHttp(persisted, (v) => v);
-      return c.json(asPublicFailure(mapped.body), 500);
+      if (mapped.status === 200) {
+        return c.json(mapped.body as { currency: string; minorUnits: string }, 200);
+      }
+      if (mapped.status === 422) return c.json(mapped.body, 422);
+      if (mapped.status === 500) return c.json(mapped.body, 500);
+      return c.json(mapped.body, 400);
     }
-    // Re-enter contracts so domain decode gates the DB-returned strings.
-    const again = decodeMoneyTransport(persisted.value);
-    const mapped = mapResultToHttp(again, encodeMoneyTransport);
+    const mapped = mapResultToHttp(decodeMoneyTransport(persisted.value), encodeMoneyTransport);
     if (mapped.status === 200) {
       return c.json(mapped.body as { currency: string; minorUnits: string }, 200);
     }
-    if (mapped.status === 422) return c.json(asPublicFailure(mapped.body), 422);
-    if (mapped.status === 500) return c.json(asPublicFailure(mapped.body), 500);
-    return c.json(asPublicFailure(mapped.body), 400);
+    if (mapped.status === 422) return c.json(mapped.body, 422);
+    if (mapped.status === 500) return c.json(mapped.body, 500);
+    return c.json(mapped.body, 400);
   });
 
   app.openapi(instantRoute, async (c) => {
     const { instant } = c.req.valid('json');
     const decoded = decodeInstantTransport(instant);
+    const toBody = (value: Parameters<typeof encodeInstantTransport>[0]) => ({
+      instant: encodeInstantTransport(value),
+    });
     if (!decoded.ok) {
-      const mapped = mapResultToHttp(decoded, encodeInstantTransport);
-      if (mapped.status === 200) return c.json({ instant: mapped.body as string }, 200);
-      if (mapped.status === 422) return c.json(asPublicFailure(mapped.body), 422);
-      if (mapped.status === 500) return c.json(asPublicFailure(mapped.body), 500);
-      return c.json(asPublicFailure(mapped.body), 400);
+      const mapped = mapResultToHttp(decoded, toBody);
+      if (mapped.status === 200) return c.json(mapped.body, 200);
+      if (mapped.status === 422) return c.json(mapped.body, 422);
+      if (mapped.status === 500) return c.json(mapped.body, 500);
+      return c.json(mapped.body, 400);
     }
-    const canonical = encodeInstantTransport(decoded.value);
-    const persisted = await roundTripInstantExact(deps.pool, canonical, deps.instantSessionTimeZone);
+    const persisted = await roundTripInstantExact(
+      deps.pool,
+      encodeInstantTransport(decoded.value),
+      deps.instantSessionTimeZone,
+    );
     if (!persisted.ok) {
-      return c.json(asPublicFailure(mapResultToHttp(persisted, (v) => v).body), 500);
+      const mapped = mapResultToHttp(persisted, (v) => v);
+      // Cast: Err-narrowed Result loses success body precision for OpenAPI.
+      if (mapped.status === 200) return c.json(mapped.body as { instant: string }, 200);
+      if (mapped.status === 422) return c.json(mapped.body, 422);
+      if (mapped.status === 500) return c.json(mapped.body, 500);
+      return c.json(mapped.body, 400);
     }
-    const again = decodeInstantTransport(persisted.value.instant);
-    const mapped = mapResultToHttp(again, (value) => ({ instant: encodeInstantTransport(value) }));
-    if (mapped.status === 200) return c.json(mapped.body as { instant: string }, 200);
-    if (mapped.status === 422) return c.json(asPublicFailure(mapped.body), 422);
-    if (mapped.status === 500) return c.json(asPublicFailure(mapped.body), 500);
-    return c.json(asPublicFailure(mapped.body), 400);
+    const mapped = mapResultToHttp(decodeInstantTransport(persisted.value.instant), toBody);
+    if (mapped.status === 200) return c.json(mapped.body, 200);
+    if (mapped.status === 422) return c.json(mapped.body, 422);
+    if (mapped.status === 500) return c.json(mapped.body, 500);
+    return c.json(mapped.body, 400);
   });
 
   app.openapi(civilDateRoute, async (c) => {
     const { civilDate } = c.req.valid('json');
     const decoded = decodeCivilDateTransport(civilDate);
+    const toBody = (value: Parameters<typeof encodeCivilDateTransport>[0]) => ({
+      civilDate: encodeCivilDateTransport(value),
+    });
     if (!decoded.ok) {
-      const mapped = mapResultToHttp(decoded, encodeCivilDateTransport);
-      if (mapped.status === 200) return c.json({ civilDate: mapped.body as string }, 200);
-      if (mapped.status === 422) return c.json(asPublicFailure(mapped.body), 422);
-      if (mapped.status === 500) return c.json(asPublicFailure(mapped.body), 500);
-      return c.json(asPublicFailure(mapped.body), 400);
+      const mapped = mapResultToHttp(decoded, toBody);
+      if (mapped.status === 200) return c.json(mapped.body, 200);
+      if (mapped.status === 422) return c.json(mapped.body, 422);
+      if (mapped.status === 500) return c.json(mapped.body, 500);
+      return c.json(mapped.body, 400);
     }
-    const canonical = encodeCivilDateTransport(decoded.value);
-    const persisted = await roundTripCivilDateExact(deps.pool, canonical);
+    const persisted = await roundTripCivilDateExact(
+      deps.pool,
+      encodeCivilDateTransport(decoded.value),
+    );
     if (!persisted.ok) {
-      return c.json(asPublicFailure(mapResultToHttp(persisted, (v) => v).body), 500);
+      const mapped = mapResultToHttp(persisted, (v) => v);
+      // Cast: Err-narrowed Result loses success body precision for OpenAPI.
+      if (mapped.status === 200) return c.json(mapped.body as { civilDate: string }, 200);
+      if (mapped.status === 422) return c.json(mapped.body, 422);
+      if (mapped.status === 500) return c.json(mapped.body, 500);
+      return c.json(mapped.body, 400);
     }
-    const again = decodeCivilDateTransport(persisted.value.civilDate);
-    const mapped = mapResultToHttp(again, (value) => ({ civilDate: encodeCivilDateTransport(value) }));
-    if (mapped.status === 200) return c.json(mapped.body as { civilDate: string }, 200);
-    if (mapped.status === 422) return c.json(asPublicFailure(mapped.body), 422);
-    if (mapped.status === 500) return c.json(asPublicFailure(mapped.body), 500);
-    return c.json(asPublicFailure(mapped.body), 400);
+    const mapped = mapResultToHttp(decodeCivilDateTransport(persisted.value.civilDate), toBody);
+    if (mapped.status === 200) return c.json(mapped.body, 200);
+    if (mapped.status === 422) return c.json(mapped.body, 422);
+    if (mapped.status === 500) return c.json(mapped.body, 500);
+    return c.json(mapped.body, 400);
   });
 
   app.openapi(failRoute, async (c) => {
     const failed = await failExactPersistenceProbe(deps.pool);
-    const mapped = mapResultToHttp(failed, (v) => v);
-    return c.json(asPublicFailure(mapped.body), 500);
+    const mapped = mapResultToHttp(failed, (): { unreachable: true } => ({ unreachable: true }));
+    if (mapped.status === 500) return c.json(mapped.body, 500);
+    return c.json(
+      { code: 'PERSISTENCE_PROBE_FAILED', message: 'exact persistence probe failed' },
+      500,
+    );
   });
 
   return app;

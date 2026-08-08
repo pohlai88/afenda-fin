@@ -30,10 +30,10 @@ function failureStatus(code: string): 400 | 422 | 500 {
  * - ok → 200 + success body
  * - err → 400/422/500 + encodeFailureTransport (never serializes cause/stack)
  */
-export function mapResultToHttp<T, C extends string>(
+export function mapResultToHttp<T, C extends string, B>(
   result: Result<T, C>,
-  successBody: (value: T) => unknown,
-): HttpMappedResult<unknown> {
+  successBody: (value: T) => B,
+): HttpMappedResult<B> {
   if (isOk(result)) {
     return { status: 200, body: successBody(result.value) };
   }
