@@ -166,28 +166,28 @@ function main(): StepResult[] {
 
   const turboPackages = runTurbo(['typecheck:native', 'typecheck:compat', 'test']);
   steps.push({
-    step: '4d. Turbo-orchestrated package typecheck+test (packages/errors, time, money, contracts, db unit)',
+    step: '4d. Turbo-orchestrated package typecheck+test (packages/* + apps/api)',
     status: turboPackages.ok ? 'PASS' : 'FAIL',
     detail: turboPackages.ok ? 'all package tasks passed' : turboPackages.output,
   });
 
   const depCruise = runPnpmScript('boundary:check');
   steps.push({
-    step: '4e. static governance control: module-boundary graph (SCC-05, dependency-cruiser over packages/*)',
+    step: '4e. static governance control: module-boundary graph (SCC-05, dependency-cruiser over apps/* + packages/*)',
     status: depCruise.ok ? 'PASS' : 'FAIL',
     detail: depCruise.ok ? 'clean' : depCruise.output,
   });
 
   const moneySafety = runNodeScript('scripts/check-money-safety.ts');
   steps.push({
-    step: '4f. static governance control: authoritative-money type safety (SCC-03, packages/money + packages/contracts surfaces)',
+    step: '4f. static governance control: authoritative-money type safety (SCC-03, money + contracts + apps/api)',
     status: moneySafety.ok ? 'PASS' : 'FAIL',
     detail: moneySafety.ok ? 'clean' : moneySafety.output,
   });
 
   const archControl = runNodeScript('scripts/check-architecture.ts');
   steps.push({
-    step: '4g. static governance control: application architecture (SCC-24 subset incl. no-ambient-clock, packages/* source)',
+    step: '4g. static governance control: application architecture (SCC-24 subset, packages/* + apps/* source)',
     status: archControl.ok ? 'PASS' : 'FAIL',
     detail: archControl.ok ? 'clean' : archControl.output,
   });
@@ -206,6 +206,20 @@ function main(): StepResult[] {
     detail: txSafety.ok ? 'clean' : txSafety.output,
   });
 
+  const honoPath = runNodeScript('scripts/check-hono-api-path.ts');
+  steps.push({
+    step: '4j. static governance control: Hono Node + Zod/OpenAPI path only (SCC-12, apps/api/src)',
+    status: honoPath.ok ? 'PASS' : 'FAIL',
+    detail: honoPath.ok ? 'clean' : honoPath.output,
+  });
+
+  const openapiDrift = runPnpmScript('api:openapi:check');
+  steps.push({
+    step: '4k. OpenAPI drift (committed apps/api/openapi.json vs fresh deterministic generation)',
+    status: openapiDrift.ok ? 'PASS' : 'FAIL',
+    detail: openapiDrift.ok ? 'in sync' : openapiDrift.output,
+  });
+
   const controlMap = JSON.parse(readFileSync(path.join(ROOT, 'governance', 'control-implementation.json'), 'utf8')) as unknown;
   const completeness = checkControlMapCompleteness(controlMap);
   steps.push({
@@ -217,13 +231,16 @@ function main(): StepResult[] {
   const packageJson = JSON.parse(readFileSync(path.join(ROOT, 'package.json'), 'utf8')) as Record<string, unknown>;
   const rootPinCheck = checkDependencyPinsAreExact(packageJson);
   const packagePinFailures: string[] = rootPinCheck.failures.map((f) => `package.json: ${f}`);
-  for (const pkgDir of globSync('packages/*/package.json', { cwd: ROOT }).sort()) {
+  for (const pkgDir of [
+    ...globSync('packages/*/package.json', { cwd: ROOT }),
+    ...globSync('apps/*/package.json', { cwd: ROOT }),
+  ].sort()) {
     const pkgJson = JSON.parse(readFileSync(path.join(ROOT, pkgDir), 'utf8')) as Record<string, unknown>;
     const result = checkDependencyPinsAreExact(pkgJson);
     packagePinFailures.push(...result.failures.map((f) => `${pkgDir}: ${f}`));
   }
   steps.push({
-    step: '5b. dependency pin policy (no ^/~/latest ranges in package.json, root + every packages/*/package.json)',
+    step: '5b. dependency pin policy (no ^/~/latest ranges in package.json, root + packages/* + apps/*)',
     status: packagePinFailures.length === 0 ? 'PASS' : 'FAIL',
     detail: packagePinFailures.length === 0 ? 'all exact' : packagePinFailures.join('; '),
   });

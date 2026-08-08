@@ -154,8 +154,11 @@ export function scanSourceForArchitectureViolations(sourceText: string, filePath
   return violations;
 }
 
-export function checkApplicationArchitecture(globPattern = 'packages/*/src/**/*.ts'): { ok: boolean; violations: ArchitectureViolation[]; filesScanned: number } {
-  const files = globSync(globPattern, { cwd: ROOT }).sort();
+export function checkApplicationArchitecture(
+  globPattern: string | string[] = ['packages/*/src/**/*.ts', 'apps/*/src/**/*.ts'],
+): { ok: boolean; violations: ArchitectureViolation[]; filesScanned: number } {
+  const patterns = Array.isArray(globPattern) ? globPattern : [globPattern];
+  const files = patterns.flatMap((pattern) => globSync(pattern, { cwd: ROOT })).sort();
   const violations: ArchitectureViolation[] = [];
   for (const relFile of files) {
     const normalizedRelFile = relFile.replace(/\\/g, '/');
@@ -171,7 +174,7 @@ export function checkApplicationArchitecture(globPattern = 'packages/*/src/**/*.
 if (isMainModule(import.meta.url, 'check-architecture.ts')) {
   const report = checkApplicationArchitecture();
   console.log('\n=== AFENDA SCC-24 application architecture control (PARTIAL: decorators, class-inheritance, module-discovery, ambient-clock subset) ===\n');
-  console.log(`Files scanned: ${String(report.filesScanned)} (packages/*/src/**/*.ts)`);
+  console.log(`Files scanned: ${String(report.filesScanned)} (packages/*/src/**/*.ts + apps/*/src/**/*.ts)`);
   if (report.filesScanned === 0) {
     console.log('FAIL: scanned 0 files (empty glob cannot PASS).');
   } else if (report.ok) {

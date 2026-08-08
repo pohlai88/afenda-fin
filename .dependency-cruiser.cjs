@@ -1,15 +1,10 @@
 // SCC-05 module-boundary control (stack/STACK.md §6-7).
 //
-// Phase 3A (AFENDA kernel) gave this config a real, non-empty package graph:
-// packages/errors, packages/time, packages/money. Phase 3B adds
-// packages/contracts. Phase 3C adds packages/db (depends on @afenda/errors
-// today; may grow time/money deps when domain decode helpers exist; must not
-// depend on contracts; kernel packages must not depend on db).
-// See governance/PHASE_3C_DB_REPORT.md.
+// Phase 3A–3C: packages/{errors,time,money,contracts,db}.
+// Phase 3D: apps/api (thin Hono adapter over contracts; must not be depended
+// on by any package; must not import package src/* internals or packages/db).
 //
-// `no-domain-to-adapter` remains forward-declared per stack/STACK.md §8 (no
-// packages/domain or apps/* exist yet) and is NOT counted as current SCC-05
-// evidence on its own.
+// `no-domain-to-adapter` remains forward-declared (no packages/domain yet).
 
 /** @type {import('dependency-cruiser').IConfiguration} */
 module.exports = {
@@ -32,6 +27,29 @@ module.exports = {
         path: '^packages/([^/]+)/src/',
         pathNot: '^packages/$1/src/',
       },
+    },
+    {
+      name: 'no-app-package-internal-import',
+      comment:
+        'Phase 3D: apps/* may only consume packages through their public exports root, never packages/*/src/* internals.',
+      severity: 'error',
+      from: { path: '^apps/' },
+      to: { path: '^packages/[^/]+/src/' },
+    },
+    {
+      name: 'no-package-depends-on-apps',
+      comment: 'Phase 3D: packages must never depend on apps/* (adapter sits above packages).',
+      severity: 'error',
+      from: { path: '^packages/' },
+      to: { path: '^apps/' },
+    },
+    {
+      name: 'no-api-depends-on-db',
+      comment:
+        'Phase 3D: apps/api proves HTTP architecture without inventing persistence; no packages/db dependency until a real operation needs it.',
+      severity: 'error',
+      from: { path: '^apps/api/' },
+      to: { path: '^packages/db/' },
     },
     {
       name: 'no-money-depends-on-time',

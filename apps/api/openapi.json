@@ -1,0 +1,325 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AFENDA API",
+    "version": "0.0.0",
+    "description": "Thin Hono adapter over @afenda/contracts. Routes tagged afenda-verify are reference/verification surfaces, not product ERP operations. No ledger, identity, or frontend client in this phase."
+  },
+  "components": {
+    "schemas": {
+      "HealthWire": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "additionalProperties": false
+      },
+      "MoneyWire": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "example": "MYR"
+          },
+          "minorUnits": {
+            "type": "string",
+            "description": "Canonical integer string (never JSON number)",
+            "example": "12345"
+          }
+        },
+        "required": [
+          "currency",
+          "minorUnits"
+        ],
+        "additionalProperties": false
+      },
+      "PublicFailureWire": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "additionalProperties": false
+      },
+      "InstantVerifyBody": {
+        "type": "object",
+        "properties": {
+          "instant": {
+            "type": "string",
+            "description": "Canonical RFC 3339 UTC instant (YYYY-MM-DDTHH:mm:ss.sssZ)",
+            "example": "2026-08-08T00:00:00.000Z"
+          }
+        },
+        "required": [
+          "instant"
+        ],
+        "additionalProperties": false
+      },
+      "CivilDateVerifyBody": {
+        "type": "object",
+        "properties": {
+          "civilDate": {
+            "type": "string",
+            "description": "Canonical civil date YYYY-MM-DD (no timezone)",
+            "example": "2026-08-08"
+          }
+        },
+        "required": [
+          "civilDate"
+        ],
+        "additionalProperties": false
+      },
+      "AsOfWire": {
+        "type": "object",
+        "properties": {
+          "businessAsOf": {
+            "type": "string",
+            "description": "Canonical RFC 3339 UTC instant (YYYY-MM-DDTHH:mm:ss.sssZ)",
+            "example": "2026-08-08T00:00:00.000Z"
+          },
+          "knowledgeAsOf": {
+            "type": "string",
+            "description": "Canonical RFC 3339 UTC instant (YYYY-MM-DDTHH:mm:ss.sssZ)",
+            "example": "2026-08-08T00:00:00.000Z"
+          }
+        },
+        "required": [
+          "businessAsOf",
+          "knowledgeAsOf"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Liveness probe (not an authoritative money/time boundary)",
+        "responses": {
+          "200": {
+            "description": "Process is up",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthWire"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_afenda/verify/money": {
+      "post": {
+        "tags": [
+          "afenda-verify"
+        ],
+        "summary": "AFENDA reference: Money wire round-trip (not a business operation)",
+        "description": "Verification-only endpoint. Decodes MoneyWire via @afenda/contracts and re-encodes. Not ERP posting/sales/payment functionality.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoneyWire"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Canonical MoneyWire round-trip",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoneyWire"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Public failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicFailureWire"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Domain/range failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicFailureWire"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_afenda/verify/instant": {
+      "post": {
+        "tags": [
+          "afenda-verify"
+        ],
+        "summary": "AFENDA reference: Instant wire round-trip (not a business operation)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstantVerifyBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Canonical InstantWire",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstantVerifyBody"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Public failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicFailureWire"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_afenda/verify/civil-date": {
+      "post": {
+        "tags": [
+          "afenda-verify"
+        ],
+        "summary": "AFENDA reference: CivilDate wire round-trip (not a business operation)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CivilDateVerifyBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Canonical CivilDateWire",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CivilDateVerifyBody"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Public failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicFailureWire"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/_afenda/verify/as-of": {
+      "post": {
+        "tags": [
+          "afenda-verify"
+        ],
+        "summary": "AFENDA reference: AsOf wire round-trip (not a business operation)",
+        "description": "Both businessAsOf and knowledgeAsOf are required. Neither may be omitted or substituted.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsOfWire"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Canonical AsOfWire",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsOfWire"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Public failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicFailureWire"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}

@@ -74,6 +74,12 @@
     },
     {
       "paths": [
+        "apps/api"
+      ],
+      "role": "Phase 3D thin Hono HTTP adapter (`@hono/node-server` + `@hono/zod-openapi`) over `@afenda/contracts`. Production `GET /health` plus labeled `/_afenda/verify/*` reference routes for Money/time HTTP evidence. No frontend, identity, worker, ledger, or packages/db coupling. See governance/PHASE_3D_API_REPORT.md."
+    },
+    {
+      "paths": [
         "package.json",
         "tsconfig.json",
         "tsconfig.base.json",
@@ -82,7 +88,7 @@
         "turbo.json",
         "docker-compose.yml"
       ],
-      "role": "Repository/tooling control-plane shell; Turborepo package tasks across errors/time/money/contracts/db; digest-pinned local Postgres 18 compose profile for development only."
+      "role": "Repository/tooling control-plane shell; Turborepo package tasks across errors/time/money/contracts/db/api; digest-pinned local Postgres 18/17 compose profile for development only."
     }
   ],
   "before_finishing": "Run `pnpm gate`. If it fails, fix the code — never the gate, the test, the seals, or the canonical authority documents. A failing or NOT-YET-BUILT gate is information; report it and stop.",

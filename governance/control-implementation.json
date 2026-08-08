@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "as_of": "2026-08-08",
-  "generation_method": "Manually assessed against executable evidence gathered during AFENDA Phase 2–2.2 (control plane), Phase 3A (errors/time/money), Phase 3B (contracts), Phase 3B.1 (lint hardening), and Phase 3C (packages/db persistence boundary: node-postgres, dual-major Testcontainers 18/17, PGlite structural lane gate, Kysely CanonicalCodegenSource + drift via pnpm gate:db-integration). Unlike doctrine-registry.json / stack-registry.json / position-registry.json / authority-index.json, this file is not a pure deterministic text-extraction projection: implementation state is a judgment call that requires running real checks, not parsing prose. Structural completeness (every SCC-01..27 and V01..18 present exactly once, states drawn from the fixed enum) is itself verified by scripts/gate.ts's control-map-completeness step. See governance/PHASE_3A_KERNEL_REPORT.md, governance/PHASE_3B_CONTRACTS_REPORT.md, governance/PHASE_3B1_LINT_REPORT.md and governance/PHASE_3C_DB_REPORT.md for full evidence detail.",
+  "generation_method": "Manually assessed against executable evidence gathered during AFENDA Phase 2–2.2 (control plane), Phase 3A (errors/time/money), Phase 3B (contracts), Phase 3B.1 (lint hardening), Phase 3C (packages/db), and Phase 3D (apps/api thin Hono HTTP adapter). Unlike doctrine-registry.json / stack-registry.json / position-registry.json / authority-index.json, this file is not a pure deterministic text-extraction projection: implementation state is a judgment call that requires running real checks, not parsing prose. Structural completeness (every SCC-01..27 and V01..18 present exactly once, states drawn from the fixed enum) is itself verified by scripts/gate.ts's control-map-completeness step. See governance/PHASE_3A_KERNEL_REPORT.md, governance/PHASE_3B_CONTRACTS_REPORT.md, governance/PHASE_3B1_LINT_REPORT.md, governance/PHASE_3C_DB_REPORT.md and governance/PHASE_3D_API_REPORT.md for full evidence detail.",
   "state_enum": ["implemented", "partial", "not-yet-built", "blocked", "not-applicable-current-tree"],
   "policy": [
     "A control is never 'implemented' merely because a document describes it; implementation requires an executable check.",
@@ -65,8 +65,9 @@
       "name": "Authoritative money type safety",
       "applies_to": ["SEL-01", "SEL-10"],
       "state": "implemented",
-      "gate": "pnpm run typecheck:native (structural, packages/money + packages/contracts) && node scripts/check-money-safety.ts (static AST gate over both packages, wired into `pnpm gate` step 4f)",
+      "gate": "pnpm run typecheck:native (structural, packages/money + packages/contracts + apps/api) && node scripts/check-money-safety.ts (static AST gate over money/contracts/apps/api, wired into `pnpm gate` step 4f)",
       "evidence": [
+        "Phase 3D: scripts/check-money-safety.ts glob extended to apps/api/src/**/*.ts; HTTP Money verify route uses string minorUnits only; apps/api Vitest proves 2^53±1 string round-trip",
         "packages/money/src/{currency,minor-units,money,rate,rounding}.ts: Money's `minorUnits` field is a branded bigint (MinorUnits); there is no code path, overload, or cast that accepts a JavaScript `number` as an authoritative amount",
         "packages/money/src/money.ts parseMoney(): rejects any input whose `minorUnits` is not a string (a JSON `number` is rejected, not silently coerced) — comment cites 'MON-01 / SCC-03' at the exact rejection site",
         "Phase 3B: packages/contracts/src/money-transport.ts MoneyWireSchema is a strict Zod object with `minorUnits: z.string()` — a JSON `number` is rejected at the schema layer before parseMoney is even called, and decodeMoneyTransport delegates all range/format semantics to the domain parseMoney rather than duplicating them",
@@ -83,10 +84,11 @@
         "Phase 3B red.ts runMoneyTransportPrecisionLossMutationFixture(): routes encodeMoneyTransport through a lossy `Number(bigint)` conversion instead of the exact domain serializer, runs the real contracts test suite, confirms 7 exact-round-trip/property tests turn red at the 2^53 boundary, restores the file byte-for-byte",
         "Phase 3A red.ts runMoneyCurrencyGuardMutationFixture() / runMoneyRangeGuardMutationFixture(): mutation-kill fixtures (see SCC-18)",
         "Phase 3A + 3B tests/type-invalid delegated fixtures (see SCC-01/SCC-02 red_fixtures)",
-        "Phase 3B.1 red.ts runMoneyJsonIngressLintFixture(): the SEC-05 business-facing proof — writes a disposable file importing `moneyFromParts` from `@afenda/money` and passing raw `JSON.parse(raw).currency`/`.minorUnits` directly to it, confirms `@typescript-eslint/no-unsafe-assignment` AND `@typescript-eslint/no-unsafe-argument` both fire, then overwrites the same real path with the sanctioned `decodeMoneyTransport(JSON.parse(raw))` form and confirms it lints with zero errors, before removing the file"
+        "Phase 3B.1 red.ts runMoneyJsonIngressLintFixture(): the SEC-05 business-facing proof — writes a disposable file importing `moneyFromParts` from `@afenda/money` and passing raw `JSON.parse(raw).currency`/`.minorUnits` directly to it, confirms `@typescript-eslint/no-unsafe-assignment` AND `@typescript-eslint/no-unsafe-argument` both fire, then overwrites the same real path with the sanctioned `decodeMoneyTransport(JSON.parse(raw))` form and confirms it lints with zero errors, before removing the file",
+        "Phase 3D red.ts runApiMoneyNumberLiteralFixture(): unsafe minorUnits number literal in apps/api/src caught by checkMoneySafety"
       ],
-      "notes": "Promoted from PARTIAL to IMPLEMENTED in Phase 3B for the current, actual topology: SCC-03's stack-authority required outcome is 'No JavaScript number in authoritative money contracts or code paths; JSON money uses canonical integer strings' (stack/STACK.md control table) — it does not itself say 'every future boundary', unlike V08's doctrine wording. That outcome is now proven, mechanically and with red evidence, across both authoritative money surfaces that currently exist: packages/money (the domain type) and packages/contracts (the one real JSON transport boundary). This does NOT claim SCC-03 is complete for a future apps/api or packages/db boundary — those do not exist yet, and when they do, scripts/check-money-safety.ts's glob scope and this control's evidence must be extended again before re-affirming 'implemented' for the larger topology. Phase 3B.1 strengthens this further, still without changing state: previously, nothing prevented an untrusted `any` (e.g. from `JSON.parse`) from being handed straight to `moneyFromParts`/`makeMoney` anywhere in the repository outside packages/contracts's own code — only convention and code review would have caught it. The two newly-enabled unsafe-ingress lint rules now make that a real, repository-wide, mechanically-enforced failure, independently of scripts/check-money-safety.ts's narrower AST scan.",
-      "revisit_trigger": "When apps/api and/or packages/db exist with authoritative money fields, extend scripts/check-money-safety.ts's glob scope to cover them and add fixtures for that boundary; if any gap is found, revert this control to 'partial' rather than silently keeping 'implemented'."
+      "notes": "Remains IMPLEMENTED for the current topology after Phase 3D: money + contracts + apps/api authoritative money surfaces are covered by the AST gate and HTTP tests. packages/db still returns exact strings (not domain Money) and has no authoritative Money JSON path — when DB→Money decode helpers appear, extend the gate again. V08 remains separately PARTIAL (not every doctrine boundary exists).",
+      "revisit_trigger": "When packages/db or additional apps expose authoritative money JSON/fields; extend check-money-safety globs and fixtures, or revert to partial if coverage gaps appear."
     },
     {
       "control_id": "SCC-04",
@@ -102,7 +104,8 @@
         "scripts/verify-toolchain-baseline.ts (executable comparison against stack/VERSION_BASELINE.json; Phase 2.2: rewritten to report 5 distinct fields per component — declared/pinned/resolved/executed/ci-observed — instead of one collapsed boolean, and extended to cover pnpm and Turborepo, not just Node/TypeScript)",
         "scripts/lib/control-map.ts checkDependencyPinsAreExact (rejects ^ / ~ / \"latest\" specs in package.json dependencies and devDependencies)",
         "stack/VERSION_BASELINE.json (Phase 2.2: schema_version 2) now carries packages.pnpm.reference_patch=11.20.0 and packages.turborepo.reference_patch=2.10.8, and compiler.typescript_compat.compiler_engine records the 6.0.3 engine fact as a field distinct from the 6.0.2 package-level reference_patch, with full resolution evidence and an independent-reproduction record inline",
-        ".github/workflows/gate.yml runs pnpm install --frozen-lockfile && pnpm gate (workflow file present; Phase 2.2 confirmed via `git remote -v` that this repository has no configured remote in this environment, so a live GitHub Actions run genuinely cannot be observed here — this is not a tooling limitation being worked around, it is the actual absence of a remote to run CI against)"
+        ".github/workflows/gate.yml present; remote origin https://github.com/pohlai88/afenda-fin.git observed",
+        "Phase 3D.0 CI observation: gh run 31229167315 (headSha 9a3dca752c031a6aa5c59b28c4227a1bfa57c75e, workflow gate, push to main) concluded failure in ~3s with zero recorded job steps — not a successful pnpm gate/red/toolchain observation; SCC-04 CI-verified claim remains unestablished"
       ],
       "red_fixtures": [
         "red:toolchain-mismatch (scripts/red.ts) — combined multi-field mismatch",
@@ -111,7 +114,7 @@
         "red:dependency-range-injected (scripts/red.ts)",
         "red:lockfile-package-disagreement (scripts/red.ts, Phase 2.2) — mutates the real package.json devDependencies.turbo to a value that disagrees with the frozen pnpm-lock.yaml, invokes the actual `pnpm install --frozen-lockfile` command (not a helper function), confirms ERR_PNPM_OUTDATED_LOCKFILE, then restores package.json byte-for-byte in a finally block"
       ],
-      "notes": "Remains partial after Phase 2.2 investigation (this is a corrected, more precisely evidenced partial, not a re-opened question). Two things were investigated to completion and neither closes the gap, by design: (1) CI-observed evidence: `git remote -v` was run and confirmed this repository has zero configured remotes in this environment; there is therefore no GitHub Actions run that could possibly be inspected from here, and none is claimed. 'CI-verified' in SCC-04's wording remains unestablished, honestly, pending a real remote + an actual observed run. (2) The TypeScript-6 compatibility engine gap was fully traced (pnpm why/list, pnpm-lock.yaml snapshot line, node_modules/.pnpm inspection, the wrapper's own bin->lib->require chain) and independently reproduced from a from-scratch disposable install containing only the exact declared package specifier with no other dependencies present — ruling out local lockfile contamination. Classification: this is upstream package design (the @typescript/typescript6@6.0.2 wrapper's own package.json declares its real compiler engine, \"@typescript/old\", via the semver range \"npm:typescript@^6\", not an exact version) combined with a latent schema gap that stack/VERSION_BASELINE.json's schema_version 1 had — it had no field distinguishing 'package pin' from 'compiler engine' for this one tool. Phase 2.2 added that field (compiler.typescript_compat.compiler_engine) so the fact is now explicit machine authority rather than only checker-output prose. This is evidence/schema remediation, not a normative STACK.md contradiction: STACK.md's SEL-02 says 'exact versions' without specifying package-vs-engine granularity, and the frozen pnpm-lock.yaml does make the engine version deterministic and reproducible for this repository's tree (just not equal to the package-level reference_patch when the two are compared as if they were one fact). No STACK_AMENDMENT_PROPOSAL.md was created because the gap is fully resolvable through implementation metadata (done: VERSION_BASELINE.json + verify-toolchain-baseline.ts + red fixtures) without touching STACK.md's normative text. Separately, and now evidence-complete rather than gapped: stack/VERSION_BASELINE.json previously did not pin an exact pnpm or Turborepo version anywhere; Phase 2.2 added packages.pnpm and packages.turborepo entries recording the already-mechanically-enforced values (11.20.0, 2.10.8) as an explicit declared reference, closing that specific incompleteness. This did not require a STACK.md amendment either: SEL-04's binding constraints ('exact packageManager field, frozen lockfile') were already satisfied by package.json + pnpm-lock.yaml before this entry existed; VERSION_BASELINE.json is an unsealed machine-authority convenience registry, not sealed normative text. Also still true: turbo.json is schema-valid but currently orchestrates 0 tasks because pnpm-workspace.yaml matches 0 packages; `pnpm gate` invokes the underlying scripts directly rather than through `turbo run`.",
+      "notes": "Remains partial. Phase 3D.0: a live remote and GitHub Actions runs are now observable, but the observed gate run for 9a3dca7 failed before recording executable steps — workflow syntax alone is not CI evidence, and a failing empty-step run does not establish CI-verified toolchain. Compat-engine gap from Phase 2.2 remains: (2) The TypeScript-6 compatibility engine gap was fully traced (pnpm why/list, pnpm-lock.yaml snapshot line, node_modules/.pnpm inspection, the wrapper's own bin->lib->require chain) and independently reproduced from a from-scratch disposable install containing only the exact declared package specifier with no other dependencies present — ruling out local lockfile contamination. Classification: this is upstream package design (the @typescript/typescript6@6.0.2 wrapper's own package.json declares its real compiler engine, \"@typescript/old\", via the semver range \"npm:typescript@^6\", not an exact version) combined with a latent schema gap that stack/VERSION_BASELINE.json's schema_version 1 had — it had no field distinguishing 'package pin' from 'compiler engine' for this one tool. Phase 2.2 added that field (compiler.typescript_compat.compiler_engine) so the fact is now explicit machine authority rather than only checker-output prose. This is evidence/schema remediation, not a normative STACK.md contradiction: STACK.md's SEL-02 says 'exact versions' without specifying package-vs-engine granularity, and the frozen pnpm-lock.yaml does make the engine version deterministic and reproducible for this repository's tree (just not equal to the package-level reference_patch when the two are compared as if they were one fact). No STACK_AMENDMENT_PROPOSAL.md was created because the gap is fully resolvable through implementation metadata (done: VERSION_BASELINE.json + verify-toolchain-baseline.ts + red fixtures) without touching STACK.md's normative text. Separately, and now evidence-complete rather than gapped: stack/VERSION_BASELINE.json previously did not pin an exact pnpm or Turborepo version anywhere; Phase 2.2 added packages.pnpm and packages.turborepo entries recording the already-mechanically-enforced values (11.20.0, 2.10.8) as an explicit declared reference, closing that specific incompleteness. This did not require a STACK.md amendment either: SEL-04's binding constraints ('exact packageManager field, frozen lockfile') were already satisfied by package.json + pnpm-lock.yaml before this entry existed; VERSION_BASELINE.json is an unsealed machine-authority convenience registry, not sealed normative text. Also still true: turbo.json is schema-valid but currently orchestrates 0 tasks because pnpm-workspace.yaml matches 0 packages; `pnpm gate` invokes the underlying scripts directly rather than through `turbo run`.",
       "revisit_trigger": "When .github/workflows/gate.yml is observed executing successfully on a live GitHub Actions runner (requires a configured git remote first), AND either (a) the TypeScript-6 compatibility engine resolution is pinned exactly (e.g. a pnpm override/resolution forcing @typescript/old to the declared reference_patch) or (b) VERSION_BASELINE.json's typescript_compat.reference_patch is explicitly revised to match the intentionally-resolved engine version, whichever reflects the real governance decision."
     },
     {
@@ -136,8 +139,8 @@
         "Phase 3B red.ts runDepCruiseReverseDependencyFixture(): injects packages/money/src/__red_fixture_reverse_dependency__.ts importing packages/contracts/src/index.ts (the exact reverse dependency the transport boundary exists to forbid), confirmed caught by the new no-kernel-depends-on-contracts rule via the real CLI command, file removed after",
         "Manually verified during implementation (not committed as a fixture): a cross-package internal import against the FORBIDDEN direction (packages/errors reaching into packages/money/src) is caught by two rules simultaneously (no-errors-depends-upward AND no-cross-package-internal-import), confirming the rules compose correctly rather than masking each other"
       ],
-      "notes": "Implemented for the current, actual 5-package graph (errors/time/money/contracts/db). Domain->adapter remains forward-declared (no packages/domain or apps/* yet).",
-      "revisit_trigger": "When packages/domain or apps/* exist, add real (not forward-declared) rules and red fixtures for those specific new boundaries."
+      "notes": "Implemented for the current graph: packages/{errors,time,money,contracts,db} + apps/api. Phase 3D added no-package-depends-on-apps, no-app-package-internal-import, no-api-depends-on-db, and boundary:check now depcruises `apps packages`. Domain->adapter remains forward-declared (no packages/domain yet).",
+      "revisit_trigger": "When packages/domain or additional apps/* exist, add real rules and red fixtures for those boundaries."
     },
     {
       "control_id": "SCC-06",
@@ -240,10 +243,22 @@
       "control_id": "SCC-12",
       "name": "Hono runtime and contract path",
       "applies_to": ["SEL-09", "SEL-10"],
-      "state": "not-yet-built",
-      "gate": null, "evidence": [], "red_fixtures": [],
-      "notes": "Remains NOT-YET-BUILT, deliberately, even after Phase 3B. SCC-12's stack-authority required outcome is 'Only @hono/node-server and @hono/zod-openapi appear in authoritative API code; Hono RPC is prohibited' (stack/STACK.md control table) — that outcome is entirely about a Hono API surface, which does not exist (no apps/api, no Hono dependency of any kind was added). Phase 3B built packages/contracts (the Zod-only, non-Hono half of SEL-10's transport-schema decision) deliberately without installing Hono, per the phase brief's explicit instruction not to install Hono merely to advance this control. That work is real evidence for V08/SEC-05/SCC-03, but it does not touch SCC-12's own required outcome, so no partial credit is claimed here.",
-      "revisit_trigger": "When apps/api exists using @hono/node-server and @hono/zod-openapi."
+      "state": "implemented",
+      "gate": "pnpm gate step 4j (scripts/check-hono-api-path.ts) && pnpm --filter @afenda/api test && pnpm api:openapi:check",
+      "evidence": [
+        "apps/api uses exact pins hono@4.13.1, @hono/node-server@2.1.0, @hono/zod-openapi@1.5.1, zod@4.4.3; createApi/startServer separation; no Hono RPC",
+        "scripts/check-hono-api-path.ts AST-scans apps/api/src imports: allows hono/@hono/node-server/@hono/zod-openapi/@afenda/{contracts,errors}/zod/node:; forbids hono/client, alternate @hono/* adapters, express/fastify/next, @afenda/db/pg, pool.query/sql()",
+        "OpenAPI generated deterministically to apps/api/openapi.json; read-only drift gate in pnpm gate step 4k",
+        "Money/time HTTP evidence uses labeled /_afenda/verify/* reference routes (not product ERP operations) — recorded in PHASE_3D_API_REPORT.md"
+      ],
+      "red_fixtures": [
+        "red: SCC-12 alternate @hono/cloudflare-workers import",
+        "red: SCC-12 hono/client RPC import",
+        "red: SCC-12 pool.query in apps/api/src",
+        "red: OpenAPI drift without regeneration"
+      ],
+      "notes": "Implemented for the current apps/api topology against SCC-12's required outcome (Node adapter + Zod/OpenAPI path; Hono RPC prohibited). Product maturity is separate: Money/time HTTP proof uses afenda-verify reference routes because no legitimate business operation exists yet. Frontend client generation remains NOT-YET-BUILT.",
+      "revisit_trigger": "When additional apps/* API packages appear, or when a real business operation replaces verify-only Money routes — extend the scanner scope and reaffirm."
     },
     {
       "control_id": "SCC-13",
@@ -359,8 +374,7 @@
       "applies_to": ["SEL-23"],
       "state": "not-yet-built",
       "gate": null, "evidence": [], "red_fixtures": [],
-      "notes": "No containers, Docker Compose files, or digest-pinned images exist.",
-      "revisit_trigger": "When deployment manifests exist."
+      "notes": "Phase 3C added digest-pinned docker-compose.yml for local/dev PostgreSQL 18/17 only (pnpm db:up). That is not a reproducible self-host application deployment profile (no API/app containers, no OCI app image, no SEL-23 deployment manifests). Stays not-yet-built.", "revisit_trigger": "When application deployment manifests (OCI/Compose self-host profile) exist."
     },
     {
       "control_id": "SCC-24",
@@ -422,7 +436,7 @@
     {
       "control_id": "V01", "title": "Privilege topology", "primary_rules": ["LED-01", "LED-02", "SEC-01", "SEC-04"],
       "related_scc": [], "state": "not-yet-built", "gate": null, "evidence": [], "red_fixtures": [],
-      "notes": "Requires database roles/grants that do not exist yet.", "revisit_trigger": "When db/migrations establishes role/grant topology."
+      "notes": "Phase 3C bootstrap (db/migrations/0001_bootstrap.sql) creates afenda_migrator and afenda_app and records bootstrap identity rules, but full privilege topology (request/posting/audit/backup separation, LED/SEC grant proofs) is not established — STACK_ADOPTION credential item remains unchecked. Stays not-yet-built pending executable privilege evidence beyond migrator/app bootstrap.", "revisit_trigger": "When request/posting/audit/backup roles and grant proofs exist with executable checks."
     },
     {
       "control_id": "V02", "title": "Atomic batch balance", "primary_rules": ["LED-03"],
@@ -437,7 +451,7 @@
     {
       "control_id": "V04", "title": "Rounding boundary", "primary_rules": ["LED-05", "MON-04"],
       "related_scc": ["SCC-03"], "state": "not-yet-built", "gate": null, "evidence": [], "red_fixtures": [],
-      "notes": "Requires packages/money.", "revisit_trigger": "When packages/money exists."
+      "notes": "packages/money exists with named half-even rounding and an independent oracle (see V13), but V04 requires the ledger posting rounding-boundary (LED-05) against real batch posting — not merely the money primitive. Stays not-yet-built until posting applies the rounding boundary.", "revisit_trigger": "When ledger posting applies the money rounding boundary with executable evidence."
     },
     {
       "control_id": "V05", "title": "Scope integrity", "primary_rules": ["LED-08", "SEC-03"],
@@ -472,8 +486,8 @@
         "Phase 3B red.ts runMoneyTransportDecimalGuardMutationFixture(): proves the malformed-canonical-string rejection is mutation-sensitive (see SCC-18/V12)",
         "Phase 3B.1 red.ts runMoneyJsonIngressLintFixture() (see SCC-03): proves the untrusted-JSON-to-Money path fails lint without Zod and lints clean through `decodeMoneyTransport`"
       ],
-      "notes": "Remains PARTIAL, not implemented: V08's doctrine wording is 'values survive every boundary exactly' (doctrine/DOCTRINE.md V-control table) — 'every boundary', not 'the boundaries that currently exist'. Phase 3B makes this materially stronger than Phase 3A: there is now one REAL external-JSON boundary (packages/contracts), proven exact at the full 2^53/bigint-bounds corpus doctrine's RED-03 names, with both example and property tests, and mutation-kill evidence that those tests would actually catch a regression. What still does NOT exist: any database, HTTP API, queue, or export boundary that carries a Money value — those are the remaining boundaries 'every boundary' still requires, and they are not simulated or assumed here. Phase 3B.1 adds a different KIND of evidence (static/lint, not runtime/test) that the one existing boundary is safe, and remains bounded by the same current-topology limit: it says nothing about a database/API/queue boundary that does not yet exist.",
-      "revisit_trigger": "When a real API/database/queue/export boundary exists carrying Money values, and a red fixture proves that boundary rejects an unsafe shape too; reassess toward 'implemented' only once no further currently-nonexistent boundary remains unaccounted for."
+      "notes": "Remains PARTIAL: doctrine requires values survive every boundary exactly. Phase 3D adds a real HTTP boundary via apps/api `/_afenda/verify/money` (reference route, not product ERP) with 2^53±1 / PG-bigint string round-trips through Hono+Zod+contracts. Separately proven layers now include: domain↔contracts JSON, Phase 3C DB exact string parsers, and Phase 3D HTTP. There is still NO composed HTTP→operation→DB Money path, and no queue/export boundary — do not read the three layers as one end-to-end chain.",
+      "revisit_trigger": "When a composed HTTP→DB (or queue/export) Money path exists with red fixtures; reassess toward implemented only when no remaining Money-carrying boundary is unaccounted for."
     },
     {
       "control_id": "V09", "title": "Typed evidence", "primary_rules": ["LED-09"],

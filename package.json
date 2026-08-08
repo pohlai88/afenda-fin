@@ -18,11 +18,13 @@
     "typecheck:compat": "tsc6 --noEmit -p tsconfig.json",
     "lint": "eslint .",
     "lint:dev": "eslint . --cache --cache-location node_modules/.cache/eslint",
-    "boundary:check": "depcruise packages --config .dependency-cruiser.cjs",
+    "boundary:check": "depcruise apps packages --config .dependency-cruiser.cjs",
     "agent-docs": "node scripts/generate-agent-docs.ts",
     "db:up": "docker compose up -d postgres18 postgres17",
     "db:down": "docker compose down -v",
     "check:postgres-image-pins": "node scripts/check-postgres-image-pins.ts",
+    "api:openapi": "pnpm --filter @afenda/api openapi:generate",
+    "api:openapi:check": "pnpm --filter @afenda/api openapi:check",
     "gate": "node scripts/gate.ts",
     "gate:db-integration": "node scripts/gate-db-integration.ts",
     "red": "node scripts/red.ts"
@@ -42,6 +44,7 @@
     "@afenda/money": "workspace:*",
     "@afenda/contracts": "workspace:*",
     "@afenda/db": "workspace:*",
+    "@afenda/api": "workspace:*",
     "zod": "4.4.3"
   }
 }

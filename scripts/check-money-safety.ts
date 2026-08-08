@@ -158,7 +158,11 @@ export function scanSourceForMoneySafetyViolations(sourceText: string, filePath:
   return violations;
 }
 
-const DEFAULT_GLOB_PATTERNS = ['packages/money/src/**/*.ts', 'packages/contracts/src/**/*.ts'];
+const DEFAULT_GLOB_PATTERNS = [
+  'packages/money/src/**/*.ts',
+  'packages/contracts/src/**/*.ts',
+  'apps/api/src/**/*.ts',
+];
 
 export function checkMoneySafety(globPatterns: string[] = DEFAULT_GLOB_PATTERNS): { ok: boolean; violations: MoneySafetyViolation[]; filesScanned: number } {
   const files = globPatterns.flatMap((pattern) => globSync(pattern, { cwd: ROOT })).sort();

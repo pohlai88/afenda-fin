@@ -21,6 +21,8 @@ import { checkApplicationArchitecture } from './check-architecture.ts';
 import { checkMoneySafety } from './check-money-safety.ts';
 import { checkTransactionSafety } from './check-transaction-safety.ts';
 import { assertComposeMatchesPins } from './check-postgres-image-pins.ts';
+import { checkHonoApiPath } from './check-hono-api-path.ts';
+import { checkOpenApiDrift } from '../apps/api/scripts/check-openapi-drift.ts';
 import { POSTGRES_IMAGE_PINS } from '../packages/db/src/postgres-pins.ts';
 import { isMainModule } from './lib/cli-main.ts';
 
@@ -840,12 +842,26 @@ function runMoneyTransportPrecisionLossMutationFixture(): RedFixtureResult {
 function runInstantTransportCalendarGuardMutationFixture(): RedFixtureResult {
   const filePath = path.join(ROOT, 'packages', 'time', 'src', 'instant.ts');
   const original = readFileSync(filePath, 'utf8');
-  const guard = 'if (instantToCanonicalString(candidate) !== canonical) {';
+  // Must match the live calendar round-trip guard in parseInstant (not a historical spelling).
+  const guard = 'if (formatEpochMillisUnchecked(epochMillis) !== canonical) {';
   if (!original.includes(guard)) {
-    return { name: 'mutation-kill: Instant calendar round-trip guard disabled', expectFail: true, failed: true, error: 'guard snippet not found verbatim in instant.ts; fixture is stale' };
+    return {
+      name: 'mutation-kill: Instant calendar round-trip guard disabled',
+      expectFail: true,
+      failed: false,
+      error: 'guard snippet not found verbatim in instant.ts; fixture is stale',
+    };
   }
   try {
     const mutated = original.replace(guard, 'if (false) {');
+    if (mutated === original || !mutated.includes('if (false) {')) {
+      return {
+        name: 'mutation-kill: Instant calendar round-trip guard disabled',
+        expectFail: true,
+        failed: false,
+        error: 'mutation replacement count was 0; fixture did not alter production code',
+      };
+    }
     writeFileSync(filePath, mutated, 'utf8');
     execFileSync('pnpm', ['--filter', '@afenda/contracts', 'run', 'test'], { encoding: 'utf8', cwd: ROOT, shell: true });
     return { name: 'mutation-kill: Instant calendar round-trip guard disabled', expectFail: true, failed: false };
@@ -860,6 +876,131 @@ function runInstantTransportCalendarGuardMutationFixture(): RedFixtureResult {
  * Phase 3C: SCC-08 static control must catch a real `pool.query(...)` call site
  * injected into packages/db/src (the production checkTransactionSafety scanner).
  */
+function runHonoApiPathFixtures(): RedFixtureResult[] {
+  const results: RedFixtureResult[] = [];
+
+  const adapterCaught = withDisposableFixtureFiles(
+    {
+      'apps/api/src/__red_fixture_cloudflare_adapter__.ts':
+        "import { serveStatic } from '@hono/cloudflare-workers';\nexport { serveStatic };\n",
+    },
+    () => !checkHonoApiPath().ok,
+  );
+  results.push({
+    name: 'SCC-12: alternate Hono runtime adapter import (@hono/cloudflare-workers)',
+    expectFail: true,
+    failed: adapterCaught,
+  });
+
+  const rpcCaught = withDisposableFixtureFiles(
+    {
+      'apps/api/src/__red_fixture_hono_client__.ts': "import { hc } from 'hono/client';\nexport { hc };\n",
+    },
+    () => !checkHonoApiPath().ok,
+  );
+  results.push({
+    name: 'SCC-12: Hono RPC/client contract import (hono/client)',
+    expectFail: true,
+    failed: rpcCaught,
+  });
+
+  const sqlCaught = withDisposableFixtureFiles(
+    {
+      'apps/api/src/__red_fixture_pool_query__.ts':
+        "declare const pool: { query: (s: string) => Promise<unknown> };\nexport async function bad(): Promise<void> { await pool.query('SELECT 1'); }\n",
+    },
+    () => !checkHonoApiPath().ok,
+  );
+  results.push({
+    name: 'SCC-12: pool.query persistence shortcut in apps/api/src',
+    expectFail: true,
+    failed: sqlCaught,
+  });
+
+  return results;
+}
+
+function runOpenApiDriftFixture(): RedFixtureResult {
+  const openapiPath = path.join(ROOT, 'apps', 'api', 'openapi.json');
+  const original = readFileSync(openapiPath, 'utf8');
+  try {
+    // Valid JSON, semantically drifted title — must fail the read-only drift check.
+    const mutated = original.replace('"title": "AFENDA API"', '"title": "AFENDA API RED-DRIFT"');
+    if (mutated === original) {
+      return {
+        name: 'OpenAPI drift: committed openapi.json mutated without regeneration',
+        expectFail: true,
+        failed: false,
+        error: 'title string not found; fixture stale',
+      };
+    }
+    writeFileSync(openapiPath, mutated, 'utf8');
+    const report = checkOpenApiDrift(openapiPath);
+    return {
+      name: 'OpenAPI drift: committed openapi.json mutated without regeneration',
+      expectFail: true,
+      failed: !report.ok,
+    };
+  } finally {
+    writeFileSync(openapiPath, original, 'utf8');
+  }
+}
+
+function runApiMoneyNumberLiteralFixture(): RedFixtureResult {
+  const caught = withDisposableFixtureFiles(
+    {
+      'apps/api/src/__red_fixture_money_number__.ts':
+        'export const payload = { currency: "MYR", minorUnits: 12345 };\n',
+    },
+    () => !checkMoneySafety().ok,
+  );
+  return {
+    name: 'SCC-03: unsafe Money JSON number in apps/api/src',
+    expectFail: true,
+    failed: caught,
+  };
+}
+
+function runDepCruiseApiReverseDependencyFixture(): RedFixtureResult {
+  const failed = withDisposableFixtureFiles(
+    {
+      'packages/contracts/src/__red_fixture_depends_on_api__.ts':
+        "import { createApi } from '../../../apps/api/src/index.ts';\nexport { createApi };\n",
+    },
+    () => {
+      try {
+        execFileSync('pnpm', ['run', 'boundary:check'], { encoding: 'utf8', cwd: ROOT, shell: true });
+        return false;
+      } catch {
+        return true;
+      }
+    },
+  );
+  return { name: 'SCC-05: package → apps/api reverse dependency', expectFail: true, failed };
+}
+
+function runDepCruiseApiInternalImportFixture(): RedFixtureResult {
+  const failed = withDisposableFixtureFiles(
+    {
+      'apps/api/src/__red_fixture_internal_import__.ts':
+        "import { parseMoney } from '../../../packages/money/src/money.ts';\nexport { parseMoney };\n",
+    },
+    () => {
+      try {
+        execFileSync('pnpm', ['run', 'boundary:check'], { encoding: 'utf8', cwd: ROOT, shell: true });
+        return false;
+      } catch {
+        return true;
+      }
+    },
+  );
+  return {
+    name: 'SCC-05: apps/api → packages/money/src/* internal import',
+    expectFail: true,
+    failed,
+  };
+}
+
 function runDbPoolQueryStaticFixture(): RedFixtureResult {
   const fixturePath = path.join(ROOT, 'packages', 'db', 'src', '__red_pool_query__.ts');
   try {
@@ -1020,6 +1161,11 @@ async function main(): Promise<void> {
   results.push(runDbTransactionPoolBeginMutationFixture());
   results.push(runDbLossyInt8ParserMutationFixture());
   results.push(runDbMigrationChecksumGuardMutationFixture());
+  results.push(...runHonoApiPathFixtures());
+  results.push(runOpenApiDriftFixture());
+  results.push(runApiMoneyNumberLiteralFixture());
+  results.push(runDepCruiseApiReverseDependencyFixture());
+  results.push(runDepCruiseApiInternalImportFixture());
 
   console.log('\n=== AFENDA red harness (gate exists -> injected violation -> real gate fails) ===\n');
   let allOk = true;

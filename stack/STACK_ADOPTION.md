@@ -103,8 +103,8 @@ Complete each item before marking the stack `ADOPTED`.
 
 ### API and frontend
 
-- [ ] Allow only Hono's Node adapter and the approved Zod/OpenAPI integration.
-- [ ] Generate and diff OpenAPI; generate the frontend transport client.
+- [x] Allow only Hono's Node adapter and the approved Zod/OpenAPI integration. *(Phase 3D: apps/api with hono/@hono/node-server/@hono/zod-openapi exact pins; SCC-12 AST gate + red fixtures.)*
+- [ ] Generate and diff OpenAPI; generate the frontend transport client. *(Phase 3D: OpenAPI generate+drift implemented for apps/api/openapi.json; frontend client generation remains NOT-YET-BUILT — compound item stays unchecked.)*
 - [ ] Configure React/Vite SPA and reject `react-server-dom-*` dependencies.
 - [ ] Choose TanStack file-based routing only and govern generated route-tree drift.
 - [ ] Apply the UI-system tokens and accessibility checks to source-owned shadcn components.
@@ -225,3 +225,9 @@ The stack remains **architecturally approved, not adopted**. No ratifier signatu
 ## 9. Phase 3C persistence-boundary review (2026-08-08)
 
 Phase 3C (`packages/db`, `db/migrations/0001_bootstrap.sql`, dual-major Testcontainers 18/17, PGlite fast lane with structural `requireTestcontainersLane`, Kysely codegen from CanonicalCodegenSource PG18 only, `pnpm gate:db-integration`) was reviewed against §3. Database items ticked above have real mechanical evidence (see `governance/PHASE_3C_DB_REPORT.md`). Full credential topology (request/posting/audit/backup) and the remaining non-Database checklist items stay unchecked. **Ticking these items is not a stack adoption event.**
+
+---
+
+## 10. Phase 3D API-boundary review (2026-08-08)
+
+Phase 3D (`apps/api` thin Hono adapter, OpenAPI generate+drift, SCC-12 gate — see `governance/PHASE_3D_API_REPORT.md`) was reviewed against §3. The Hono Node + Zod/OpenAPI item is ticked with mechanical evidence. The compound “Generate and diff OpenAPI; generate the frontend transport client” item stays unchecked because no frontend client exists. Frontend/identity/Playwright/jobs items remain unchecked. **This is not a stack adoption event.**
