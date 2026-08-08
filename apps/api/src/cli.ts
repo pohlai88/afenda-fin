@@ -5,12 +5,18 @@ import { isMainModule } from './lib/is-main.ts';
 import { createApi } from './create-api.ts';
 import { startServer } from './start-server.ts';
 
+const DEFAULT_PORT = 8787;
+
 function main(): void {
-  const portRaw = process.env['PORT'] ?? '8787';
+  const portEnv = process.env['PORT'];
+  const portRaw = portEnv ?? String(DEFAULT_PORT);
   const port = Number.parseInt(portRaw, 10);
   if (!Number.isFinite(port) || port <= 0) {
     console.error(`Invalid PORT: ${portRaw}`);
     process.exit(1);
+  }
+  if (portEnv === undefined) {
+    console.log(`PORT unset; defaulting to ${String(DEFAULT_PORT)}`);
   }
   const app = createApi();
   startServer(app, { port });

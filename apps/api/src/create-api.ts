@@ -1,6 +1,7 @@
 // Explicit app factory — no listen side effects, no globals, no DI container.
 
 import { OpenAPIHono } from '@hono/zod-openapi';
+import { validationFailureBody } from './http/map-result.ts';
 import { registerHealthRoutes } from './routes/health.ts';
 import { registerMoneyVerifyRoute } from './routes/verify-money.ts';
 import { registerInstantVerifyRoute } from './routes/verify-instant.ts';
@@ -25,20 +26,20 @@ export const OPENAPI_INFO = {
 /**
  * Compose the OpenAPIHono application. Does not bind a port.
  * Tests should call createApi() and use app.request().
+ *
+ * OpenAPI document identity is always OPENAPI_INFO (drift authority).
+ * `deps.serviceName` is reserved for future capability wiring and does not
+ * alter the OpenAPI title (avoids runtime-vs-committed document divergence).
  */
 export function createApi(deps: ApiDependencies = {}): OpenAPIHono {
+  void deps.serviceName;
+
   const app = new OpenAPIHono({
     defaultHook: (result, c) => {
       if (result.success) {
         return undefined;
       }
-      return c.json(
-        {
-          code: 'REQUEST_VALIDATION_FAILED',
-          message: 'request failed OpenAPI/Zod validation',
-        },
-        400,
-      );
+      return c.json(validationFailureBody(), 400);
     },
   });
 
@@ -49,23 +50,12 @@ export function createApi(deps: ApiDependencies = {}): OpenAPIHono {
   registerAsOfVerifyRoute(app);
 
   // Doc endpoint for humans; committed openapi.json is the gate authority.
-  // Explicit deps reserved for future Clock/actor capabilities (V11 not-yet-built).
-  const docInfo =
-    deps.serviceName === undefined
-      ? OPENAPI_INFO
-      : {
-          ...OPENAPI_INFO,
-          info: {
-            ...OPENAPI_INFO.info,
-            title: `${deps.serviceName} (AFENDA API)`,
-          },
-        };
-  app.doc31('/openapi.json', docInfo);
+  app.doc31('/openapi.json', OPENAPI_INFO);
 
   return app;
 }
 
-/** Deterministic OpenAPI 3.1 document from the live route registry (no timestamps). */
-export function buildOpenApiDocument(app: OpenAPIHono = createApi()): ReturnType<OpenAPIHono['getOpenAPI31Document']> {
-  return app.getOpenAPI31Document(OPENAPI_INFO);
+/** Deterministic OpenAPI 3.1 document from a fresh createApi() route registry. */
+export function buildOpenApiDocument(): ReturnType<OpenAPIHono['getOpenAPI31Document']> {
+  return createApi().getOpenAPI31Document(OPENAPI_INFO);
 }

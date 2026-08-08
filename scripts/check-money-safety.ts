@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 // SCC-03 authoritative-money type-safety gate — scoped to
-// packages/money/src and packages/contracts/src (the two authoritative
-// money-JSON surfaces). packages/db type parsers and future API handlers are
-// out of this gate's scope — see governance/control-implementation.json for
-// the honest SCC-03 state.
+// packages/money/src, packages/contracts/src, and apps/api/src (authoritative
+// money-JSON surfaces). packages/db type parsers remain out of this gate's
+// scope — see governance/control-implementation.json for the honest SCC-03 state.
 //
 // Uses the real TypeScript compiler API (ts.createSourceFile + AST
 // traversal) rather than a grep/regex heuristic, so doc-comments that merely
@@ -178,7 +177,7 @@ export function checkMoneySafety(globPatterns: string[] = DEFAULT_GLOB_PATTERNS)
 if (isMainModule(import.meta.url, 'check-money-safety.ts')) {
   const report = checkMoneySafety();
   console.log(
-    '\n=== AFENDA SCC-03 authoritative-money safety gate (scoped to packages/money/src and packages/contracts/src; API money-JSON surfaces and packages/db parsers are out of this gate\'s scope) ===\n',
+    '\n=== AFENDA SCC-03 authoritative-money safety gate (scoped to packages/money/src, packages/contracts/src, apps/api/src; packages/db parsers remain out of scope) ===\n',
   );
   console.log(`Files scanned: ${String(report.filesScanned)} (${DEFAULT_GLOB_PATTERNS.join(', ')})`);
   if (report.filesScanned === 0) {

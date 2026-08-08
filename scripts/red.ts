@@ -303,6 +303,15 @@ function runEmptyScanTransactionSafetyFixture(): RedFixtureResult {
   };
 }
 
+function runEmptyScanHonoApiPathFixture(): RedFixtureResult {
+  const report = checkHonoApiPath(['apps/__no_such_api__/src/**/*.ts']);
+  return {
+    name: 'SCC-12: empty scan fails closed (0 files cannot PASS)',
+    expectFail: true,
+    failed: !report.ok && report.filesScanned === 0,
+  };
+}
+
 /**
  * Cross-service image swap: every pin string still appears somewhere in the
  * file, so a whole-file substring check would false-green. Service-scoped
@@ -917,6 +926,45 @@ function runHonoApiPathFixtures(): RedFixtureResult[] {
     failed: sqlCaught,
   });
 
+  const dbCaught = withDisposableFixtureFiles(
+    {
+      'apps/api/src/__red_fixture_afenda_db__.ts':
+        "import { createPool } from '@afenda/db';\nexport { createPool };\n",
+    },
+    () => !checkHonoApiPath().ok,
+  );
+  results.push({
+    name: 'SCC-12: direct @afenda/db import in apps/api/src',
+    expectFail: true,
+    failed: dbCaught,
+  });
+
+  const timeCaught = withDisposableFixtureFiles(
+    {
+      'apps/api/src/__red_fixture_afenda_time__.ts':
+        "import { Instant } from '@afenda/time';\nexport type { Instant };\n",
+    },
+    () => !checkHonoApiPath().ok,
+  );
+  results.push({
+    name: 'SCC-12: direct @afenda/time import in apps/api/src',
+    expectFail: true,
+    failed: timeCaught,
+  });
+
+  const moneyCaught = withDisposableFixtureFiles(
+    {
+      'apps/api/src/__red_fixture_afenda_money__.ts':
+        "import { Money } from '@afenda/money';\nexport type { Money };\n",
+    },
+    () => !checkHonoApiPath().ok,
+  );
+  results.push({
+    name: 'SCC-12: direct @afenda/money import in apps/api/src',
+    expectFail: true,
+    failed: moneyCaught,
+  });
+
   return results;
 }
 
@@ -1137,6 +1185,7 @@ async function main(): Promise<void> {
   results.push(runEmptyScanMoneySafetyFixture());
   results.push(runEmptyScanArchitectureFixture());
   results.push(runEmptyScanTransactionSafetyFixture());
+  results.push(runEmptyScanHonoApiPathFixture());
   results.push(runComposeCrossServiceImageSwapFixture());
   results.push(runLockfileDisagreementFixture());
   results.push(await runLintTsSuppressionFixture());

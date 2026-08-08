@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildOpenApiDocument } from '../src/create-api.ts';
+import { buildOpenApiDocument, createApi } from '../src/create-api.ts';
 import { checkOpenApiDrift } from '../scripts/check-openapi-drift.ts';
 import { renderOpenApiJson } from '../scripts/generate-openapi.ts';
 
@@ -10,13 +10,23 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const committedPath = path.join(__dirname, '..', 'openapi.json');
 
 describe('OpenAPI document', () => {
-  it('is byte-identical across two generations', () => {
-    expect(renderOpenApiJson()).toBe(renderOpenApiJson());
-  });
-
   it('matches committed openapi.json (drift check)', () => {
     const report = checkOpenApiDrift(committedPath);
     expect(report.ok).toBe(true);
+  });
+
+  it('runtime GET /openapi.json matches committed document', async () => {
+    const app = createApi();
+    const res = await app.request('/openapi.json');
+    expect(res.status).toBe(200);
+    const runtime = await res.json();
+    const committed = JSON.parse(readFileSync(committedPath, 'utf8')) as unknown;
+    expect(runtime).toEqual(committed);
+  });
+
+  it('renderOpenApiJson equals committed file bytes', () => {
+    const committed = readFileSync(committedPath, 'utf8');
+    expect(renderOpenApiJson()).toBe(committed);
   });
 
   it('declares Money minorUnits as string, not number', () => {
@@ -47,7 +57,18 @@ describe('OpenAPI document', () => {
     expect(failure?.properties).not.toHaveProperty('cause');
   });
 
-  it('committed file parses as JSON', () => {
-    JSON.parse(readFileSync(committedPath, 'utf8'));
+  it('documents 422 on all verify routes', () => {
+    const doc = buildOpenApiDocument() as {
+      paths?: Record<string, { post?: { responses?: Record<string, unknown> } }>;
+    };
+    const verifyPaths = [
+      '/_afenda/verify/money',
+      '/_afenda/verify/instant',
+      '/_afenda/verify/civil-date',
+      '/_afenda/verify/as-of',
+    ];
+    for (const p of verifyPaths) {
+      expect(doc.paths?.[p]?.post?.responses?.['422'], p).toBeDefined();
+    }
   });
 });

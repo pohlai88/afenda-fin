@@ -45,9 +45,12 @@ describe('HTTP Money verify (reference route)', () => {
     expect(json).not.toHaveProperty('cause');
   });
 
-  it('rejects out-of-range minorUnits', async () => {
+  it('rejects out-of-range minorUnits as 422 without cause', async () => {
     const res = await postMoney({ currency: 'MYR', minorUnits: '9223372036854775808' });
-    expect([400, 422]).toContain(res.status);
+    expect(res.status).toBe(422);
+    const json = (await res.json()) as { code: string };
+    expect(json.code).toMatch(/RANGE|OVERFLOW/i);
+    expect(json).not.toHaveProperty('cause');
   });
 
   it('rejects extra authoritative fields under strict schema', async () => {

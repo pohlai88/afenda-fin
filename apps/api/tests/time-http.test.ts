@@ -38,13 +38,16 @@ describe('HTTP Instant / CivilDate / AsOf verify', () => {
     await expect(res.json()).resolves.toEqual({ civilDate });
   });
 
-  it('rejects malformed CivilDate', async () => {
+  it('rejects malformed CivilDate without cause', async () => {
     const res = await app().request('/_afenda/verify/civil-date', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ civilDate: '2026-02-30' }),
     });
     expect(res.status).toBe(400);
+    const json = (await res.json()) as { code: string };
+    expect(json.code).toMatch(/MALFORMED|INVALID|CANONICAL/i);
+    expect(json).not.toHaveProperty('cause');
   });
 
   it('round-trips AsOf with both boundaries', async () => {
@@ -61,21 +64,25 @@ describe('HTTP Instant / CivilDate / AsOf verify', () => {
     await expect(res.json()).resolves.toEqual(body);
   });
 
-  it('rejects AsOf missing knowledgeAsOf', async () => {
+  it('rejects AsOf missing knowledgeAsOf without cause', async () => {
     const res = await app().request('/_afenda/verify/as-of', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ businessAsOf: '2026-01-01T00:00:00.000Z' }),
     });
     expect(res.status).toBe(400);
+    const json = (await res.json()) as Record<string, unknown>;
+    expect(json).not.toHaveProperty('cause');
   });
 
-  it('rejects AsOf missing businessAsOf', async () => {
+  it('rejects AsOf missing businessAsOf without cause', async () => {
     const res = await app().request('/_afenda/verify/as-of', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ knowledgeAsOf: '2026-08-08T00:00:00.000Z' }),
     });
     expect(res.status).toBe(400);
+    const json = (await res.json()) as Record<string, unknown>;
+    expect(json).not.toHaveProperty('cause');
   });
 });

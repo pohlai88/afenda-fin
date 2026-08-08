@@ -235,6 +235,16 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Domain/range failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicFailureWire"
+                }
+              }
+            }
           }
         }
       }
@@ -268,6 +278,16 @@
           },
           "400": {
             "description": "Public failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicFailureWire"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Domain/range failure",
             "content": {
               "application/json": {
                 "schema": {
@@ -309,6 +329,16 @@
           },
           "400": {
             "description": "Public failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicFailureWire"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Domain/range failure",
             "content": {
               "application/json": {
                 "schema": {

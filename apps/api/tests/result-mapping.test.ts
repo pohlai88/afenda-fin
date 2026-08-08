@@ -16,4 +16,13 @@ describe('mapResultToHttp', () => {
     expect(mapped.body).toEqual({ code: 'MALFORMED_TEST', message: 'bad' });
     expect(mapped.body).not.toHaveProperty('cause');
   });
+
+  it('maps RANGE/OVERFLOW/MISMATCH codes to 422', () => {
+    for (const code of ['OUT_OF_RANGE', 'RANGE_OVERFLOW', 'CURRENCY_MISMATCH'] as const) {
+      const mapped = mapResultToHttp(err(code, 'domain'), (v) => v);
+      expect(mapped.status).toBe(422);
+      if (mapped.status === 200) return;
+      expect(mapped.body).not.toHaveProperty('cause');
+    }
+  });
 });

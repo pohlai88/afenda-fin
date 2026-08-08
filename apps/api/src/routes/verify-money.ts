@@ -2,7 +2,8 @@
 // Proves MoneyWire survives HTTP → Zod/OpenAPI → contracts decode → encode.
 
 import { createRoute, type OpenAPIHono } from '@hono/zod-openapi';
-import { decodeMoneyTransport, encodeMoneyTransport, encodeFailureTransport } from '@afenda/contracts';
+import { decodeMoneyTransport, encodeMoneyTransport } from '@afenda/contracts';
+import { mapResultToHttp } from '../http/map-result.ts';
 import { MoneyWireOpenApiSchema, PublicFailureWireOpenApiSchema } from '../openapi/wire-schemas.ts';
 
 const moneyVerifyRoute = createRoute({
@@ -41,11 +42,13 @@ const moneyVerifyRoute = createRoute({
 export function registerMoneyVerifyRoute(app: OpenAPIHono): void {
   app.openapi(moneyVerifyRoute, (c) => {
     const json = c.req.valid('json');
-    const decoded = decodeMoneyTransport(json);
-    if (!decoded.ok) {
-      const status = decoded.error.code.includes('OVERFLOW') || decoded.error.code.includes('RANGE') ? 422 : 400;
-      return c.json(encodeFailureTransport(decoded.error), status);
+    const mapped = mapResultToHttp(decodeMoneyTransport(json), encodeMoneyTransport);
+    if (mapped.status === 200) {
+      return c.json(mapped.body as { currency: string; minorUnits: string }, 200);
     }
-    return c.json(encodeMoneyTransport(decoded.value), 200);
+    if (mapped.status === 422) {
+      return c.json(mapped.body, 422);
+    }
+    return c.json(mapped.body, 400);
   });
 }

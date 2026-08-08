@@ -28,7 +28,10 @@ const FORBIDDEN_EXACT = new Set([
   'express',
   'fastify',
   'next',
+  // Domain/persistence must enter via @afenda/contracts only (SCC-12).
   '@afenda/db',
+  '@afenda/time',
+  '@afenda/money',
   'pg',
   'kysely',
 ]);

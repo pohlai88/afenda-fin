@@ -1,5 +1,6 @@
 import { createRoute, type OpenAPIHono } from '@hono/zod-openapi';
-import { decodeAsOfTransport, encodeAsOfTransport, encodeFailureTransport } from '@afenda/contracts';
+import { decodeAsOfTransport, encodeAsOfTransport } from '@afenda/contracts';
+import { mapResultToHttp } from '../http/map-result.ts';
 import { AsOfWireOpenApiSchema, PublicFailureWireOpenApiSchema } from '../openapi/wire-schemas.ts';
 
 const route = createRoute({
@@ -23,16 +24,23 @@ const route = createRoute({
       description: 'Public failure',
       content: { 'application/json': { schema: PublicFailureWireOpenApiSchema } },
     },
+    422: {
+      description: 'Domain/range failure',
+      content: { 'application/json': { schema: PublicFailureWireOpenApiSchema } },
+    },
   },
 });
 
 export function registerAsOfVerifyRoute(app: OpenAPIHono): void {
   app.openapi(route, (c) => {
     const json = c.req.valid('json');
-    const decoded = decodeAsOfTransport(json);
-    if (!decoded.ok) {
-      return c.json(encodeFailureTransport(decoded.error), 400);
+    const mapped = mapResultToHttp(decodeAsOfTransport(json), encodeAsOfTransport);
+    if (mapped.status === 200) {
+      return c.json(mapped.body as { businessAsOf: string; knowledgeAsOf: string }, 200);
     }
-    return c.json(encodeAsOfTransport(decoded.value), 200);
+    if (mapped.status === 422) {
+      return c.json(mapped.body, 422);
+    }
+    return c.json(mapped.body, 400);
   });
 }
