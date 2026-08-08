@@ -603,3 +603,9 @@ AFENDA Phase 3C established the first persistence boundary (`packages/db`, `db/m
 ## 40. Phase 3D forward reference (2026-08-08)
 
 AFENDA Phase 3D established the thin Hono HTTP adapter (`apps/api`) over `@afenda/contracts` using exact pins `hono@4.13.1`, `@hono/node-server@2.1.0`, `@hono/zod-openapi@1.5.1`, `zod@4.4.3`. It added SCC-12 AST enforcement (`scripts/check-hono-api-path.ts`), OpenAPI generate+read-only drift, extended SCC-03/05/24 to `apps/api`, and HTTP Money/time evidence via labeled `/_afenda/verify/*` reference routes (not product ERP). Control move: SCC-12 `not-yet-built` → `implemented` for the current topology. V08 remains `partial` (no composed HTTP→DB Money path). Frontend client generation remains NOT-YET-BUILT. Full detail: `governance/PHASE_3D_API_REPORT.md`. This forward reference does not duplicate that report's content and is not itself new evidence.
+
+---
+
+## 41. Phase 3D.1 forward reference (2026-08-08)
+
+AFENDA Phase 3D.1 pushed `main` to `c82d852` and observed live `gate.yml` run `31232287375`. The job recorded **zero steps**; check-run annotation states the account is **locked due to a billing issue** (`runner_id=0`). Workflow YAML was inspected and is not the root cause. SCC-04 remains `partial` (CI-verified still unestablished; TypeScript-6 compat-engine gap also still open). Phase 3E was not started. Full detail: `governance/PHASE_3D1_CI_REPORT.md`.
