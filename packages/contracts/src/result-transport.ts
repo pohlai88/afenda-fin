@@ -19,10 +19,20 @@
 //     `minorUnitsToCanonicalString`/`serializeMoney`), which is exactly a
 //     `string` and therefore already representable — never as a JS number.
 //
-// No HTTP status mapping exists here; no API framework exists yet (SCC-12).
+// Encode and decode share `@afenda/errors`' detail canonicalization
+// (`normalizePublicErrorDetails`), so inbound `-0` becomes `'-0'` just as
+// outbound encode/`toPublicJson` already does. No HTTP status mapping exists
+// here; no API framework exists yet (SCC-12).
 
 import { z } from 'zod';
-import { err, ok, toPublicJson, type ErrorShape, type Result } from '@afenda/errors';
+import {
+  err,
+  ok,
+  normalizePublicErrorDetails,
+  toPublicJson,
+  type ErrorShape,
+  type Result,
+} from '@afenda/errors';
 
 /** JSON-safe scalar allowed inside a public failure's `details` — identical restriction to @afenda/errors' own `PublicErrorDetailValue`. */
 export const PublicErrorDetailValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
@@ -45,15 +55,20 @@ export function encodeFailureTransport<C extends string>(error: ErrorShape<C>): 
 
 /**
  * Validates that an untrusted external value has the shape of a public
- * failure. This is a shape/type gate only — a decoded failure wire is
- * terminal transport data (a description of a past failure), not a domain
- * value to reconstruct further, so there is no corresponding "decode to
- * ErrorShape" step.
+ * failure, then applies the same detail canonicalization as encode /
+ * `toPublicJson` (including `-0` → `'-0'`). This is a shape + canonical-form
+ * gate — a decoded failure wire is terminal transport data (a description of
+ * a past failure), not a domain value to reconstruct further, so there is no
+ * corresponding "decode to ErrorShape" step.
  */
 export function decodeFailureTransportShape(input: unknown): Result<PublicFailureWire, 'MALFORMED_FAILURE_WIRE_SHAPE'> {
   const shape = PublicFailureWireSchema.safeParse(input);
   if (!shape.success) {
     return err('MALFORMED_FAILURE_WIRE_SHAPE', `failure wire shape invalid: ${shape.error.issues.map((issue) => issue.message).join('; ')}`);
   }
-  return ok(shape.data);
+  const { code, message, details } = shape.data;
+  if (details === undefined) {
+    return ok({ code, message });
+  }
+  return ok({ code, message, details: normalizePublicErrorDetails(details) });
 }

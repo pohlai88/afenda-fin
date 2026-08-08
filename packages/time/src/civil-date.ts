@@ -7,15 +7,22 @@
 // own (TIM-03's "business zones are retained separately"), so this module
 // performs no such conversion and contains no Date-object usage at all — pure
 // integer calendar arithmetic only.
+//
+// Branding (aligned with packages/money): only `civilDateFromParts` /
+// `parseCivilDate` attach the brand. A raw `{ year, month, day }` object is not
+// a `CivilDate`, so invalid calendar dates cannot type-check into encode paths.
 
 import { err, ok, type Result } from '@afenda/errors';
 
+declare const civilDateBrand: unique symbol;
+
 /** A calendar date: year/month/day, no time-of-day, no timezone. */
-export interface CivilDate {
+export type CivilDate = {
   readonly year: number;
   readonly month: number;
   readonly day: number;
-}
+  readonly [civilDateBrand]: 'CivilDate';
+};
 
 export type CivilDateErrorCode = 'INVALID_YEAR' | 'INVALID_MONTH' | 'INVALID_DAY' | 'MALFORMED_CANONICAL_STRING';
 
@@ -30,8 +37,7 @@ function isLeapYear(year: number): boolean {
  * Number of days in `month` (1-12) of `year`. `year`/`month` must already be
  * validated by the caller — an out-of-range `month` here indicates a
  * programmer fault in this module, not a user-input failure, so it throws
- * rather than returning a `Result` (doctrine: thrown exceptions remain for
- * programmer/infrastructure faults, not ordinary domain control flow).
+ * rather than returning a `Result`.
  */
 function daysInMonth(year: number, month: number): number {
   switch (month) {
@@ -55,6 +61,15 @@ function daysInMonth(year: number, month: number): number {
   }
 }
 
+function brandCivilDate(year: number, month: number, day: number): CivilDate {
+  // Single sanctioned brand-attaching cast, immediately after validation.
+  return { year, month, day } as CivilDate;
+}
+
+function formatCivilDateUnchecked(year: number, month: number, day: number): string {
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
 /** Constructs a `CivilDate`, validating year/month/day (including leap years) explicitly. */
 export function civilDateFromParts(year: number, month: number, day: number): Result<CivilDate, CivilDateErrorCode> {
   if (!Number.isInteger(year) || year < MIN_YEAR || year > MAX_YEAR) {
@@ -65,28 +80,41 @@ export function civilDateFromParts(year: number, month: number, day: number): Re
   }
   const maxDay = daysInMonth(year, month);
   if (!Number.isInteger(day) || day < 1 || day > maxDay) {
-    return err('INVALID_DAY', `day must be an integer in [1, ${String(maxDay)}] for ${String(year)}-${String(month)}, got ${String(day)}`);
+    return err(
+      'INVALID_DAY',
+      `day must be an integer in [1, ${String(maxDay)}] for ${formatCivilDateUnchecked(year, month, 1).slice(0, 7)}, got ${String(day)}`,
+    );
   }
-  return ok({ year, month, day });
+  return ok(brandCivilDate(year, month, day));
 }
 
 const CANONICAL_CIVIL_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-/** Serializes `date` to its canonical `YYYY-MM-DD` form. */
+/**
+ * Serializes `date` to its canonical `YYYY-MM-DD` form.
+ * Re-validates so a forged/`as`-cast CivilDate cannot emit unparseable wire
+ * (programmer fault → throw).
+ */
 export function civilDateToCanonicalString(date: CivilDate): string {
-  const year = String(date.year).padStart(4, '0');
-  const month = String(date.month).padStart(2, '0');
-  const day = String(date.day).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const checked = civilDateFromParts(date.year, date.month, date.day);
+  if (!checked.ok) {
+    throw new Error(`civilDateToCanonicalString: invalid CivilDate (${checked.error.code}): ${checked.error.message}`);
+  }
+  return formatCivilDateUnchecked(checked.value.year, checked.value.month, checked.value.day);
 }
 
 /** Parses the canonical `YYYY-MM-DD` form produced by `civilDateToCanonicalString`. */
 export function parseCivilDate(canonical: string): Result<CivilDate, CivilDateErrorCode> {
   const match = CANONICAL_CIVIL_DATE_PATTERN.exec(canonical);
-  if (!match) {
+  if (match === null) {
     return err('MALFORMED_CANONICAL_STRING', `not a canonical AFENDA civil date string: ${canonical}`);
   }
-  const [, year, month, day] = match as unknown as [string, string, string, string];
+  const year = match[1];
+  const month = match[2];
+  const day = match[3];
+  if (year === undefined || month === undefined || day === undefined) {
+    return err('MALFORMED_CANONICAL_STRING', `not a canonical AFENDA civil date string: ${canonical}`);
+  }
   return civilDateFromParts(Number(year), Number(month), Number(day));
 }
 
@@ -95,4 +123,9 @@ export function compareCivilDates(a: CivilDate, b: CivilDate): number {
   if (a.year !== b.year) return a.year - b.year;
   if (a.month !== b.month) return a.month - b.month;
   return a.day - b.day;
+}
+
+/** Equality via total order. */
+export function civilDateEquals(a: CivilDate, b: CivilDate): boolean {
+  return compareCivilDates(a, b) === 0;
 }

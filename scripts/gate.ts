@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 // Deterministic governance dispatcher: `pnpm gate`.
-// Runs, in order: (1) authority build+integrity, (2) registry drift (delegated to
-// step 1's own check), (3) toolchain baseline, (4) implemented static governance
-// controls — root scripts/** typecheck+lint (4a-4c), Turbo-orchestrated
-// packages/{errors,time,money,contracts,db} typecheck+unit-test (4d), module-boundary/SCC-05
-// (4e), authoritative-money safety/SCC-03 (4f), application-architecture
-// subset/SCC-24 (4g), compile-time negative fixtures (4h), SCC-08 transaction-safety
-// static check (4i) — (5) control-map completeness, (6) dependency pin policy,
-// (7) generated agent-doc drift, (8) red-fixture registration.
+// Runs, in order: (1) authority build, (2) authority-integrity + registry drift,
+// (3) toolchain baseline, (4) implemented static governance controls — root
+// scripts/** typecheck+lint (4a-4c), Turbo-orchestrated
+// packages/{errors,time,money,contracts,db} typecheck+unit-test (4d),
+// module-boundary/SCC-05 (4e), authoritative-money safety/SCC-03 (4f),
+// application-architecture subset/SCC-24 (4g), compile-time negative fixtures
+// (4h), SCC-08 transaction-safety static check (4i) — (5) control-map
+// completeness, (5b) dependency pin policy, (6) generated agent-doc drift,
+// (7) red-fixture registration.
 //
 // Testcontainers DB-integration evidence is intentionally NOT in this gate:
 // use `pnpm gate:db-integration` (scripts/gate-db-integration.ts).
@@ -22,8 +23,12 @@ import { readFileSync, globSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { checkControlMapCompleteness, checkDependencyPinsAreExact } from './lib/control-map.ts';
-import { renderAgentDocs } from './generate-agent-docs.ts';
-import type { AuthorityIndex } from './lib/authority-parser.ts';
+import {
+  assertCurrentLayoutAgainstFilesystem,
+  buildAgentRulesData,
+  loadAuthorityIndex,
+  renderAgentDocsFromData,
+} from './generate-agent-docs.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -77,8 +82,28 @@ function runPnpmScript(scriptName: string): { ok: boolean; output: string } {
 }
 
 function checkAgentDocsDrift(): { ok: boolean; detail: string } {
-  const authorityIndex = JSON.parse(readFileSync(path.join(ROOT, 'governance', 'authority-index.json'), 'utf8')) as AuthorityIndex;
-  const fresh = renderAgentDocs(authorityIndex);
+  let authorityIndex;
+  try {
+    authorityIndex = loadAuthorityIndex(ROOT);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { ok: false, detail: `authority-index.json failed boundary parse: ${message}` };
+  }
+  const data = buildAgentRulesData(authorityIndex);
+  try {
+    assertCurrentLayoutAgainstFilesystem(data.current_layout, ROOT);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { ok: false, detail: message };
+  }
+  const fresh = renderAgentDocsFromData(data);
+  if (fresh.cursorRule !== fresh.agentsMd) {
+    return {
+      ok: false,
+      detail:
+        'Cursor rule and AGENTS.md diverged — formats are expected to stay byte-identical until an explicit split; use renderGenerated for both',
+    };
+  }
   const committed = {
     rulesJson: readFileSync(path.join(ROOT, 'governance', 'rules.json'), 'utf8'),
     cursorRule: readFileSync(path.join(ROOT, '.cursor', 'rules', 'afenda.mdc'), 'utf8'),
@@ -91,7 +116,7 @@ function checkAgentDocsDrift(): { ok: boolean; detail: string } {
   if (diffs.length > 0) {
     return { ok: false, detail: `committed file(s) differ from fresh \`pnpm agent-docs\` regeneration: ${diffs.join(', ')}` };
   }
-  return { ok: true, detail: 'byte-identical to fresh regeneration' };
+  return { ok: true, detail: 'byte-identical to fresh regeneration; layout paths match filesystem; Cursor=AGENTS.md' };
 }
 
 function main(): StepResult[] {

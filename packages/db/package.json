@@ -23,8 +23,6 @@
   },
   "dependencies": {
     "@afenda/errors": "workspace:*",
-    "@afenda/time": "workspace:*",
-    "@afenda/money": "workspace:*",
     "pg": "8.22.0",
     "kysely": "0.29.4"
   },

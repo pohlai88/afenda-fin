@@ -15,14 +15,14 @@
 
 import { err, type Result } from '@afenda/errors';
 import { toMinorUnits, type MinorUnits, type MinorUnitsErrorCode } from './minor-units.ts';
-import type { Rate } from './rate.ts';
+import { toRate, type Rate, type RateErrorCode } from './rate.ts';
 
 /** The fixed set of rounding boundaries registered in this phase. Deliberately singular — see module doc comment. */
 export const ROUNDING_BOUNDARY_IDS = ['KERNEL.DEMO.HALF_EVEN.v1'] as const;
 
 export type RoundingBoundaryId = (typeof ROUNDING_BOUNDARY_IDS)[number];
 
-export type RoundingErrorCode = 'UNKNOWN_ROUNDING_BOUNDARY' | MinorUnitsErrorCode;
+export type RoundingErrorCode = 'UNKNOWN_ROUNDING_BOUNDARY' | RateErrorCode | MinorUnitsErrorCode;
 
 function isKnownRoundingBoundary(id: string): id is RoundingBoundaryId {
   return (ROUNDING_BOUNDARY_IDS as readonly string[]).includes(id);
@@ -57,6 +57,12 @@ export function roundExactRateToMinorUnits(exactValue: Rate, boundaryId: Roundin
   if (!isKnownRoundingBoundary(boundaryId)) {
     return err('UNKNOWN_ROUNDING_BOUNDARY', `unregistered rounding boundary: ${String(boundaryId)}`);
   }
-  const rounded = halfEvenRoundToInteger(exactValue.numerator, exactValue.denominator);
+  // Defense in depth: even a forged `Rate` (type assertion past the brand) is
+  // re-normalized here so a non-positive denominator cannot silently mis-round
+  // or throw from bigint division. Honest callers already hold a `toRate` value;
+  // this path is idempotent for those.
+  const normalized = toRate(exactValue.numerator, exactValue.denominator);
+  if (!normalized.ok) return normalized;
+  const rounded = halfEvenRoundToInteger(normalized.value.numerator, normalized.value.denominator);
   return toMinorUnits(rounded);
 }

@@ -24,10 +24,14 @@ Against node-postgres `8.22.0` + digest-pinned PostgreSQL 18:
 
 ### `packages/db`
 
+Public API (`src/index.ts`): pool constructors, `withTransaction` / `queryOnClient`, migrate helpers, owned type parsers (`configureExactTypeParsers`), branded `CanonicalCodegenSource` + `assertCanonicalCodegenSource`, lane/pin/role constants. Test-only `resetTypeParserConfigurationForTests` and the codegen mint `createCanonicalCodegenSource` are **not** root exports (tests/helpers import them from `src/` directly).
+
+- Depends on `@afenda/errors` only (no `@afenda/time` / `@afenda/money` until domain decode call sites exist)
 - `createBootstrapPool` / `createAppPool` — exact type parsers installed before pool construction
 - `withTransaction` — one checked-out client for BEGIN/work/COMMIT|ROLLBACK
 - `migrate` — SHA-256 checksums, strict `NNNN_name.sql` ordering, transactional default, `-- afenda:transactional=false` requires `-- afenda:non-transactional-note:`
 - Owned parsers for int8/numeric/timestamp/timestamptz/date; throwing parser for OID 790
+- `CanonicalCodegenSource` is branded; only `codegenSourceFromPostgres18` mints it (compile-time fixture `canonical-codegen-source-cannot-be-forged.ts`)
 
 ### `db/migrations/0001_bootstrap.sql`
 
@@ -43,10 +47,20 @@ Authoritative bootstrap (not a throwaway table):
 | Command | Role |
 | --- | --- |
 | `pnpm gate` | Fast authority/toolchain/static controls + package unit tests; includes SCC-08 AST scan (step 4i). **No Testcontainers.** |
-| `pnpm gate:db-integration` | Unit + Testcontainers integration for `@afenda/db` |
-| `pnpm db:up` / `db:down` | Local digest-pinned Postgres 18 compose (dev only) |
+| `pnpm gate:db-integration` | Image-pin major check + unit + Testcontainers dual-major + Kysely drift |
+| `pnpm db:up` / `db:down` | Local digest-pinned Postgres 18/17 compose (dev only; ephemeral, no volumes) |
 
 DB red fixtures invoke the DB-integration lane / `checkTransactionSafety`, never fold cold containers into `pnpm gate`.
+
+### Compose / pin / identity hardenings (post-commit-2 review)
+
+- `packages/db/src/postgres-pins.ts` — digests + declared majors + compose host ports (`127.0.0.1:55432` / `55433`)
+- `scripts/check-postgres-image-pins.ts` — asserts `docker-compose.yml` image refs/ports match the pin registry, then `docker` asserts `postgres --version` and image `PG_MAJOR` (opaque digest alone is not evidence)
+- Healthcheck uses `pg_isready … -h localhost` + `start_period: 10s` (TCP readiness, not Unix-socket-during-initdb)
+- Ephemeral by design: no named `volumes:`; `pnpm db:down` is `docker compose down -v` so the image's anonymous VOLUME is removed and the next `db:up` re-runs initdb from scratch
+- `POSTGRES_USER: postgres` documented as the sole compose bootstrap credential for 0001
+- `assertMigrationRunnerIdentity` — 0001 forbids managed roles; post-0001 requires `afenda_migrator` for both `current_user` and `session_user` (rejects postgres / SET ROLE / `afenda_app`); `migrate()` wiring covered by fake-pool unit tests
+- Dual-major disagreement policy restated in pin module + dual-major tests: **build failure**, never silent floor bump
 
 ---
 
@@ -59,7 +73,7 @@ DB red fixtures invoke the DB-integration lane / `checkTransactionSafety`, never
 | SCC-07 | not-yet-built | **implemented** | Dual-major 18+17 corpus; disagreement = fail |
 | SCC-08 | not-yet-built | **implemented** | withTransaction + static scan + red fixtures |
 | SCC-09 | not-yet-built | **implemented** | Owned parsers + OID 790 ban + lossy-mutant red |
-| SCC-10 | not-yet-built | **implemented** | CanonicalCodegenSource PG18 only + drift gate |
+| SCC-10 | not-yet-built | **implemented** | Branded CanonicalCodegenSource (PG18 mint only) + drift gate |
 | SCC-11 | not-yet-built | **implemented** | Checksums + 0001 bootstrap + red fixture |
 | SCC-19 | not-yet-built | **partial** | Structural lane gate; no real concurrency corpus yet |
 
@@ -71,7 +85,7 @@ DB red fixtures invoke the DB-integration lane / `checkTransactionSafety`, never
 - `requireTestcontainersLane()` — import-time structural gate (not a filename convention)
 - PGlite fast lane for cheap SQL feedback; concurrency helpers throw there
 - `CanonicalCodegenSource` + `generate:types` / `check:types-drift` (PG18 Testcontainers only)
-- docker-compose PostgreSQL 17 service on host port 5433
+- docker-compose PostgreSQL 17 service on host port `127.0.0.1:55433` (18 on `55432`)
 
 ---
 

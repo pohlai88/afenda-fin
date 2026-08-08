@@ -1,8 +1,8 @@
 // Exact database type parsing (SEL-06 / SCC-09).
 //
-// Empirically verified against node-postgres 8.22.0 + PostgreSQL 18 (see
-// packages/db/tests/type-parser-defaults.probe.test.ts and
-// governance/PHASE_3C_DB_REPORT.md): OID 20 (int8) and OID 1700 (numeric)
+// Empirically verified against node-postgres 8.22.0 + PostgreSQL 18 (see the
+// defaults probe in packages/db/tests/persistence.integration.test.ts and
+// governance/PHASE_3C_DB_REPORT.md §1): OID 20 (int8) and OID 1700 (numeric)
 // already return JS strings by default. The real regression vector is therefore
 // *adding* a lossy parser (e.g. parseInt / Number), not removing a safe one.
 //
@@ -13,6 +13,7 @@
 //      silently enter an AFENDA process.
 //   3. Leaves conversion into domain types (@afenda/money, @afenda/time) to
 //      call sites that hold enough context (currency, civil vs instant, etc.).
+//      This package does not depend on those packages until such call sites exist.
 
 import pg from 'pg';
 import { PG_OID } from './oids.ts';

@@ -21,7 +21,8 @@
     "boundary:check": "depcruise packages --config .dependency-cruiser.cjs",
     "agent-docs": "node scripts/generate-agent-docs.ts",
     "db:up": "docker compose up -d postgres18 postgres17",
-    "db:down": "docker compose down",
+    "db:down": "docker compose down -v",
+    "check:postgres-image-pins": "node scripts/check-postgres-image-pins.ts",
     "gate": "node scripts/gate.ts",
     "gate:db-integration": "node scripts/gate-db-integration.ts",
     "red": "node scripts/red.ts"
@@ -40,6 +41,7 @@
     "@afenda/time": "workspace:*",
     "@afenda/money": "workspace:*",
     "@afenda/contracts": "workspace:*",
-    "@afenda/db": "workspace:*"
+    "@afenda/db": "workspace:*",
+    "zod": "4.4.3"
   }
 }

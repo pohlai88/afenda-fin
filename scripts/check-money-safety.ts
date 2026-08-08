@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // SCC-03 authoritative-money type-safety gate — scoped to
-// packages/money/src and packages/contracts/src (Phase 3B: the two
-// authoritative-money surfaces that exist in this phase; no API/database
-// exists yet, so this still cannot be full SCC-03 coverage — see
-// governance/control-implementation.json for the honest state).
+// packages/money/src and packages/contracts/src (the two authoritative
+// money-JSON surfaces). packages/db type parsers and future API handlers are
+// out of this gate's scope — see governance/control-implementation.json for
+// the honest SCC-03 state.
 //
 // Uses the real TypeScript compiler API (ts.createSourceFile + AST
 // traversal) rather than a grep/regex heuristic, so doc-comments that merely
@@ -39,6 +39,7 @@ import { readFileSync } from 'node:fs';
 import { globSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { isMainModule } from './lib/cli-main.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -166,15 +167,19 @@ export function checkMoneySafety(globPatterns: string[] = DEFAULT_GLOB_PATTERNS)
     const text = readFileSync(path.join(ROOT, relFile), 'utf8');
     violations.push(...scanSourceForMoneySafetyViolations(text, relFile));
   }
-  return { ok: violations.length === 0, violations, filesScanned: files.length };
+  // Empty scan cannot PASS — a broken/renamed glob would otherwise greenwash SCC-03.
+  return { ok: files.length > 0 && violations.length === 0, violations, filesScanned: files.length };
 }
 
-const invokedDirectly = process.argv[1] !== undefined && import.meta.url === new URL(`file://${process.argv[1].replace(/\\/g, '/')}`).href;
-if (invokedDirectly || process.argv[1]?.endsWith('check-money-safety.ts')) {
+if (isMainModule(import.meta.url, 'check-money-safety.ts')) {
   const report = checkMoneySafety();
-  console.log('\n=== AFENDA SCC-03 authoritative-money safety gate (PARTIAL: scoped to packages/money/src and packages/contracts/src; no API/database exist yet) ===\n');
+  console.log(
+    '\n=== AFENDA SCC-03 authoritative-money safety gate (scoped to packages/money/src and packages/contracts/src; API money-JSON surfaces and packages/db parsers are out of this gate\'s scope) ===\n',
+  );
   console.log(`Files scanned: ${String(report.filesScanned)} (${DEFAULT_GLOB_PATTERNS.join(', ')})`);
-  if (report.ok) {
+  if (report.filesScanned === 0) {
+    console.log('FAIL: scanned 0 files (empty glob cannot PASS).');
+  } else if (report.ok) {
     console.log('No violations found.');
   } else {
     console.log('VIOLATIONS:');

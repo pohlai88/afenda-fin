@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { civilDateFromParts, civilDateToCanonicalString, compareCivilDates, parseCivilDate } from '../src/civil-date.ts';
+import {
+  civilDateEquals,
+  civilDateFromParts,
+  civilDateToCanonicalString,
+  compareCivilDates,
+  parseCivilDate,
+  type CivilDate,
+} from '../src/civil-date.ts';
 
 describe('valid CivilDate', () => {
   it('accepts an ordinary date', () => {
@@ -27,29 +34,45 @@ describe('valid CivilDate', () => {
 
 describe('invalid CivilDate', () => {
   it('rejects Feb 29 on a non-leap year', () => {
-    expect(civilDateFromParts(2025, 2, 29).ok).toBe(false);
+    const result = civilDateFromParts(2025, 2, 29);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe('INVALID_DAY');
   });
 
   it('rejects Feb 29 on a century non-leap year (divisible by 100, not 400)', () => {
-    expect(civilDateFromParts(1900, 2, 29).ok).toBe(false);
+    const result = civilDateFromParts(1900, 2, 29);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe('INVALID_DAY');
   });
 
   it('rejects day 31 of a 30-day month', () => {
-    expect(civilDateFromParts(2026, 4, 31).ok).toBe(false);
+    const result = civilDateFromParts(2026, 4, 31);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe('INVALID_DAY');
   });
 
   it('rejects month 0 and month 13', () => {
-    expect(civilDateFromParts(2026, 0, 1).ok).toBe(false);
-    expect(civilDateFromParts(2026, 13, 1).ok).toBe(false);
+    const m0 = civilDateFromParts(2026, 0, 1);
+    const m13 = civilDateFromParts(2026, 13, 1);
+    expect(m0.ok).toBe(false);
+    expect(m13.ok).toBe(false);
+    if (!m0.ok) expect(m0.error.code).toBe('INVALID_MONTH');
+    if (!m13.ok) expect(m13.error.code).toBe('INVALID_MONTH');
   });
 
   it('rejects day 0', () => {
-    expect(civilDateFromParts(2026, 1, 0).ok).toBe(false);
+    const result = civilDateFromParts(2026, 1, 0);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe('INVALID_DAY');
   });
 
   it('rejects a year outside [0, 9999]', () => {
-    expect(civilDateFromParts(-1, 1, 1).ok).toBe(false);
-    expect(civilDateFromParts(10_000, 1, 1).ok).toBe(false);
+    const low = civilDateFromParts(-1, 1, 1);
+    const high = civilDateFromParts(10_000, 1, 1);
+    expect(low.ok).toBe(false);
+    expect(high.ok).toBe(false);
+    if (!low.ok) expect(low.error.code).toBe('INVALID_YEAR');
+    if (!high.ok) expect(high.error.code).toBe('INVALID_YEAR');
   });
 
   it('rejects non-integer fields', () => {
@@ -90,7 +113,14 @@ describe('parseCivilDate malformed input', () => {
   });
 });
 
-describe('compareCivilDates', () => {
+describe('serialize defense in depth', () => {
+  it('throws rather than emitting an invalid forged CivilDate', () => {
+    const forged = { year: 2026, month: 2, day: 30 } as unknown as CivilDate;
+    expect(() => civilDateToCanonicalString(forged)).toThrow(/INVALID_DAY/);
+  });
+});
+
+describe('compareCivilDates / civilDateEquals', () => {
   it('orders by year, then month, then day', () => {
     const a = civilDateFromParts(2025, 12, 31);
     const b = civilDateFromParts(2026, 1, 1);
@@ -98,6 +128,8 @@ describe('compareCivilDates', () => {
     if (a.ok && b.ok) {
       expect(compareCivilDates(a.value, b.value)).toBeLessThan(0);
       expect(compareCivilDates(b.value, a.value)).toBeGreaterThan(0);
+      expect(civilDateEquals(a.value, a.value)).toBe(true);
+      expect(civilDateEquals(a.value, b.value)).toBe(false);
       expect(compareCivilDates(a.value, a.value)).toBe(0);
     }
   });

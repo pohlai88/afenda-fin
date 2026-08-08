@@ -1,34 +1,66 @@
 # Local PostgreSQL 18/17 for development (SEL-05 / STACK_ADOPTION Database block).
-# Digest-pinned. Not part of `pnpm gate` — use `pnpm db:up` / `pnpm db:down`.
-# Authoritative dual-major evidence is Testcontainers via `pnpm gate:db-integration`.
+#
+# Digest-pinned. Digests alone are opaque — each image line carries a comment
+# naming the tag/version the digest was resolved from. Mechanical proof:
+#   scripts/check-postgres-image-pins.ts asserts this file's image refs and
+#   host ports match packages/db/src/postgres-pins.ts, then asserts each pulled
+#   image's postgres --version + PG_MAJOR match the declared major.
+# Dual-major tests also assert live server_version_num.
+#
+# Authoritative dual-major evidence is Testcontainers via `pnpm gate:db-integration`,
+# not this compose file. `pnpm db:up` / `pnpm db:down` are dev ergonomics only.
+#
+# EPHEMERAL BY DESIGN: no named `volumes:` entry (do not add one for convenience —
+# that is how stale local schema starts). The official postgres image still
+# creates an anonymous VOLUME; `pnpm db:down` runs `docker compose down -v` so
+# those volumes are removed and the next `db:up` re-runs initdb from scratch.
+#
+# Dual-major disagreement policy: PG17 vs PG18 corpus divergence is a build
+# failure, never a silent compatibility-floor bump.
 
 services:
   postgres18:
+    # digest for: postgres:18 (Debian, PG_VERSION 18.4-1.pgdg13+1), resolved 2026-08-08
+    # source of truth: packages/db/src/postgres-pins.ts (compose↔pins asserted by gate)
     image: postgres@sha256:a02db8cac496f15b094798a38254f14d6e00741f709360e5e00bb6668ea31636
     container_name: afenda-postgres18
     environment:
+      # Bootstrap credential only (Phase 3C plan): the image superuser `postgres`
+      # is the sole compose identity allowed to apply 0001, which creates
+      # afenda_migrator / afenda_app. Do NOT "fix" this to afenda_migrator —
+      # that role does not exist until 0001 runs. This is the only place a
+      # superuser-ish compose credential legitimately appears.
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: afenda
     ports:
-      - "5432:5432"
+      # Host 55432 avoids colliding with a local Postgres on 5432 / other compose
+      # projects. App/local clients must use this port (see postgres-pins.ts).
+      - "127.0.0.1:55432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d afenda"]
+      # -h localhost forces TCP readiness (Unix socket can accept during initdb
+      # before 5432 is actually serving).
+      test: ["CMD-SHELL", "pg_isready -U postgres -d afenda -h localhost"]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 10s
 
   postgres17:
+    # digest for: postgres:17 (Debian, PG_VERSION 17.10-1.pgdg13+1), resolved 2026-08-08
+    # source of truth: packages/db/src/postgres-pins.ts (compose↔pins asserted by gate)
     image: postgres@sha256:7958605b474b3d264a969cb3a123d6aa00ad1e1fe9da8a69984dabb704d93317
     container_name: afenda-postgres17
     environment:
+      # Same bootstrap-credential rule as postgres18 — see comment above.
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: afenda
     ports:
-      - "5433:5432"
+      - "127.0.0.1:55433:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d afenda"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d afenda -h localhost"]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 10s

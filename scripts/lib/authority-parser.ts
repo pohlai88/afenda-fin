@@ -12,6 +12,9 @@
 
 import { createHash } from 'node:crypto';
 
+/** Schema version written into every generated governance/*.json registry. */
+export const AUTHORITY_REGISTRY_SCHEMA_VERSION = 1;
+
 export function sha256(text: string): string {
   return createHash('sha256').update(text, 'utf8').digest('hex');
 }
@@ -930,7 +933,7 @@ export function buildRegistries({ doctrineText, stackText, positionText }: Build
   const p = parsePosition(positionText, positionSha);
 
   const doctrineRegistry: DoctrineRegistry = {
-    schema_version: 1,
+    schema_version: AUTHORITY_REGISTRY_SCHEMA_VERSION,
     generated_by: 'scripts/build-authority-registry.ts',
     generated_from: { path: 'doctrine/DOCTRINE.md', sha256: doctrineSha },
     authority_classes: d.authorityClasses,
@@ -943,7 +946,7 @@ export function buildRegistries({ doctrineText, stackText, positionText }: Build
   };
 
   const stackRegistry: StackRegistry = {
-    schema_version: 1,
+    schema_version: AUTHORITY_REGISTRY_SCHEMA_VERSION,
     generated_by: 'scripts/build-authority-registry.ts',
     generated_from: { path: 'stack/STACK.md', sha256: stackSha },
     selections: s.selections,
@@ -956,7 +959,7 @@ export function buildRegistries({ doctrineText, stackText, positionText }: Build
   };
 
   const positionRegistry: PositionRegistry = {
-    schema_version: 1,
+    schema_version: AUTHORITY_REGISTRY_SCHEMA_VERSION,
     generated_by: 'scripts/build-authority-registry.ts',
     generated_from: { path: 'position/POSITION.md', sha256: positionSha },
     document_role: 'market_claim_authority',
@@ -973,7 +976,7 @@ export function buildRegistries({ doctrineText, stackText, positionText }: Build
   };
 
   const authorityIndex: AuthorityIndex = {
-    schema_version: 1,
+    schema_version: AUTHORITY_REGISTRY_SCHEMA_VERSION,
     generated_by: 'scripts/build-authority-registry.ts',
     documents: [
       {

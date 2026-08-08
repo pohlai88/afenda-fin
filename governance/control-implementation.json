@@ -156,7 +156,9 @@
       "gate": "pnpm gate:db-integration (packages/db/tests/dual-major.integration.test.ts)",
       "evidence": [
         "Phase 3C commit 2: dual-major.integration.test.ts runs the same migration + transaction + int8 corpus on digest-pinned PostgreSQL 18 (sha256:a02db8cac496f15b094798a38254f14d6e00741f709360e5e00bb6668ea31636) and PostgreSQL 17 (sha256:7958605b474b3d264a969cb3a123d6aa00ad1e1fe9da8a69984dabb704d93317)",
-        "docker-compose.yml pins both digests (`pnpm db:up`)",
+        "packages/db/src/postgres-pins.ts is the pin registry; scripts/check-postgres-image-pins.ts (gate:db-integration step 1) asserts docker-compose.yml image refs + host ports match the registry, then docker postgres --version and image PG_MAJOR match the declared major (opaque digest alone is not evidence)",
+        "dual-major tests assert live server_version_num major matches the pin in beforeAll before treating the lane as dual-major evidence",
+        "docker-compose.yml pins both digests on 127.0.0.1:55432/55433 (`pnpm db:up`); ephemeral by design — no named volumes; `pnpm db:down` runs `docker compose down -v`",
         "Disagreement policy: any 17-vs-18 failure fails the DB-integration gate; raising the floor requires an explicit STACK decision, never a silent runner fallback"
       ],
       "red_fixtures": [
@@ -207,7 +209,7 @@
       "state": "implemented",
       "gate": "pnpm gate:db-integration step check:types-drift",
       "evidence": [
-        "packages/db/src/codegen-source.ts CanonicalCodegenSource token is minted only by codegenSourceFromPostgres18 (Testcontainers PG18); PGlite/PG17 helpers do not return that type",
+        "packages/db/src/codegen-source.ts CanonicalCodegenSource is branded; createCanonicalCodegenSource is not a package-root export; only codegenSourceFromPostgres18 (Testcontainers PG18) mints it — proven by tests/type-invalid/canonical-codegen-source-cannot-be-forged.ts; PGlite/PG17 helpers do not return that type",
         "packages/db/scripts/generate-types.ts regenerates packages/db/src/generated/database.ts from a migrated PG18 Testcontainers instance via kysely-codegen 0.20.0",
         "packages/db/scripts/check-types-drift.ts regenerates fresh and diffs against the committed file; wired into pnpm gate:db-integration"
       ],
@@ -224,7 +226,8 @@
       "evidence": [
         "db/migrations/0001_bootstrap.sql: checksummed forward-only bootstrap creating afenda_migration_history, afenda_migrator/afenda_app roles, lock_timeout/statement_timeout, one SECURITY DEFINER recorder function with $$ quoting + ALTER OWNER + GRANT",
         "packages/db/src/migrate.ts: SHA-256 checksums, strict NNNN ordering, transactional by default, `-- afenda:transactional=false` requires `-- afenda:non-transactional-note:`",
-        "Bootstrap identity is explicitly the container/image superuser `postgres` (not afenda_migrator/afenda_app), documented in the migration header"
+        "Bootstrap identity is explicitly the container/image superuser `postgres` (not afenda_migrator/afenda_app), documented in the migration header and in docker-compose POSTGRES_USER",
+        "assertMigrationRunnerIdentity: 0001 forbids managed roles; post-0001 requires afenda_migrator for both current_user and session_user (rejects postgres, SET ROLE from postgres, and afenda_app) — SEC-01 hazard via the runner"
       ],
       "red_fixtures": [
         "Phase 3C integration test mutates 0001 on disk after apply and expects MIGRATION_CHECKSUM_MISMATCH",

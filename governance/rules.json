@@ -2,7 +2,8 @@
   "schema_version": 1,
   "generated_by": "scripts/generate-agent-docs.ts",
   "generated_from": [
-    "governance/authority-index.json"
+    "governance/authority-index.json",
+    "scripts/generate-agent-docs.ts"
   ],
   "precedence": [
     "doctrine/DOCTRINE.md",
@@ -21,39 +22,66 @@
   ],
   "current_layout": [
     {
-      "path": "doctrine/",
+      "paths": [
+        "doctrine/"
+      ],
       "role": "Normative doctrine authority (highest precedence)."
     },
     {
-      "path": "stack/",
+      "paths": [
+        "stack/"
+      ],
       "role": "Normative stack/implementation authority, subordinate to doctrine."
     },
     {
-      "path": "position/",
+      "paths": [
+        "position/"
+      ],
       "role": "Normative market-claim authority; not technical authority."
     },
     {
-      "path": "governance/",
+      "paths": [
+        "governance/"
+      ],
       "role": "Generated JSON projections, integrity/control-plane reports, and archived history. Never hand-authored authority."
     },
     {
-      "path": "scripts/",
+      "paths": [
+        "scripts/"
+      ],
       "role": "Deterministic build/check/gate tooling, written in strict TypeScript and executed directly by Node (no build step). scripts/lib/ holds shared parsing logic used by both build and check scripts."
     },
     {
-      "path": "packages/errors, packages/time, packages/money",
+      "paths": [
+        "packages/errors",
+        "packages/time",
+        "packages/money"
+      ],
       "role": "Phase 3A application kernel: canonical Result/error vocabulary, explicit temporal primitives (Instant/CivilDate/AsOf/Clock), and exact bigint-based money primitives (CurrencyCode/MinorUnits/Money/Rate/rounding). See governance/PHASE_3A_KERNEL_REPORT.md."
     },
     {
-      "path": "packages/contracts",
+      "paths": [
+        "packages/contracts"
+      ],
       "role": "Phase 3B external transport boundary: Zod 4 (exact pin 4.4.3) wire schemas and exact serialize/parse contracts for Money, Instant, CivilDate, AsOf and public-safe Result/Failure shapes. Depends on errors/time/money only; no Hono/API/OpenAPI dependency. See governance/PHASE_3B_CONTRACTS_REPORT.md."
     },
     {
-      "path": "packages/db, db/migrations/",
-      "role": "Phase 3C persistence boundary: node-postgres pool/single-client transactions, exact type parsers (incl. forbidden OID 790 money), checksummed forward-only migrations bootstrapping role topology, Testcontainers PostgreSQL 18 integration lane via `pnpm gate:db-integration` (not folded into `pnpm gate`). No ledger/business schema yet. See governance/PHASE_3C_DB_REPORT.md."
+      "paths": [
+        "packages/db",
+        "db/migrations/"
+      ],
+      "role": "Phase 3C persistence boundary: node-postgres pool/single-client transactions, exact type parsers (incl. forbidden OID 790 money), checksummed forward-only migrations bootstrapping role topology, dual-major Testcontainers PostgreSQL 18+17 integration lane via `pnpm gate:db-integration` (not folded into `pnpm gate`; Kysely codegen from PG18 only). Depends on `@afenda/errors` only until domain decode helpers exist. No ledger/business schema yet. See governance/PHASE_3C_DB_REPORT.md."
     },
     {
-      "path": "package.json, tsconfig*.json, pnpm-workspace.yaml, .node-version, turbo.json, docker-compose.yml",
+      "paths": [
+        "package.json",
+        "tsconfig.json",
+        "tsconfig.base.json",
+        "pnpm-workspace.yaml",
+        ".node-version",
+        "turbo.json",
+        "docker-compose.yml"
+      ],
       "role": "Repository/tooling control-plane shell; Turborepo package tasks across errors/time/money/contracts/db; digest-pinned local Postgres 18 compose profile for development only."
     }
   ],

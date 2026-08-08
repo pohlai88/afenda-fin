@@ -1,7 +1,8 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import pg from 'pg';
 import type { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createAppPool, createBootstrapPool } from '../src/pool.ts';
 import { migrate } from '../src/migrate.ts';
@@ -16,6 +17,15 @@ import {
   containerConnection,
   startPostgres18,
 } from './helpers/postgres-container.ts';
+
+const tempDirs: string[] = [];
+
+afterEach(() => {
+  while (tempDirs.length > 0) {
+    const dir = tempDirs.pop();
+    if (dir !== undefined) rmSync(dir, { recursive: true, force: true });
+  }
+});
 
 describe('AFENDA persistence foundations (PostgreSQL 18 / Testcontainers)', () => {
   let container: StartedPostgreSqlContainer;
@@ -119,20 +129,19 @@ describe('AFENDA persistence foundations (PostgreSQL 18 / Testcontainers)', () =
   });
 
   it('rejects checksum mismatch when an applied migration file changes on disk', async () => {
-    const migrationPath = path.join(MIGRATIONS_DIR, '0001_bootstrap.sql');
-    const original = readFileSync(migrationPath, 'utf8');
-    try {
-      writeFileSync(migrationPath, `${original}\n-- red-checksum-probe\n`, 'utf8');
-      const mismatched = await migrate(bootstrapPool, {
-        migrationsDir: MIGRATIONS_DIR,
-        appliedBy: BOOTSTRAP_USER,
-      });
-      expect(mismatched.ok).toBe(false);
-      if (mismatched.ok) return;
-      expect(mismatched.error.code).toBe('MIGRATION_CHECKSUM_MISMATCH');
-    } finally {
-      writeFileSync(migrationPath, original, 'utf8');
-    }
+    // Mutate a temp copy — never the shared repo migration file — so parallel
+    // Vitest files (dual-major) cannot race on db/migrations/0001_bootstrap.sql.
+    const tempDir = mkdtempSync(path.join(tmpdir(), 'afenda-checksum-'));
+    tempDirs.push(tempDir);
+    const original = readFileSync(path.join(MIGRATIONS_DIR, '0001_bootstrap.sql'), 'utf8');
+    writeFileSync(path.join(tempDir, '0001_bootstrap.sql'), `${original}\n-- red-checksum-probe\n`, 'utf8');
+    const mismatched = await migrate(bootstrapPool, {
+      migrationsDir: tempDir,
+      appliedBy: BOOTSTRAP_USER,
+    });
+    expect(mismatched.ok).toBe(false);
+    if (mismatched.ok) return;
+    expect(mismatched.error.code).toBe('MIGRATION_CHECKSUM_MISMATCH');
   });
 
   it('withTransaction commits both writes on the same client', async () => {

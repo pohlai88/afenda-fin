@@ -54,8 +54,45 @@ describe('SEC-05: external-input validation, negative/malformed cases', () => {
     expect(decodeFailureTransportShape({ code: 'X', message: 'm', extra: 'field' }).ok).toBe(false);
   });
 
+  it('rejects a diagnostic cause key on inbound wire (strict shape)', () => {
+    expect(
+      decodeFailureTransportShape({
+        code: 'X',
+        message: 'm',
+        cause: 'password=hunter2',
+      }).ok,
+    ).toBe(false);
+  });
+
   it('rejects non-object input', () => {
     expect(decodeFailureTransportShape(null).ok).toBe(false);
     expect(decodeFailureTransportShape('X').ok).toBe(false);
+  });
+});
+
+describe('encode/decode detail canonicalization parity', () => {
+  it('decode canonicalizes -0 to the same string encode/toPublicJson emit', () => {
+    const encoded = encodeFailureTransport(err('X', 'm', { details: { delta: -0 } }).error);
+    expect(encoded.details).toEqual({ delta: '-0' });
+
+    const decoded = decodeFailureTransportShape({ code: 'X', message: 'm', details: { delta: -0 } });
+    expect(decoded.ok).toBe(true);
+    if (decoded.ok) {
+      expect(decoded.value.details).toEqual({ delta: '-0' });
+      expect(Object.is(decoded.value.details?.['delta'], -0)).toBe(false);
+    }
+  });
+
+  it('decode leaves ordinary finite numbers, including +0, unchanged', () => {
+    const decoded = decodeFailureTransportShape({
+      code: 'X',
+      message: 'm',
+      details: { attempt: 3, zero: 0 },
+    });
+    expect(decoded.ok).toBe(true);
+    if (decoded.ok) {
+      expect(decoded.value.details).toEqual({ attempt: 3, zero: 0 });
+      expect(Object.is(decoded.value.details?.['zero'], -0)).toBe(false);
+    }
   });
 });

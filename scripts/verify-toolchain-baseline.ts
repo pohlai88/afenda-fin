@@ -21,8 +21,9 @@
 
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import { isMainModule } from './lib/cli-main.ts';
 import path from 'node:path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -278,7 +279,6 @@ function main(): void {
   process.exitCode = failCount === 0 ? 0 : 1;
 }
 
-const invokedDirectly = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (invokedDirectly) {
+if (isMainModule(import.meta.url, 'verify-toolchain-baseline.ts')) {
   main();
 }

@@ -1,5 +1,5 @@
 <!-- GENERATED FILE - DO NOT EDIT -->
-<!-- Source: governance/rules.json | Regenerate: pnpm agent-docs -->
+<!-- Sources: governance/authority-index.json + scripts/generate-agent-docs.ts | Regenerate: pnpm agent-docs -->
 <!-- A hand edit here will fail the AGENT-DOCS-DRIFT gate. -->
 # AFENDA rules
 
@@ -31,10 +31,10 @@ AFENDA is a vibe-code-first ERP under construction. This repository currently ho
 | `position/` | Normative market-claim authority; not technical authority. |
 | `governance/` | Generated JSON projections, integrity/control-plane reports, and archived history. Never hand-authored authority. |
 | `scripts/` | Deterministic build/check/gate tooling, written in strict TypeScript and executed directly by Node (no build step). scripts/lib/ holds shared parsing logic used by both build and check scripts. |
-| `packages/errors, packages/time, packages/money` | Phase 3A application kernel: canonical Result/error vocabulary, explicit temporal primitives (Instant/CivilDate/AsOf/Clock), and exact bigint-based money primitives (CurrencyCode/MinorUnits/Money/Rate/rounding). See governance/PHASE_3A_KERNEL_REPORT.md. |
+| `packages/errors`, `packages/time`, `packages/money` | Phase 3A application kernel: canonical Result/error vocabulary, explicit temporal primitives (Instant/CivilDate/AsOf/Clock), and exact bigint-based money primitives (CurrencyCode/MinorUnits/Money/Rate/rounding). See governance/PHASE_3A_KERNEL_REPORT.md. |
 | `packages/contracts` | Phase 3B external transport boundary: Zod 4 (exact pin 4.4.3) wire schemas and exact serialize/parse contracts for Money, Instant, CivilDate, AsOf and public-safe Result/Failure shapes. Depends on errors/time/money only; no Hono/API/OpenAPI dependency. See governance/PHASE_3B_CONTRACTS_REPORT.md. |
-| `packages/db, db/migrations/` | Phase 3C persistence boundary: node-postgres pool/single-client transactions, exact type parsers (incl. forbidden OID 790 money), checksummed forward-only migrations bootstrapping role topology, Testcontainers PostgreSQL 18 integration lane via `pnpm gate:db-integration` (not folded into `pnpm gate`). No ledger/business schema yet. See governance/PHASE_3C_DB_REPORT.md. |
-| `package.json, tsconfig*.json, pnpm-workspace.yaml, .node-version, turbo.json, docker-compose.yml` | Repository/tooling control-plane shell; Turborepo package tasks across errors/time/money/contracts/db; digest-pinned local Postgres 18 compose profile for development only. |
+| `packages/db`, `db/migrations/` | Phase 3C persistence boundary: node-postgres pool/single-client transactions, exact type parsers (incl. forbidden OID 790 money), checksummed forward-only migrations bootstrapping role topology, dual-major Testcontainers PostgreSQL 18+17 integration lane via `pnpm gate:db-integration` (not folded into `pnpm gate`; Kysely codegen from PG18 only). Depends on `@afenda/errors` only until domain decode helpers exist. No ledger/business schema yet. See governance/PHASE_3C_DB_REPORT.md. |
+| `package.json`, `tsconfig.json`, `tsconfig.base.json`, `pnpm-workspace.yaml`, `.node-version`, `turbo.json`, `docker-compose.yml` | Repository/tooling control-plane shell; Turborepo package tasks across errors/time/money/contracts/db; digest-pinned local Postgres 18 compose profile for development only. |
 
 ## Stack adoption status
 

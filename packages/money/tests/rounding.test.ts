@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ROUNDING_BOUNDARY_IDS, roundExactRateToMinorUnits } from '../src/rounding.ts';
 import { toRate, type Rate } from '../src/rate.ts';
-import { toMinorUnits } from '../src/minor-units.ts';
+import { MAX_MINOR_UNITS, MIN_MINOR_UNITS, toMinorUnits } from '../src/minor-units.ts';
 import { independentHalfEvenRoundOracle } from './oracles/rounding-oracle.ts';
 
 function rate(numerator: bigint, denominator: bigint): Rate {
@@ -20,6 +20,32 @@ describe('registered rounding boundary', () => {
     const result = roundExactRateToMinorUnits(rate(1n, 2n), 'NOT.A.REAL.BOUNDARY' as unknown as typeof BOUNDARY);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error.code).toBe('UNKNOWN_ROUNDING_BOUNDARY');
+  });
+});
+
+describe('forged Rate defense in depth', () => {
+  // Branding rejects these at compile time; the casts below only exist to prove
+  // the runtime re-normalization path cannot silently mis-round or throw.
+  it('normalizes a forged negative denominator before half-even rounding', () => {
+    const forged = { numerator: 5n, denominator: -2n } as Rate; // −2.5
+    const result = roundExactRateToMinorUnits(forged, BOUNDARY);
+    expect(result).toEqual(toMinorUnits(-2n));
+  });
+
+  it('returns ZERO_DENOMINATOR for a forged zero denominator instead of throwing', () => {
+    const forged = { numerator: 1n, denominator: 0n } as Rate;
+    const result = roundExactRateToMinorUnits(forged, BOUNDARY);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe('ZERO_DENOMINATOR');
+  });
+
+  it('returns OUT_OF_RANGE when the rounded integer is outside MinorUnits bounds', () => {
+    const above = roundExactRateToMinorUnits(rate(MAX_MINOR_UNITS + 1n, 1n), BOUNDARY);
+    const below = roundExactRateToMinorUnits(rate(MIN_MINOR_UNITS - 1n, 1n), BOUNDARY);
+    expect(above.ok).toBe(false);
+    expect(below.ok).toBe(false);
+    if (!above.ok) expect(above.error.code).toBe('OUT_OF_RANGE');
+    if (!below.ok) expect(below.error.code).toBe('OUT_OF_RANGE');
   });
 });
 

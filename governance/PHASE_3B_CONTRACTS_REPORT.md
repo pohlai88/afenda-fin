@@ -62,7 +62,7 @@ No `src/*` internal path is a supported import target for consumers; enforced by
 
 #### Result/Failure transport
 
-`PublicFailureWireSchema` is a strict Zod object: `{ code: string, message: string, details?: Record<string, string | number | boolean | null> }`. `encodeFailureTransport` delegates to the **existing** `packages/errors` `toPublicJson` (no redesign) — `cause`/diagnostic internals are already stripped by that function; this phase adds the transport-side Zod validation on top, and a compile-time negative fixture (§4) proves a domain `Money` object can never be assigned into `PublicErrorDetails`, so authoritative Money can never leak through the generic ordinary-number details channel. No HTTP status mapping exists — there is no API framework to map onto yet.
+`PublicFailureWireSchema` is a strict Zod object: `{ code: string, message: string, details?: Record<string, string | number | boolean | null> }`. `encodeFailureTransport` delegates to the **existing** `packages/errors` `toPublicJson` (no redesign) — `cause`/diagnostic internals are already stripped by that function. `decodeFailureTransportShape` applies the same `@afenda/errors` `normalizePublicErrorDetails` canonicalization after the Zod shape gate (so inbound `-0` becomes `'-0'`, matching encode), and `.strict()` rejects an inbound `cause` key. A compile-time negative fixture (§4) proves a domain `Money` object can never be assigned into `PublicErrorDetails`, so authoritative Money can never leak through the generic ordinary-number details channel. No HTTP status mapping exists — there is no API framework to map onto yet.
 
 ### Canonical integer string — one owned parser/validator
 
@@ -84,7 +84,7 @@ All three agree exactly. `4.4.3` was selected as the latest published `zod@4.x` 
 
 ## 3. Round-trip and property test evidence
 
-`packages/contracts/tests/` — **8 test files, 82 tests, all passing.**
+`packages/contracts/tests/` — **8 test files, 85 tests, all passing** (includes later encode/decode `-0` parity and inbound-`cause` rejection cases).
 
 | File | Tests | Covers |
 | --- | --- | --- |
@@ -95,7 +95,7 @@ All three agree exactly. `4.4.3` was selected as the latest published `zod@4.x` 
 | `civil-date-transport.test.ts` | unit | Exact round trip including leap days; rejects non-string input and malformed `YYYY-MM-DD` (calendar-invalid, missing padding, time component, garbage) |
 | `as-of-transport.test.ts` | unit | Exact round trip for distinct **and** equal `businessAsOf`/`knowledgeAsOf`; rejects missing fields, extra fields, malformed instant strings, non-object input |
 | `as-of-transport.property.test.ts` | fast-check | Both dimensions round-trip independently without collapsing into one value; full JSON round trip preserves distinct boundaries |
-| `result-transport.test.ts` | unit | `cause` is stripped; `code`/`message`/`details` preserved; a domain `Money` value entering `details` is only ever representable as a JSON-safe primitive (string), never a raw object; rejects malformed shapes |
+| `result-transport.test.ts` | unit | outbound `cause` is stripped; inbound `cause` rejected by `.strict()`; `code`/`message`/`details` preserved; encode/decode `-0` → `'-0'` parity; a domain `Money` value entering `details` is only ever representable as a JSON-safe primitive (string), never a raw object; rejects malformed shapes |
 
 **Money JSON boundary result (the doctrine-mandated corpus, RED-03's spirit):**
 
@@ -113,7 +113,7 @@ All five values are covered by both the example-based test (`money-transport.tes
 
 ## 4. Compile-time negative fixtures (`tests/type-invalid/`)
 
-Six **new** fixtures added this phase (12 total now, up from 6 in Phase 3A), run via the same real `node scripts/check-type-invalid.ts` → `tsc --noEmit -p tests/type-invalid/tsconfig.json` harness:
+Six **new** fixtures added this phase (12 total then, up from 6 in Phase 3A), run via the same real `node scripts/check-type-invalid.ts` → `tsc --noEmit -p tests/type-invalid/tsconfig.json` harness. A later money-kernel seal added `rate-cannot-be-forged-structurally.ts` (branded `Rate`), bringing the live fixture count to **13**.
 
 | Fixture | Proves |
 | --- | --- |
@@ -124,10 +124,11 @@ Six **new** fixtures added this phase (12 total now, up from 6 in Phase 3A), run
 | `asof-transport-missing-knowledge-boundary.ts` | `AsOfWire.knowledgeAsOf` is required, not optional |
 | `domain-money-not-assignable-to-money-transport.ts` | A domain `Money` (bigint `minorUnits`) is **not** directly assignable to `MoneyWire` — transport/domain separation is structurally enforced, not just a naming convention |
 | `money-cannot-enter-failure-details.ts` *(bonus, SEC-05/MON-01 adjacent)* | A domain `Money` object cannot be assigned as a value in `PublicErrorDetails` — Money can never leak through the generic JSON-details channel |
+| `rate-cannot-be-forged-structurally.ts` *(later money-kernel seal)* | A plain `{ numerator, denominator }` object is not assignable to branded `Rate` |
 
 `_control-valid.ts` was updated to additionally construct valid `MoneyWire`/`AsOfWire` values, proving the harness itself still compiles clean and the new types are genuinely usable, not just restrictive.
 
-Run standalone: `node scripts/check-type-invalid.ts` — **12/12 fixtures failed for their declared reason; control fixture compiled clean.** Wired into `pnpm gate` (step 4h, scope comment updated) and delegated into `pnpm red` (`runTypeInvalidDelegatedFixture`).
+Run standalone: `node scripts/check-type-invalid.ts` — fixtures fail for their declared reason; control fixture compiles clean. Wired into `pnpm gate` (step 4h, scope comment updated) and delegated into `pnpm red` (`runTypeInvalidDelegatedFixture`).
 
 ---
 
@@ -305,7 +306,7 @@ All fixtures use `withDisposableFixtureFiles` (writes files, runs the real check
 | `pnpm --filter @afenda/money run test` | exit 0, 8 files / 88 tests passed |
 | `pnpm --filter @afenda/time run test` | exit 0, 5 files / 45 tests passed |
 | `pnpm --filter @afenda/errors run test` | exit 0, 2 files / 16 tests passed |
-| `node scripts/check-type-invalid.ts` | exit 0, 12/12 fixtures + control correct |
+| `node scripts/check-type-invalid.ts` | exit 0, fixtures + control correct (live count includes later `rate-cannot-be-forged-structurally.ts`) |
 | `pnpm run boundary:check` (clean tree) | exit 0, 4-package graph, 0 violations |
 | `node scripts/check-money-safety.ts` | exit 0, 0 violations (both packages) |
 | `node scripts/check-architecture.ts` | exit 0, 0 violations (all 4 packages) |

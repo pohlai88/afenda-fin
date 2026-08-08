@@ -1,9 +1,11 @@
 /**
  * Dual-major qualification (SCC-07).
  *
- * Policy: PostgreSQL 17 and 18 must both pass the same migration + transaction
- * + type-parser corpus. Any difference is a build failure requiring
- * investigation — never a silent compatibility-floor bump.
+ * Disagreement policy (fixed before PG17 was added — do not renegotiate under
+ * a red lane): PostgreSQL 17 and 18 must both pass the same migration +
+ * transaction + type-parser corpus. Any difference is a **build failure**
+ * requiring investigation. Raising the compatibility floor is an explicit
+ * STACK.md / STACK_ADOPTION decision — never a silent runner fallback.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import pg from 'pg';
@@ -12,6 +14,7 @@ import { createAppPool, createBootstrapPool } from '../src/pool.ts';
 import { migrate } from '../src/migrate.ts';
 import { withTransaction } from '../src/transaction.ts';
 import { configureExactTypeParsers, resetTypeParserConfigurationForTests } from '../src/type-parsers.ts';
+import { POSTGRES_IMAGE_PINS } from '../src/postgres-pins.ts';
 import {
   APP_PASSWORD,
   APP_USER,
@@ -38,6 +41,16 @@ function describeMajor(major: PostgresMajor): void {
         password: conn.password,
         applicationName: `afenda-bootstrap-pg${String(major)}`,
       });
+
+      // Opaque digests are not self-describing — assert the live server major
+      // matches the pin registry before treating this lane as dual-major evidence.
+      const version = await bootstrapPool.query<{ n: string }>(
+        `SELECT current_setting('server_version_num') AS n`,
+      );
+      const serverVersionNum = Number.parseInt(version.rows[0]?.n ?? '', 10);
+      const expectedMajor = POSTGRES_IMAGE_PINS[major].major;
+      expect(Math.floor(serverVersionNum / 10_000)).toBe(expectedMajor);
+
       const migrated = await migrate(bootstrapPool, {
         migrationsDir: MIGRATIONS_DIR,
         appliedBy: BOOTSTRAP_USER,
@@ -68,7 +81,7 @@ function describeMajor(major: PostgresMajor): void {
       await container?.stop();
     });
 
-    it('applies 0001 and records history', async () => {
+    it('applies 0001 and records history (pin major already asserted in beforeAll)', async () => {
       const history = await bootstrapPool.query<{ name: string }>('SELECT name FROM afenda_migration_history');
       expect(history.rows[0]?.name).toBe('bootstrap');
     });

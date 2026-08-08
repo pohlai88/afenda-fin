@@ -28,9 +28,11 @@ export const AsOfWireSchema: z.ZodType<AsOfWire> = z
 export type AsOfTransportErrorCode = 'MALFORMED_ASOF_WIRE_SHAPE' | InstantTransportErrorCode;
 
 /**
- * Decodes an untrusted external value into a domain `AsOf`. Both dimensions
- * are validated independently — one being malformed never masks the other,
- * and neither can be silently defaulted from the other.
+ * Decodes an untrusted external value into a domain `AsOf`. Zod `.strict()`
+ * requires both wire fields before any domain parse runs. Neither boundary can
+ * be silently defaulted from or substituted for the other. Domain Instant
+ * parsing then runs per field (first Instant failure short-circuits the
+ * Result — the shape gate has already confirmed both strings were present).
  */
 export function decodeAsOfTransport(input: unknown): Result<AsOf, AsOfTransportErrorCode> {
   const shape = AsOfWireSchema.safeParse(input);

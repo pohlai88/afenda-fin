@@ -7,14 +7,21 @@
 // - Checksums are SHA-256 of the on-disk file bytes; re-applying a changed file
 //   after success is a hard failure (checksum mismatch).
 // - 0001 must run as a bootstrap identity that is NOT `afenda_migrator` /
-//   `afenda_app` (those roles are created by 0001). See
-//   db/migrations/0001_bootstrap.sql header for the explicit statement.
+//   `afenda_app` (those roles are created by 0001). Local compose/Testcontainers
+//   use the image superuser `postgres`; managed hosts use their provisioned
+//   owner. See db/migrations/0001_bootstrap.sql.
+// - Post-0001 migrations must connect as `afenda_migrator` for both
+//   current_user and session_user. Silently running them as `postgres`
+//   (or as `afenda_app`) is a SEC-01 hazard: the runner would grant DDL
+//   privileges nobody reviewed. SET ROLE from a postgres session is rejected
+//   because session_user would still be postgres.
 
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Pool, PoolClient } from 'pg';
 import { err, ok, type Result } from '@afenda/errors';
+import { APP_ROLE, MANAGED_MIGRATION_ROLES, MIGRATOR_ROLE } from './migration-roles.ts';
 
 export type MigrationErrorCode =
   | 'MIGRATION_DIR_UNREADABLE'
@@ -22,7 +29,8 @@ export type MigrationErrorCode =
   | 'MIGRATION_ORDERING'
   | 'MIGRATION_CHECKSUM_MISMATCH'
   | 'MIGRATION_APPLY_FAILED'
-  | 'MIGRATION_HEADER_INVALID';
+  | 'MIGRATION_HEADER_INVALID'
+  | 'MIGRATION_IDENTITY_FORBIDDEN';
 
 export interface MigrationFile {
   readonly filename: string;
@@ -111,6 +119,59 @@ export function loadMigrationFiles(migrationsDir: string): Result<MigrationFile[
     }
   }
   return ok(files);
+}
+
+/**
+ * Asserts the runner is not connected as a role it manages (bootstrap) and
+ * does not silently execute post-bootstrap DDL as postgres / afenda_app (SEC-01).
+ */
+export function assertMigrationRunnerIdentity(
+  migrationVersion: number,
+  currentUser: string,
+  sessionUser: string,
+): Result<void, MigrationErrorCode> {
+  if (migrationVersion === 1) {
+    for (const role of MANAGED_MIGRATION_ROLES) {
+      if (currentUser === role || sessionUser === role) {
+        return err(
+          'MIGRATION_IDENTITY_FORBIDDEN',
+          `0001 must not run as managed role ${role} (current_user=${currentUser}, session_user=${sessionUser}); ` +
+            'those roles are created by 0001 — use the image/bootstrap superuser only',
+        );
+      }
+    }
+    return ok(undefined);
+  }
+
+  if (currentUser === APP_ROLE || sessionUser === APP_ROLE) {
+    return err(
+      'MIGRATION_IDENTITY_FORBIDDEN',
+      `post-0001 migration v${String(migrationVersion)} must not run as ${APP_ROLE} ` +
+        `(current_user=${currentUser}, session_user=${sessionUser})`,
+    );
+  }
+
+  if (currentUser !== MIGRATOR_ROLE || sessionUser !== MIGRATOR_ROLE) {
+    return err(
+      'MIGRATION_IDENTITY_FORBIDDEN',
+      `post-0001 migration v${String(migrationVersion)} must connect as ${MIGRATOR_ROLE} ` +
+        `(current_user=${currentUser}, session_user=${sessionUser}); ` +
+        'running as postgres (including SET ROLE from a postgres session) is a SEC-01 hazard',
+    );
+  }
+
+  return ok(undefined);
+}
+
+async function readSessionIdentity(client: PoolClient): Promise<{ currentUser: string; sessionUser: string }> {
+  const result = await client.query<{ current_user: string; session_user: string }>(
+    'SELECT current_user::text AS current_user, session_user::text AS session_user',
+  );
+  const row = result.rows[0];
+  if (row === undefined) {
+    throw new Error('failed to read current_user/session_user');
+  }
+  return { currentUser: row.current_user, sessionUser: row.session_user };
 }
 
 async function historyTableExists(client: PoolClient): Promise<boolean> {
@@ -216,6 +277,13 @@ export async function migrate(pool: Pool, options: MigrateOptions): Promise<Resu
         alreadyApplied.push(migration.filename);
         continue;
       }
+      const identity = await readSessionIdentity(client);
+      const identityCheck = assertMigrationRunnerIdentity(
+        migration.version,
+        identity.currentUser,
+        identity.sessionUser,
+      );
+      if (!identityCheck.ok) return identityCheck;
       const appliedResult = await applyOne(client, migration, options.appliedBy);
       if (!appliedResult.ok) return appliedResult;
       newlyApplied.push(migration.filename);

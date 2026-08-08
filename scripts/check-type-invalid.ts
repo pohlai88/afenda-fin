@@ -16,9 +16,10 @@
 // which itself extends the same tsconfig.base.json every package uses.
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { isMainModule } from './lib/cli-main.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -83,9 +84,20 @@ export function checkTypeInvalidFixtures(): TypeInvalidReport {
   const fixtureFileNames = listFixtureFileNames();
   const expectations = fixtureFileNames.map(readExpectation);
 
+  if (!existsSync(path.join(TYPE_INVALID_DIR, CONTROL_FILE))) {
+    failures.push(`${CONTROL_FILE}: missing must-always-compile control fixture`);
+  }
+
+  // Empty fixture suite cannot PASS — deleting all EXPECT_ERROR files would
+  // otherwise greenwash the gate if tsc still fails for unrelated reasons,
+  // or worse if the suite is empty and control alone passes.
+  if (expectations.length === 0) {
+    failures.push('no type-invalid fixtures found (empty suite cannot PASS)');
+  }
+
   const { exitCode, output } = runTypeInvalidCompilation();
 
-  if (exitCode === 0) {
+  if (expectations.length > 0 && exitCode === 0) {
     failures.push('tsc exited 0 (success) over tests/type-invalid, but fixtures exist that must fail to compile');
   }
 
@@ -113,8 +125,7 @@ export function checkTypeInvalidFixtures(): TypeInvalidReport {
   return { ok: failures.length === 0, failures, fixtureCount: expectations.length };
 }
 
-const invokedDirectly = process.argv[1] !== undefined && import.meta.url === new URL(`file://${process.argv[1].replace(/\\/g, '/')}`).href;
-if (invokedDirectly || process.argv[1]?.endsWith('check-type-invalid.ts')) {
+if (isMainModule(import.meta.url, 'check-type-invalid.ts')) {
   const report = checkTypeInvalidFixtures();
   console.log(`\n=== AFENDA compile-time negative fixtures (tests/type-invalid) ===\n`);
   console.log(`Fixtures checked: ${String(report.fixtureCount)}`);

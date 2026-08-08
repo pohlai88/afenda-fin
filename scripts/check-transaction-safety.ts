@@ -5,7 +5,8 @@
 import ts from 'typescript';
 import { readFileSync, globSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
+import { isMainModule } from './lib/cli-main.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -14,6 +15,12 @@ export interface TransactionSafetyViolation {
   readonly filePath: string;
   readonly line: number;
   readonly snippet: string;
+}
+
+export interface TransactionSafetyReport {
+  readonly ok: boolean;
+  readonly filesScanned: number;
+  readonly violations: TransactionSafetyViolation[];
 }
 
 function lineOf(sourceFile: ts.SourceFile, node: ts.Node): number {
@@ -47,7 +54,7 @@ export function scanSourceForTransactionSafetyViolations(sourceText: string, fil
 
 export function checkTransactionSafety(
   globPatterns: string[] = ['packages/db/src/**/*.ts'],
-): TransactionSafetyViolation[] {
+): TransactionSafetyReport {
   const files = globPatterns.flatMap((pattern) => globSync(pattern, { cwd: ROOT })).sort();
   const violations: TransactionSafetyViolation[] = [];
   for (const relFile of files) {
@@ -56,22 +63,30 @@ export function checkTransactionSafety(
     const sourceText = readFileSync(absFile, 'utf8');
     violations.push(...scanSourceForTransactionSafetyViolations(sourceText, normalizedRelFile));
   }
-  return violations;
+  // Empty scan cannot PASS — a broken/renamed glob would otherwise greenwash SCC-08.
+  return {
+    ok: files.length > 0 && violations.length === 0,
+    filesScanned: files.length,
+    violations,
+  };
 }
 
 function main(): void {
-  const violations = checkTransactionSafety();
-  if (violations.length > 0) {
+  const report = checkTransactionSafety();
+  if (report.filesScanned === 0) {
+    console.error('SCC-08 transaction-safety: FAIL (scanned 0 files; empty glob cannot PASS)');
+    process.exit(1);
+  }
+  if (report.violations.length > 0) {
     console.error('SCC-08 transaction-safety violations:');
-    for (const v of violations) {
-      console.error(`  ${v.filePath}:${v.line}: ${v.snippet}`);
+    for (const v of report.violations) {
+      console.error(`  ${v.filePath}:${String(v.line)}: ${v.snippet}`);
     }
     process.exit(1);
   }
-  console.log('SCC-08 transaction-safety: PASS (0 pool.query call sites in packages/db/src)');
+  console.log(`SCC-08 transaction-safety: PASS (0 pool.query call sites in ${String(report.filesScanned)} files under packages/db/src)`);
 }
 
-const isMain = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (isMain) {
+if (isMainModule(import.meta.url, 'check-transaction-safety.ts')) {
   main();
 }

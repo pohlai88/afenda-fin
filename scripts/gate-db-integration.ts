@@ -23,15 +23,19 @@ function run(command: string, args: string[]): void {
 console.log('=== AFENDA DB-integration gate (pnpm gate:db-integration) ===\n');
 
 try {
-  console.log('[1/3] @afenda/db unit + PGlite fast tests (no Docker)');
+  console.log('[1/4] Digest-pinned image majors match postgres-pins.ts (SCC-07)');
+  run('node', ['scripts/check-postgres-image-pins.ts']);
+  console.log('[PASS] image-pin major check\n');
+
+  console.log('[2/4] @afenda/db unit + PGlite fast tests (no Docker)');
   run('pnpm', ['--filter', '@afenda/db', 'run', 'test']);
   console.log('[PASS] unit/PGlite tests\n');
 
-  console.log('[2/3] @afenda/db Testcontainers integration (PostgreSQL 18 + 17)');
+  console.log('[3/4] @afenda/db Testcontainers integration (PostgreSQL 18 + 17)');
   run('pnpm', ['--filter', '@afenda/db', 'run', 'test:integration']);
   console.log('[PASS] dual-major integration tests\n');
 
-  console.log('[3/3] Kysely types drift vs Testcontainers PostgreSQL 18 (sole codegen source)');
+  console.log('[4/4] Kysely types drift vs Testcontainers PostgreSQL 18 (sole codegen source)');
   run('pnpm', ['--filter', '@afenda/db', 'run', 'check:types-drift']);
   console.log('[PASS] Kysely type drift\n');
 

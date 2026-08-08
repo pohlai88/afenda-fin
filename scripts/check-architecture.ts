@@ -44,6 +44,7 @@ import { readFileSync } from 'node:fs';
 import { globSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { isMainModule } from './lib/cli-main.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -163,15 +164,17 @@ export function checkApplicationArchitecture(globPattern = 'packages/*/src/**/*.
     const allowAmbientClock = normalizedRelFile === AMBIENT_CLOCK_ALLOWLISTED_PATH;
     violations.push(...scanSourceForArchitectureViolations(text, normalizedRelFile, allowAmbientClock));
   }
-  return { ok: violations.length === 0, violations, filesScanned: files.length };
+  // Empty scan cannot PASS — a broken/renamed glob would otherwise greenwash SCC-24.
+  return { ok: files.length > 0 && violations.length === 0, violations, filesScanned: files.length };
 }
 
-const invokedDirectly = process.argv[1] !== undefined && import.meta.url === new URL(`file://${process.argv[1].replace(/\\/g, '/')}`).href;
-if (invokedDirectly || process.argv[1]?.endsWith('check-architecture.ts')) {
+if (isMainModule(import.meta.url, 'check-architecture.ts')) {
   const report = checkApplicationArchitecture();
   console.log('\n=== AFENDA SCC-24 application architecture control (PARTIAL: decorators, class-inheritance, module-discovery, ambient-clock subset) ===\n');
   console.log(`Files scanned: ${String(report.filesScanned)} (packages/*/src/**/*.ts)`);
-  if (report.ok) {
+  if (report.filesScanned === 0) {
+    console.log('FAIL: scanned 0 files (empty glob cannot PASS).');
+  } else if (report.ok) {
     console.log('No violations of the detected subset found.');
   } else {
     console.log('VIOLATIONS:');

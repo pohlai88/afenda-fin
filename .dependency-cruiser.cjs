@@ -2,8 +2,9 @@
 //
 // Phase 3A (AFENDA kernel) gave this config a real, non-empty package graph:
 // packages/errors, packages/time, packages/money. Phase 3B adds
-// packages/contracts. Phase 3C adds packages/db (depends on errors/time/money;
-// must not depend on contracts; kernel packages must not depend on db).
+// packages/contracts. Phase 3C adds packages/db (depends on @afenda/errors
+// today; may grow time/money deps when domain decode helpers exist; must not
+// depend on contracts; kernel packages must not depend on db).
 // See governance/PHASE_3C_DB_REPORT.md.
 //
 // `no-domain-to-adapter` remains forward-declared per stack/STACK.md §8 (no
@@ -65,7 +66,7 @@ module.exports = {
     {
       name: 'no-kernel-depends-on-db',
       comment:
-        'Phase 3C: packages/db sits above errors/time/money; the kernel packages must never depend on packages/db.',
+        'Phase 3C: packages/db sits above the kernel packages; errors/time/money must never depend on packages/db.',
       severity: 'error',
       from: { path: '^packages/(errors|time|money)/' },
       to: { path: '^packages/db/' },

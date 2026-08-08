@@ -1,18 +1,25 @@
 /**
  * Canonical source token for Kysely schema codegen (SEL-07 / SCC-10).
  *
- * Only Testcontainers-managed PostgreSQL 18 may produce committed types.
- * PGlite and PostgreSQL 17 connection helpers deliberately do not return this
- * type, so there is no code path by which a faster/alternate lane can write
- * `packages/db/src/generated/database.ts`.
+ * Branded so a plain `{ kind, connectionString }` object cannot forge the
+ * token. The only sanctioned mint is `codegenSourceFromPostgres18` in the
+ * Testcontainers helper (used by `generate:types` / `check:types-drift`).
+ * PGlite and PostgreSQL 17 helpers deliberately do not return this type.
  */
-export interface CanonicalCodegenSource {
+
+declare const canonicalCodegenBrand: unique symbol;
+
+export type CanonicalCodegenSource = {
   readonly kind: 'testcontainers-pg18';
   readonly connectionString: string;
-}
+} & { readonly [canonicalCodegenBrand]: 'CanonicalCodegenSource' };
 
+/**
+ * Internal mint — not part of the package root public API. Call only from
+ * `codegenSourceFromPostgres18` (Testcontainers PostgreSQL 18).
+ */
 export function createCanonicalCodegenSource(connectionString: string): CanonicalCodegenSource {
-  return { kind: 'testcontainers-pg18', connectionString };
+  return { kind: 'testcontainers-pg18', connectionString } as CanonicalCodegenSource;
 }
 
 export function assertCanonicalCodegenSource(source: CanonicalCodegenSource): void {

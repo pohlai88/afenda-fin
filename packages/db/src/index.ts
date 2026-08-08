@@ -1,5 +1,5 @@
 export { PG_OID } from './oids.ts';
-export { configureExactTypeParsers, resetTypeParserConfigurationForTests } from './type-parsers.ts';
+export { configureExactTypeParsers } from './type-parsers.ts';
 export { createAppPool, createBootstrapPool, type AppPoolConfig } from './pool.ts';
 export { withTransaction, queryOnClient, type TransactionClient } from './transaction.ts';
 export {
@@ -7,6 +7,7 @@ export {
   loadMigrationFiles,
   parseMigrationHeader,
   checksumMigrationSource,
+  assertMigrationRunnerIdentity,
   type MigrationFile,
   type MigrateOptions,
   type MigrateResult,
@@ -14,9 +15,9 @@ export {
   type AppliedMigration,
 } from './migrate.ts';
 export {
-  createCanonicalCodegenSource,
   assertCanonicalCodegenSource,
   type CanonicalCodegenSource,
 } from './codegen-source.ts';
 export { requireTestcontainersLane, currentDbLane, type DbLane } from './testcontainers-lane.ts';
-
+export { POSTGRES_IMAGE_PINS, type PostgresImagePin } from './postgres-pins.ts';
+export { MANAGED_MIGRATION_ROLES, MIGRATOR_ROLE, APP_ROLE } from './migration-roles.ts';

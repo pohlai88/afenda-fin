@@ -11,7 +11,7 @@
 // --self-test and are invoked here, not duplicated.
 
 import { execFileSync } from 'node:child_process';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { readFileSync, writeFileSync, rmSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { ESLint } from 'eslint';
@@ -20,6 +20,9 @@ import { checkControlMapCompleteness, checkDependencyPinsAreExact } from './lib/
 import { checkApplicationArchitecture } from './check-architecture.ts';
 import { checkMoneySafety } from './check-money-safety.ts';
 import { checkTransactionSafety } from './check-transaction-safety.ts';
+import { assertComposeMatchesPins } from './check-postgres-image-pins.ts';
+import { POSTGRES_IMAGE_PINS } from '../packages/db/src/postgres-pins.ts';
+import { isMainModule } from './lib/cli-main.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -200,6 +203,42 @@ function runControlMapIncompleteFixture(): RedFixtureResult {
   };
 }
 
+/**
+ * "NOT-YET-BUILT is not PASS": a full ID set can still be dishonest if
+ * `implemented` is claimed with a null gate / empty evidence. Completeness
+ * alone would green this; the gate+evidence rule must fail it.
+ */
+function runControlMapImplementedWithoutEvidenceFixture(): RedFixtureResult {
+  const stackControls = [];
+  for (let i = 1; i <= 27; i += 1) {
+    const id = `SCC-${String(i).padStart(2, '0')}`;
+    stackControls.push(
+      i === 1
+        ? { control_id: id, state: 'implemented', gate: null, evidence: [] }
+        : { control_id: id, state: 'not-yet-built', gate: null, evidence: [] },
+    );
+  }
+  const vControls = [];
+  for (let i = 1; i <= 18; i += 1) {
+    vControls.push({
+      control_id: `V${String(i).padStart(2, '0')}`,
+      state: 'not-yet-built',
+      gate: null,
+      evidence: [],
+    });
+  }
+  const report = checkControlMapCompleteness({
+    stack_controls: stackControls,
+    doctrine_verification_controls: vControls,
+  });
+  const mentionsPolicy = report.failures.some((f) => f.includes('NOT-YET-BUILT is not PASS'));
+  return {
+    name: 'control-map-implemented-without-evidence (SCC-01 implemented, gate null, evidence [])',
+    expectFail: true,
+    failed: !report.ok && mentionsPolicy,
+  };
+}
+
 function runDependencyRangeFixture(): RedFixtureResult {
   const fakePackageJson = {
     dependencies: {},
@@ -211,6 +250,97 @@ function runDependencyRangeFixture(): RedFixtureResult {
     expectFail: true,
     failed: !report.ok,
   };
+}
+
+function runNpmAliasRangeFixture(): RedFixtureResult {
+  const fakePackageJson = {
+    dependencies: {
+      'aliased-caret': 'npm:left-pad@^1.3.0',
+      'aliased-latest': 'npm:left-pad@latest',
+      'aliased-scoped-caret': 'npm:@scope/pkg@~2.0.0',
+    },
+  };
+  const report = checkDependencyPinsAreExact(fakePackageJson);
+  const expected = 3;
+  const failed = !report.ok && report.failures.length === expected;
+  const result: RedFixtureResult = {
+    name: `dependency-npm-alias-range-injected (npm:…@^ / @~ / @latest; expect ${String(expected)} failures)`,
+    expectFail: true,
+    failed,
+  };
+  if (!failed) {
+    result.error = `failures=${String(report.failures.length)} ok=${String(report.ok)}: ${report.failures.join('; ')}`;
+  }
+  return result;
+}
+
+function runEmptyScanMoneySafetyFixture(): RedFixtureResult {
+  const report = checkMoneySafety(['packages/__no_such_pkg__/src/**/*.ts']);
+  return {
+    name: 'SCC-03: empty scan fails closed (0 files cannot PASS)',
+    expectFail: true,
+    failed: !report.ok && report.filesScanned === 0,
+  };
+}
+
+function runEmptyScanArchitectureFixture(): RedFixtureResult {
+  const report = checkApplicationArchitecture('packages/__no_such_pkg__/src/**/*.ts');
+  return {
+    name: 'SCC-24: empty scan fails closed (0 files cannot PASS)',
+    expectFail: true,
+    failed: !report.ok && report.filesScanned === 0,
+  };
+}
+
+function runEmptyScanTransactionSafetyFixture(): RedFixtureResult {
+  const report = checkTransactionSafety(['packages/__no_such_pkg__/src/**/*.ts']);
+  return {
+    name: 'SCC-08: empty scan fails closed (0 files cannot PASS)',
+    expectFail: true,
+    failed: !report.ok && report.filesScanned === 0,
+  };
+}
+
+/**
+ * Cross-service image swap: every pin string still appears somewhere in the
+ * file, so a whole-file substring check would false-green. Service-scoped
+ * assertion must fail both services' image lines.
+ */
+function runComposeCrossServiceImageSwapFixture(): RedFixtureResult {
+  const pins = Object.values(POSTGRES_IMAGE_PINS);
+  const a = pins[0];
+  const b = pins[1];
+  if (a === undefined || b === undefined) {
+    return {
+      name: 'SCC-07: compose cross-service image swap fails service-scoped pin check',
+      expectFail: true,
+      failed: false,
+      error: 'need at least two POSTGRES_IMAGE_PINS entries',
+    };
+  }
+  const compose = [
+    'services:',
+    `  ${a.composeService}:`,
+    `    image: ${b.imageRef}`,
+    '    ports:',
+    `      - "127.0.0.1:${String(a.composeHostPort)}:${String(a.containerPort)}"`,
+    `  ${b.composeService}:`,
+    `    image: ${a.imageRef}`,
+    '    ports:',
+    `      - "127.0.0.1:${String(b.composeHostPort)}:${String(b.containerPort)}"`,
+    '',
+  ].join('\n');
+  const failures = assertComposeMatchesPins(compose);
+  const imageFailures = failures.filter((f) => f.includes('image does not match pin'));
+  const result: RedFixtureResult = {
+    name: 'SCC-07: compose cross-service image swap fails service-scoped pin check',
+    expectFail: true,
+    failed: imageFailures.length >= 2,
+  };
+  if (imageFailures.length < 2) {
+    result.error = failures.join('; ') || 'no failures';
+  }
+  return result;
 }
 
 /**
@@ -744,8 +874,8 @@ function runDbPoolQueryStaticFixture(): RedFixtureResult {
       ].join('\n'),
       'utf8',
     );
-    const violations = checkTransactionSafety();
-    const failed = violations.some((v) => v.filePath.includes('__red_pool_query__'));
+    const report = checkTransactionSafety();
+    const failed = report.violations.some((v) => v.filePath.includes('__red_pool_query__'));
     return { name: 'SCC-08: pool.query call site detected in packages/db/src', expectFail: true, failed };
   } catch (err) {
     const e = err as { message: string };
@@ -860,7 +990,13 @@ async function main(): Promise<void> {
   results.push(runTurboPackageMismatchFixture());
   results.push(runCompatEngineDiscrepancyIsRecordedNotHiddenFixture());
   results.push(runControlMapIncompleteFixture());
+  results.push(runControlMapImplementedWithoutEvidenceFixture());
   results.push(runDependencyRangeFixture());
+  results.push(runNpmAliasRangeFixture());
+  results.push(runEmptyScanMoneySafetyFixture());
+  results.push(runEmptyScanArchitectureFixture());
+  results.push(runEmptyScanTransactionSafetyFixture());
+  results.push(runComposeCrossServiceImageSwapFixture());
   results.push(runLockfileDisagreementFixture());
   results.push(await runLintTsSuppressionFixture());
   results.push(await runUnsafeAssignmentLintFixture());
@@ -899,7 +1035,6 @@ async function main(): Promise<void> {
   process.exitCode = allOk ? 0 : 1;
 }
 
-const invokedDirectly = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (invokedDirectly) {
+if (isMainModule(import.meta.url, 'red.ts')) {
   await main();
 }
