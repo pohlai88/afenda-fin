@@ -27,6 +27,7 @@
     "api:openapi:check": "pnpm --filter @afenda/api openapi:check",
     "gate": "node scripts/gate.ts",
     "gate:db-integration": "node scripts/gate-db-integration.ts",
+    "test:composition": "pnpm --filter @afenda/api run test:composition",
     "red": "node scripts/red.ts"
   },
   "devDependencies": {

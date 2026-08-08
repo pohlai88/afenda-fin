@@ -18,6 +18,8 @@ const ALLOWED_PACKAGE_PREFIXES = [
   '@hono/zod-openapi',
   '@afenda/contracts',
   '@afenda/errors',
+  // Phase 3E: composition may use the public @afenda/db API (not pg/kysely).
+  '@afenda/db',
   'zod',
 ] as const;
 
@@ -28,8 +30,7 @@ const FORBIDDEN_EXACT = new Set([
   'express',
   'fastify',
   'next',
-  // Domain/persistence must enter via @afenda/contracts only (SCC-12).
-  '@afenda/db',
+  // Domain types enter via @afenda/contracts; drivers stay inside packages/db.
   '@afenda/time',
   '@afenda/money',
   'pg',

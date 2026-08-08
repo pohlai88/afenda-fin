@@ -14,6 +14,8 @@ import {
   APP_USER,
   BOOTSTRAP_USER,
   MIGRATIONS_DIR,
+  MIGRATOR_PASSWORD,
+  MIGRATOR_USER,
   containerConnection,
   startPostgres18,
 } from './helpers/postgres-container.ts';
@@ -58,13 +60,23 @@ describe('AFENDA persistence foundations (PostgreSQL 18 / Testcontainers)', () =
       password: conn.password,
       applicationName: 'afenda-bootstrap-test',
     });
+    const migratorPool = createBootstrapPool({
+      host: conn.host,
+      port: conn.port,
+      database: conn.database,
+      user: MIGRATOR_USER,
+      password: MIGRATOR_PASSWORD,
+      applicationName: 'afenda-migrator-test',
+    });
     const migrated = await migrate(bootstrapPool, {
       migrationsDir: MIGRATIONS_DIR,
       appliedBy: BOOTSTRAP_USER,
+      migratorPool,
     });
     expect(migrated.ok).toBe(true);
     if (!migrated.ok) throw new Error(migrated.error.message);
-    expect(migrated.value.applied).toEqual(['0001_bootstrap.sql']);
+    expect(migrated.value.applied).toEqual(['0001_bootstrap.sql', '0002_verify_exact_probe.sql']);
+    await migratorPool.end();
 
     appPool = createAppPool({
       host: conn.host,
@@ -96,13 +108,15 @@ describe('AFENDA persistence foundations (PostgreSQL 18 / Testcontainers)', () =
     expect(defaultMoneyIsString).toBe(true);
   });
 
-  it('records 0001 in afenda_migration_history with checksum and roles', async () => {
+  it('records bootstrap + verify-probe migrations in history with roles', async () => {
     const history = await bootstrapPool.query<{ version: number; name: string; applied_by: string }>(
       'SELECT version, name, applied_by FROM afenda_migration_history ORDER BY version',
     );
-    expect(history.rows).toHaveLength(1);
+    expect(history.rows).toHaveLength(2);
     expect(history.rows[0]?.name).toBe('bootstrap');
     expect(history.rows[0]?.applied_by).toBe(BOOTSTRAP_USER);
+    expect(history.rows[1]?.name).toBe('verify_exact_probe');
+    expect(history.rows[1]?.applied_by).toBe(MIGRATOR_USER);
 
     const roles = await bootstrapPool.query<{ rolname: string }>(
       `SELECT rolname FROM pg_roles WHERE rolname IN ('afenda_migrator', 'afenda_app') ORDER BY rolname`,
@@ -118,14 +132,27 @@ describe('AFENDA persistence foundations (PostgreSQL 18 / Testcontainers)', () =
   });
 
   it('is idempotent: second migrate applies nothing', async () => {
-    const again = await migrate(bootstrapPool, {
-      migrationsDir: MIGRATIONS_DIR,
-      appliedBy: BOOTSTRAP_USER,
+    const migratorPool = createBootstrapPool({
+      host: container.getHost(),
+      port: container.getPort(),
+      database: container.getDatabase(),
+      user: MIGRATOR_USER,
+      password: MIGRATOR_PASSWORD,
+      applicationName: 'afenda-migrator-idempotent',
     });
-    expect(again.ok).toBe(true);
-    if (!again.ok) return;
-    expect(again.value.applied).toEqual([]);
-    expect(again.value.alreadyApplied).toEqual(['0001_bootstrap.sql']);
+    try {
+      const again = await migrate(bootstrapPool, {
+        migrationsDir: MIGRATIONS_DIR,
+        appliedBy: BOOTSTRAP_USER,
+        migratorPool,
+      });
+      expect(again.ok).toBe(true);
+      if (!again.ok) return;
+      expect(again.value.applied).toEqual([]);
+      expect(again.value.alreadyApplied).toEqual(['0001_bootstrap.sql', '0002_verify_exact_probe.sql']);
+    } finally {
+      await migratorPool.end();
+    }
   });
 
   it('rejects checksum mismatch when an applied migration file changes on disk', async () => {

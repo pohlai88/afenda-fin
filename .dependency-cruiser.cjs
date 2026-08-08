@@ -1,8 +1,9 @@
 // SCC-05 module-boundary control (stack/STACK.md §6-7).
 //
 // Phase 3A–3C: packages/{errors,time,money,contracts,db}.
-// Phase 3D: apps/api (thin Hono adapter over contracts; must not be depended
-// on by any package; must not import package src/* internals or packages/db).
+// Phase 3D–3E: apps/api (Hono adapter over contracts; Phase 3E may depend on
+// packages/db public API for verification composition). Packages must not
+// depend on apps/*; apps must not import package src/* internals.
 //
 // `no-domain-to-adapter` remains forward-declared (no packages/domain yet).
 
@@ -42,14 +43,6 @@ module.exports = {
       severity: 'error',
       from: { path: '^packages/' },
       to: { path: '^apps/' },
-    },
-    {
-      name: 'no-api-depends-on-db',
-      comment:
-        'Phase 3D: apps/api proves HTTP architecture without inventing persistence; no packages/db dependency until a real operation needs it.',
-      severity: 'error',
-      from: { path: '^apps/api/' },
-      to: { path: '^packages/db/' },
     },
     {
       name: 'no-money-depends-on-time',

@@ -608,4 +608,10 @@ AFENDA Phase 3D established the thin Hono HTTP adapter (`apps/api`) over `@afend
 
 ## 41. Phase 3D.1 forward reference (2026-08-08)
 
-AFENDA Phase 3D.1 pushed `main` to `c82d852` and observed live `gate.yml` run `31232287375`. The job recorded **zero steps**; check-run annotation states the account is **locked due to a billing issue** (`runner_id=0`). Workflow YAML was inspected and is not the root cause. SCC-04 remains `partial` (CI-verified still unestablished; TypeScript-6 compat-engine gap also still open). Phase 3E was not started. Full detail: `governance/PHASE_3D1_CI_REPORT.md`.
+AFENDA Phase 3D.1 pushed `main` to `c82d852` and observed live `gate.yml` run `31232287375`. The job recorded **zero steps**; check-run annotation states the account is **locked due to a billing issue** (`runner_id=0`). Workflow YAML was inspected and is not the root cause. SCC-04 remains `partial` (CI-verified still unestablished; TypeScript-6 compat-engine gap also still open). Operator later deferred live CI due to payment failure. Full detail: `governance/PHASE_3D1_CI_REPORT.md`.
+
+---
+
+## 42. Phase 3E forward reference (2026-08-08)
+
+AFENDA Phase 3E added verification-only HTTP→contracts→`packages/db`→PostgreSQL composition via `createCompositionApi` (not registered on production `createApi`). Migration `0002_verify_exact_probe.sql` + migrator-pool handoff for post-0001 DDL. Money exact corpus and Instant/CivilDate round-trips proven on PG17 and PG18; DB failure maps to public-safe 500. V08 stays `partial` (HTTP+JSON+PostgreSQL composition demonstrated; other boundaries absent). Live CI remains deferred. Full detail: `governance/PHASE_3E_HTTP_DB_REPORT.md`.

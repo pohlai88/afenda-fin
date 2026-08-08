@@ -25,4 +25,15 @@ describe('mapResultToHttp', () => {
       expect(mapped.body).not.toHaveProperty('cause');
     }
   });
+
+  it('maps PERSISTENCE codes to 500 without cause', () => {
+    const mapped = mapResultToHttp(err('PERSISTENCE_PROBE_FAILED', 'exact persistence probe failed'), (v) => v);
+    expect(mapped.status).toBe(500);
+    if (mapped.status === 200) return;
+    expect(mapped.body).toEqual({
+      code: 'PERSISTENCE_PROBE_FAILED',
+      message: 'exact persistence probe failed',
+    });
+    expect(mapped.body).not.toHaveProperty('cause');
+  });
 });

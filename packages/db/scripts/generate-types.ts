@@ -9,7 +9,14 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import { assertCanonicalCodegenSource } from '../src/codegen-source.ts';
-import { codegenSourceFromPostgres18, MIGRATIONS_DIR, BOOTSTRAP_USER, POSTGRES_18_IMAGE } from '../tests/helpers/postgres-container.ts';
+import {
+  codegenSourceFromPostgres18,
+  MIGRATIONS_DIR,
+  BOOTSTRAP_USER,
+  MIGRATOR_USER,
+  MIGRATOR_PASSWORD,
+  POSTGRES_18_IMAGE,
+} from '../tests/helpers/postgres-container.ts';
 import { createBootstrapPool } from '../src/pool.ts';
 import { migrate } from '../src/migrate.ts';
 
@@ -37,8 +44,20 @@ async function main(): Promise<void> {
       password: container.getPassword(),
       applicationName: 'afenda-codegen',
     });
+    const migratorPool = createBootstrapPool({
+      host: container.getHost(),
+      port: container.getPort(),
+      database: container.getDatabase(),
+      user: MIGRATOR_USER,
+      password: MIGRATOR_PASSWORD,
+      applicationName: 'afenda-codegen-migrator',
+    });
     try {
-      const migrated = await migrate(pool, { migrationsDir: MIGRATIONS_DIR, appliedBy: BOOTSTRAP_USER });
+      const migrated = await migrate(pool, {
+        migrationsDir: MIGRATIONS_DIR,
+        appliedBy: BOOTSTRAP_USER,
+        migratorPool,
+      });
       if (!migrated.ok) {
         throw new Error(`migrate failed: ${migrated.error.code}: ${migrated.error.message}`);
       }
@@ -73,6 +92,7 @@ async function main(): Promise<void> {
       }
       console.log(`Wrote ${OUT_FILE}`);
     } finally {
+      await migratorPool.end();
       await pool.end();
     }
   } finally {

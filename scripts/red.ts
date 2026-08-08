@@ -926,17 +926,17 @@ function runHonoApiPathFixtures(): RedFixtureResult[] {
     failed: sqlCaught,
   });
 
-  const dbCaught = withDisposableFixtureFiles(
+  const pgCaught = withDisposableFixtureFiles(
     {
-      'apps/api/src/__red_fixture_afenda_db__.ts':
-        "import { createPool } from '@afenda/db';\nexport { createPool };\n",
+      'apps/api/src/__red_fixture_pg_driver__.ts':
+        "import pg from 'pg';\nexport const pool = new pg.Pool();\n",
     },
     () => !checkHonoApiPath().ok,
   );
   results.push({
-    name: 'SCC-12: direct @afenda/db import in apps/api/src',
+    name: 'SCC-12: direct pg driver import in apps/api/src',
     expectFail: true,
-    failed: dbCaught,
+    failed: pgCaught,
   });
 
   const timeCaught = withDisposableFixtureFiles(
@@ -1047,6 +1047,107 @@ function runDepCruiseApiInternalImportFixture(): RedFixtureResult {
     expectFail: true,
     failed,
   };
+}
+
+/**
+ * Phase 3E: coerce DB-returned minor_units through Number() in the composition
+ * probe — real precision loss at 2^53+1 — and prove HTTP→DB composition tests fail.
+ */
+function runCompositionMoneyNumberCoercionMutationFixture(): RedFixtureResult {
+  const filePath = path.join(ROOT, 'packages', 'db', 'src', 'exact-persistence-probe.ts');
+  const original = readFileSync(filePath, 'utf8');
+  const guard =
+    "if (typeof row.minor_units !== 'string') {\n        throw new Error('money probe lost int8 string exactness');\n      }";
+  if (!original.includes(guard)) {
+    return {
+      name: 'mutation-kill: composition money probe coerces minor_units via Number',
+      expectFail: true,
+      failed: false,
+      error: 'guard snippet not found in exact-persistence-probe.ts; fixture stale',
+    };
+  }
+  try {
+    const mutated = original.replace(
+      guard,
+      "{\n        const n = Number(row.minor_units);\n        (row as { minor_units: string }).minor_units = String(n);\n      }",
+    );
+    if (mutated === original) {
+      return {
+        name: 'mutation-kill: composition money probe coerces minor_units via Number',
+        expectFail: true,
+        failed: false,
+        error: 'mutation replacement count was 0',
+      };
+    }
+    writeFileSync(filePath, mutated, 'utf8');
+    execFileSync('pnpm', ['--filter', '@afenda/api', 'run', 'test:composition'], {
+      encoding: 'utf8',
+      cwd: ROOT,
+      shell: true,
+    });
+    return {
+      name: 'mutation-kill: composition money probe coerces minor_units via Number',
+      expectFail: true,
+      failed: false,
+    };
+  } catch {
+    return {
+      name: 'mutation-kill: composition money probe coerces minor_units via Number',
+      expectFail: true,
+      failed: true,
+    };
+  } finally {
+    writeFileSync(filePath, original, 'utf8');
+  }
+}
+
+/** Phase 3E: leak raw driver error message (may contain SQL) into public Failure.message. */
+function runCompositionFailureLeakMutationFixture(): RedFixtureResult {
+  const filePath = path.join(ROOT, 'packages', 'db', 'src', 'exact-persistence-probe.ts');
+  const original = readFileSync(filePath, 'utf8');
+  const guard =
+    'function mapProbeFailure(_error: unknown): Result<never, ExactPersistenceProbeErrorCode> {\n  void _error;\n  // Never surface SQL, host, stack, or driver internals via Result.message.\n  return err(\'PERSISTENCE_PROBE_FAILED\', \'exact persistence probe failed\');\n}';
+  if (!original.includes(guard)) {
+    return {
+      name: 'mutation-kill: composition DB failure leaks diagnostic message',
+      expectFail: true,
+      failed: false,
+      error: 'mapProbeFailure snippet not found; fixture stale',
+    };
+  }
+  try {
+    const mutated = original.replace(
+      guard,
+      'function mapProbeFailure(_error: unknown): Result<never, ExactPersistenceProbeErrorCode> {\n  const message = _error instanceof Error ? _error.message : \'exact persistence probe failed\';\n  return err(\'PERSISTENCE_PROBE_FAILED\', message);\n}',
+    );
+    if (mutated === original) {
+      return {
+        name: 'mutation-kill: composition DB failure leaks diagnostic message',
+        expectFail: true,
+        failed: false,
+        error: 'mutation replacement count was 0',
+      };
+    }
+    writeFileSync(filePath, mutated, 'utf8');
+    execFileSync('pnpm', ['--filter', '@afenda/api', 'run', 'test:composition'], {
+      encoding: 'utf8',
+      cwd: ROOT,
+      shell: true,
+    });
+    return {
+      name: 'mutation-kill: composition DB failure leaks diagnostic message',
+      expectFail: true,
+      failed: false,
+    };
+  } catch {
+    return {
+      name: 'mutation-kill: composition DB failure leaks diagnostic message',
+      expectFail: true,
+      failed: true,
+    };
+  } finally {
+    writeFileSync(filePath, original, 'utf8');
+  }
 }
 
 function runDbPoolQueryStaticFixture(): RedFixtureResult {
@@ -1215,6 +1316,8 @@ async function main(): Promise<void> {
   results.push(runApiMoneyNumberLiteralFixture());
   results.push(runDepCruiseApiReverseDependencyFixture());
   results.push(runDepCruiseApiInternalImportFixture());
+  results.push(runCompositionMoneyNumberCoercionMutationFixture());
+  results.push(runCompositionFailureLeakMutationFixture());
 
   console.log('\n=== AFENDA red harness (gate exists -> injected violation -> real gate fails) ===\n');
   let allOk = true;

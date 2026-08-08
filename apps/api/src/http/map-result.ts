@@ -9,13 +9,16 @@ export interface HttpMappedSuccess<T> {
 }
 
 export interface HttpMappedFailure {
-  readonly status: 400 | 422;
+  readonly status: 400 | 422 | 500;
   readonly body: ReturnType<typeof encodeFailureTransport>;
 }
 
 export type HttpMappedResult<T> = HttpMappedSuccess<T> | HttpMappedFailure;
 
-function failureStatus(code: string): 400 | 422 {
+function failureStatus(code: string): 400 | 422 | 500 {
+  if (code.includes('PERSISTENCE') || code.includes('INTERNAL')) {
+    return 500;
+  }
   if (code.includes('OVERFLOW') || code.includes('RANGE') || code.includes('MISMATCH')) {
     return 422;
   }
@@ -25,7 +28,7 @@ function failureStatus(code: string): 400 | 422 {
 /**
  * Maps a canonical Result to a public HTTP body.
  * - ok → 200 + success body
- * - err → 400/422 + encodeFailureTransport (never serializes cause/stack)
+ * - err → 400/422/500 + encodeFailureTransport (never serializes cause/stack)
  */
 export function mapResultToHttp<T, C extends string>(
   result: Result<T, C>,

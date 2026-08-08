@@ -20,6 +20,8 @@ import {
   APP_USER,
   BOOTSTRAP_USER,
   MIGRATIONS_DIR,
+  MIGRATOR_PASSWORD,
+  MIGRATOR_USER,
   containerConnection,
   startPostgres,
   type PostgresMajor,
@@ -51,12 +53,22 @@ function describeMajor(major: PostgresMajor): void {
       const expectedMajor = POSTGRES_IMAGE_PINS[major].major;
       expect(Math.floor(serverVersionNum / 10_000)).toBe(expectedMajor);
 
+      const migratorPool = createBootstrapPool({
+        host: conn.host,
+        port: conn.port,
+        database: conn.database,
+        user: MIGRATOR_USER,
+        password: MIGRATOR_PASSWORD,
+        applicationName: `afenda-migrator-pg${String(major)}`,
+      });
       const migrated = await migrate(bootstrapPool, {
         migrationsDir: MIGRATIONS_DIR,
         appliedBy: BOOTSTRAP_USER,
+        migratorPool,
       });
       expect(migrated.ok).toBe(true);
       if (!migrated.ok) throw new Error(migrated.error.message);
+      await migratorPool.end();
 
       appPool = createAppPool({
         host: conn.host,

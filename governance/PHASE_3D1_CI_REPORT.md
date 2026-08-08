@@ -84,9 +84,9 @@ Inspected committed `.github/workflows/gate.yml`:
 
 Mandatory sequence requires Part A to reach stable executable CI evidence before Part B.
 
-**Phase 3E status:** blocked / not started.
+**Phase 3E status:** operator deferred live GitHub CI due to payment failure (2026-08-08). Phase 3E proceeds under that explicit deferral; SCC-04 remains `partial` and is **not** closed by local gate/red.
 
-**Unblock:** clear GitHub account billing lock → re-push or re-run workflow → observe real steps → only then resume Phase 3E.
+**Unblock CI later:** clear GitHub account billing lock → re-push or re-run workflow → observe real steps.
 
 ---
 

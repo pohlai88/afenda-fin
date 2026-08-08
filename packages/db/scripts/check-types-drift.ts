@@ -13,6 +13,8 @@ import { assertCanonicalCodegenSource } from '../src/codegen-source.ts';
 import {
   BOOTSTRAP_USER,
   MIGRATIONS_DIR,
+  MIGRATOR_PASSWORD,
+  MIGRATOR_USER,
   POSTGRES_18_IMAGE,
   codegenSourceFromPostgres18,
 } from '../tests/helpers/postgres-container.ts';
@@ -58,8 +60,20 @@ async function main(): Promise<void> {
       password: container.getPassword(),
       applicationName: 'afenda-codegen-drift',
     });
+    const migratorPool = createBootstrapPool({
+      host: container.getHost(),
+      port: container.getPort(),
+      database: container.getDatabase(),
+      user: MIGRATOR_USER,
+      password: MIGRATOR_PASSWORD,
+      applicationName: 'afenda-codegen-drift-migrator',
+    });
     try {
-      const migrated = await migrate(pool, { migrationsDir: MIGRATIONS_DIR, appliedBy: BOOTSTRAP_USER });
+      const migrated = await migrate(pool, {
+        migrationsDir: MIGRATIONS_DIR,
+        appliedBy: BOOTSTRAP_USER,
+        migratorPool,
+      });
       if (!migrated.ok) {
         throw new Error(`migrate failed: ${migrated.error.code}: ${migrated.error.message}`);
       }
@@ -79,6 +93,7 @@ async function main(): Promise<void> {
       }
       console.log('Kysely type drift check: PASS (matches Testcontainers PostgreSQL 18)');
     } finally {
+      await migratorPool.end();
       await pool.end();
     }
   } finally {

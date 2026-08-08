@@ -13,6 +13,8 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
   ? ColumnType<S, I | undefined, U>
   : ColumnType<T, T | undefined, T>;
 
+export type Int8 = ColumnType<string, bigint | number | string, bigint | number | string>;
+
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export interface AfendaMigrationHistory {
@@ -23,6 +25,17 @@ export interface AfendaMigrationHistory {
   version: number;
 }
 
+export interface AfendaVerifyExactProbe {
+  civil_date: Timestamp | null;
+  created_at: Generated<Timestamp>;
+  currency: string | null;
+  id: Generated<Int8>;
+  instant_ts: Timestamp | null;
+  kind: string;
+  minor_units: Int8 | null;
+}
+
 export interface DB {
   afenda_migration_history: AfendaMigrationHistory;
+  afenda_verify_exact_probe: AfendaVerifyExactProbe;
 }

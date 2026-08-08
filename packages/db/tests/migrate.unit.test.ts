@@ -111,19 +111,24 @@ describe('migration header policy', () => {
 });
 
 describe('loadMigrationFiles', () => {
-  it('loads 0001_bootstrap.sql with a stable checksum', () => {
+  it('loads numbered migrations with stable checksums', () => {
     const loaded = loadMigrationFiles(MIGRATIONS_DIR);
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
-    expect(loaded.value).toHaveLength(1);
+    expect(loaded.value).toHaveLength(2);
     const first = loaded.value[0];
+    const second = loaded.value[1];
     expect(first).toBeDefined();
-    if (first === undefined) return;
+    expect(second).toBeDefined();
+    if (first === undefined || second === undefined) return;
     expect(first.filename).toBe('0001_bootstrap.sql');
     expect(first.version).toBe(1);
     expect(first.transactional).toBe(true);
     expect(first.checksum).toBe(checksumMigrationSource(first.sql));
     expect(first.checksum).toMatch(/^[a-f0-9]{64}$/);
+    expect(second.filename).toBe('0002_verify_exact_probe.sql');
+    expect(second.version).toBe(2);
+    expect(second.checksum).toBe(checksumMigrationSource(second.sql));
   });
 });
 
@@ -180,6 +185,7 @@ describe('migrate() identity wiring (SEC-01)', () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.code).toBe('MIGRATION_IDENTITY_FORBIDDEN');
+    expect(result.error.message).toMatch(/migratorPool/);
     expect((pool as Pool & { __appliedSql: () => boolean }).__appliedSql()).toBe(false);
   });
 
@@ -197,7 +203,11 @@ describe('migrate() identity wiring (SEC-01)', () => {
       applied: [{ version: 1, name: 'bootstrap', checksum: checksumMigrationSource(sql1) }],
     });
 
-    const result = await migrate(pool, { migrationsDir: dir, appliedBy: 'postgres' });
+    const result = await migrate(pool, {
+      migrationsDir: dir,
+      appliedBy: 'postgres',
+      migratorPool: pool,
+    });
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.code).toBe('MIGRATION_IDENTITY_FORBIDDEN');

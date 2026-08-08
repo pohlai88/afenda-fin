@@ -238,8 +238,16 @@ async function applyOne(client: PoolClient, migration: MigrationFile, appliedBy:
 
 export interface MigrateOptions {
   readonly migrationsDir: string;
-  /** Identity recorded in afenda_migration_history.applied_by (bootstrap user for 0001). */
+  /** Identity recorded in afenda_migration_history.applied_by for bootstrap (0001). */
   readonly appliedBy: string;
+  /**
+   * Pool that connects as `afenda_migrator`. Required to apply version >= 2.
+   * May be constructed before 0001; first `connect()` must happen after 0001
+   * creates the role (lazy connect).
+   */
+  readonly migratorPool?: Pool;
+  /** Recorded applied_by for post-0001 migrations (defaults to afenda_migrator). */
+  readonly migratorAppliedBy?: string;
 }
 
 export interface MigrateResult {
@@ -248,16 +256,20 @@ export interface MigrateResult {
 }
 
 /**
- * Applies pending migrations on `pool` using a single checked-out client for
- * the whole run (not one pool.query per statement).
+ * Applies pending migrations.
+ * - version 0001: single checked-out client from `bootstrapPool`
+ * - version >= 2: single checked-out client from `migratorPool` (required)
  */
-export async function migrate(pool: Pool, options: MigrateOptions): Promise<Result<MigrateResult, MigrationErrorCode>> {
+export async function migrate(
+  bootstrapPool: Pool,
+  options: MigrateOptions,
+): Promise<Result<MigrateResult, MigrationErrorCode>> {
   const loaded = loadMigrationFiles(options.migrationsDir);
   if (!loaded.ok) return loaded;
 
-  const client = await pool.connect();
+  const bootstrapClient = await bootstrapPool.connect();
   try {
-    const applied = await readAppliedMigrations(client);
+    const applied = await readAppliedMigrations(bootstrapClient);
     const appliedByVersion = new Map(applied.map((row) => [row.version, row]));
 
     for (const migration of loaded.value) {
@@ -277,19 +289,47 @@ export async function migrate(pool: Pool, options: MigrateOptions): Promise<Resu
         alreadyApplied.push(migration.filename);
         continue;
       }
-      const identity = await readSessionIdentity(client);
-      const identityCheck = assertMigrationRunnerIdentity(
-        migration.version,
-        identity.currentUser,
-        identity.sessionUser,
-      );
-      if (!identityCheck.ok) return identityCheck;
-      const appliedResult = await applyOne(client, migration, options.appliedBy);
-      if (!appliedResult.ok) return appliedResult;
-      newlyApplied.push(migration.filename);
+
+      if (migration.version === 1) {
+        const identity = await readSessionIdentity(bootstrapClient);
+        const identityCheck = assertMigrationRunnerIdentity(
+          migration.version,
+          identity.currentUser,
+          identity.sessionUser,
+        );
+        if (!identityCheck.ok) return identityCheck;
+        const appliedResult = await applyOne(bootstrapClient, migration, options.appliedBy);
+        if (!appliedResult.ok) return appliedResult;
+        newlyApplied.push(migration.filename);
+        continue;
+      }
+
+      if (options.migratorPool === undefined) {
+        return err(
+          'MIGRATION_IDENTITY_FORBIDDEN',
+          `post-0001 migration ${migration.filename} requires MigrateOptions.migratorPool connected as ${MIGRATOR_ROLE}`,
+        );
+      }
+
+      const migratorClient = await options.migratorPool.connect();
+      try {
+        const identity = await readSessionIdentity(migratorClient);
+        const identityCheck = assertMigrationRunnerIdentity(
+          migration.version,
+          identity.currentUser,
+          identity.sessionUser,
+        );
+        if (!identityCheck.ok) return identityCheck;
+        const appliedBy = options.migratorAppliedBy ?? MIGRATOR_ROLE;
+        const appliedResult = await applyOne(migratorClient, migration, appliedBy);
+        if (!appliedResult.ok) return appliedResult;
+        newlyApplied.push(migration.filename);
+      } finally {
+        migratorClient.release();
+      }
     }
     return ok({ applied: newlyApplied, alreadyApplied });
   } finally {
-    client.release();
+    bootstrapClient.release();
   }
 }

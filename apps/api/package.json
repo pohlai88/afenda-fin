@@ -2,7 +2,7 @@
   "name": "@afenda/api",
   "version": "0.0.0",
   "private": true,
-  "description": "AFENDA thin Hono HTTP adapter over @afenda/contracts. Routes parse transport and map Result to HTTP; no business policy, no ledger, no DB coupling in Phase 3D.",
+  "description": "AFENDA thin Hono HTTP adapter over @afenda/contracts. Phase 3E adds verification-only composition against @afenda/db (not registered on the production router).",
   "type": "module",
   "exports": {
     ".": {
@@ -17,13 +17,15 @@
   "scripts": {
     "typecheck:native": "tsc --noEmit -p tsconfig.json",
     "typecheck:compat": "tsc6 --noEmit -p tsconfig.json",
-    "test": "vitest run",
+    "test": "vitest run --exclude \"**/composition/**\"",
+    "test:composition": "node scripts/run-composition.ts",
     "openapi:generate": "node scripts/generate-openapi.ts",
     "openapi:check": "node scripts/check-openapi-drift.ts",
     "start": "node src/cli.ts"
   },
   "dependencies": {
     "@afenda/contracts": "workspace:*",
+    "@afenda/db": "workspace:*",
     "@afenda/errors": "workspace:*",
     "@hono/node-server": "2.1.0",
     "@hono/zod-openapi": "1.5.1",
@@ -31,7 +33,9 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@testcontainers/postgresql": "12.1.0",
     "@typescript/native": "npm:typescript@7.0.2",
+    "testcontainers": "12.1.0",
     "typescript": "npm:@typescript/typescript6@6.0.2",
     "vitest": "4.1.10"
   }
